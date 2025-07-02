@@ -11,7 +11,7 @@ public class AccountController : Controller
     private readonly IConfiguration _configuration;
     private readonly string _connectionString;
 
-    public AccountController(IConfiguration configuration)
+    public AccountController(IConfiguration configuration) 
     {
         _configuration = configuration;
         _connectionString = _configuration.GetConnectionString("DefaultConnection");
