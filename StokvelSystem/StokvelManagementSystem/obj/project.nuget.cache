@@ -1,8 +1,8 @@
 {
   "version": 2,
-  "dgSpecHash": "dQZgGtetjwOxbotCGHuAB6x4dFgneLCXhRaxfYbzBibWXcTn4btqnduaBwpq8gNcKErODZtwTVVHVxgDrU6Hpg==",
+  "dgSpecHash": "Byf4/U5abothHKxr7MsiKzm+EnAKAiwfDuv8m6Pxd0nuFYHB3kv5YiOQqn+4NbX5bGgWlwWr6GNVYzzEAZVPMQ==",
   "success": true,
-  "projectFilePath": "C:\\Users\\UrbanTech\\Downloads\\StokvelSystemManagementProject-master\\StokvelSystemManagementProject-master\\StokvelManagementSystem\\StokvelManagementSystem.csproj",
+  "projectFilePath": "C:\\Users\\UrbanTech\\source\\repos\\StokvelSystemManagement\\StokvelSystem\\StokvelManagementSystem\\StokvelManagementSystem.csproj",
   "expectedPackageFiles": [
     "C:\\Users\\UrbanTech\\.nuget\\packages\\microsoft.aspnetcore.authentication.jwtbearer\\8.0.0\\microsoft.aspnetcore.authentication.jwtbearer.8.0.0.nupkg.sha512",
     "C:\\Users\\UrbanTech\\.nuget\\packages\\microsoft.extensions.dependencyinjection.abstractions\\8.0.0\\microsoft.extensions.dependencyinjection.abstractions.8.0.0.nupkg.sha512",

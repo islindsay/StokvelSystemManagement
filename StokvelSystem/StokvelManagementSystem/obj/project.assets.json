@@ -632,11 +632,11 @@
   "project": {
     "version": "1.0.0",
     "restore": {
-      "projectUniqueName": "C:\\Users\\UrbanTech\\Downloads\\StokvelSystemManagementProject-master\\StokvelSystemManagementProject-master\\StokvelManagementSystem\\StokvelManagementSystem.csproj",
+      "projectUniqueName": "C:\\Users\\UrbanTech\\source\\repos\\StokvelSystemManagement\\StokvelSystem\\StokvelManagementSystem\\StokvelManagementSystem.csproj",
       "projectName": "StokvelManagementSystem",
-      "projectPath": "C:\\Users\\UrbanTech\\Downloads\\StokvelSystemManagementProject-master\\StokvelSystemManagementProject-master\\StokvelManagementSystem\\StokvelManagementSystem.csproj",
+      "projectPath": "C:\\Users\\UrbanTech\\source\\repos\\StokvelSystemManagement\\StokvelSystem\\StokvelManagementSystem\\StokvelManagementSystem.csproj",
       "packagesPath": "C:\\Users\\UrbanTech\\.nuget\\packages\\",
-      "outputPath": "C:\\Users\\UrbanTech\\Downloads\\StokvelSystemManagementProject-master\\StokvelSystemManagementProject-master\\StokvelManagementSystem\\obj\\",
+      "outputPath": "C:\\Users\\UrbanTech\\source\\repos\\StokvelSystemManagement\\StokvelSystem\\StokvelManagementSystem\\obj\\",
       "projectStyle": "PackageReference",
       "configFilePaths": [
         "C:\\Users\\UrbanTech\\AppData\\Roaming\\NuGet\\NuGet.Config",
