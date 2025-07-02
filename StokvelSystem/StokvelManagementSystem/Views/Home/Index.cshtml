@@ -1,0 +1,128 @@
+﻿@{
+    ViewData["Title"] = "Home Page";
+}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>@ViewData["Title"]</title>
+
+    <!-- Bootstrap CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
+</head>
+<body>
+    <!-- Navbar -->
+    <nav class="navbar navbar-expand-lg navbar-light bg-white shadow-sm border-bottom">
+        <div class="container">
+            <a class="navbar-brand fw-bold d-flex align-items-center" href="#" style="font-size: 1.6rem; color: #1f3f5b;">
+                <i class="fas fa-coins me-2 text-primary"></i> Stokvel
+            </a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarContent"
+                    aria-controls="navbarContent" aria-expanded="false" aria-label="Toggle navigation">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+
+            <div class="collapse navbar-collapse" id="navbarContent">
+                <ul class="navbar-nav ms-auto align-items-center fw-semibold gap-3">
+                    <li class="nav-item">
+                        <a class="nav-link text-dark d-flex align-items-center" asp-controller="Account" asp-action="Login">
+                            <i class="fas fa-sign-in-alt me-2"></i> Login
+                        </a>
+                    </li>
+
+                    <li class="nav-item">
+                        <a class="nav-link text-dark d-flex align-items-center" asp-controller="Registration" asp-action="Index">
+                            <i class="fas fa-user-plus me-2"></i> Registration
+                        </a>
+                    </li>
+
+                    <li class="nav-item">
+                        <a class="nav-link text-dark d-flex align-items-center" asp-controller="Groups" asp-action="ListGroups" asp-route-showCreate="true">
+                            <i class="fas fa-users me-2"></i> Stokvel Groups
+                        </a>
+                    </li>
+
+                    <li class="nav-item">
+                        <a class="nav-link text-dark d-flex align-items-center" asp-controller="Groups" asp-action="JoinRequestsDashboard">
+                            <i class="fas fa-user-check me-2"></i> Requests
+                        </a>
+                    </li>
+
+                    <!-- Changed from dropdown to dropup -->
+                    <li class="nav-item dropup">
+                        <a class="nav-link dropdown-toggle text-dark d-flex align-items-center" href="#"
+                           id="transactionsDropup" role="button" data-bs-toggle="dropdown"
+                           aria-expanded="false" data-bs-auto-close="outside">
+                            <i class="fas fa-exchange-alt me-2"></i> Transactions
+                        </a>
+                        <ul class="dropdown-menu shadow-sm border-0 rounded-3" aria-labelledby="transactionsDropup">
+                            <li>
+                                <a class="dropdown-item d-flex align-items-center" asp-controller="Transactions" asp-action="Index">
+                                    <i class="fas fa-hand-holding-usd me-3 text-primary"></i> Contributions
+                                </a>
+                            </li>
+                            <li>
+                                <a class="dropdown-item d-flex align-items-center" asp-controller="Transactions" asp-action="Index">
+                                    <i class="fas fa-money-bill-wave me-3 text-primary"></i> Payouts
+                                </a>
+                            </li>
+                        </ul>
+                    </li>
+
+                    <li class="nav-item">
+                        <a class="nav-link text-dark d-flex align-items-center" href="#">
+                            <i class="fas fa-chart-line me-2"></i> Reports
+                        </a>
+                    </li>
+
+                    <li class="nav-item">
+                        <form asp-controller="Account" asp-action="Logout" method="post" class="d-inline">
+                            @Html.AntiForgeryToken()
+                            <button type="submit" class="btn btn-link nav-link text-dark d-flex align-items-center p-0">
+                                <i class="fas fa-sign-out-alt me-2"></i> Logout
+                            </button>
+                        </form>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Hero Section -->
+    <section class="py-5 text-center bg-light">
+        <div class="container">
+            <h1 class="display-4 fw-bold text-dark mb-3" style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;">
+                Smart Savings, Stronger Communities
+            </h1>
+            <p class="lead text-muted mb-4">
+                Join a community-driven financial system that empowers you to save, invest, and grow together.
+            </p>
+            <a href="@Url.Action("Index", "Registration")" class="btn btn-primary btn-lg px-4">
+                Join Now
+            </a>
+        </div>
+    </section>
+
+    <!-- Bootstrap JS Bundle with Popper -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+
+    <!-- Dropup Initialization Script -->
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            // Initialize the dropup manually if needed
+            var transactionsDropup = document.getElementById('transactionsDropup');
+            if (transactionsDropup) {
+                transactionsDropup.addEventListener('click', function (e) {
+                    e.preventDefault();
+                    var dropupInstance = new bootstrap.Dropdown(this);
+                    dropupInstance.toggle();
+                });
+            }
+        });
+    </script>
+</body>
+</html>

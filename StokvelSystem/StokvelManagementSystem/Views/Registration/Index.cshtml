@@ -1,0 +1,171 @@
+﻿@model StokvelManagementSystem.Models.Member
+
+@{
+    ViewData["Title"] = "Member Registration";
+}
+@section Styles {
+    <link rel="stylesheet" href="~/css/member-registration.css" />
+}
+
+
+<h2 class="text-center page-title">Member Registration</h2>
+
+<!-- Search Bar -->
+<form asp-controller="Registration" asp-action="Search" method="get" class="d-flex justify-content-center mb-4">
+    @Html.AntiForgeryToken()
+    <div asp-validation-summary="All" class="text-danger text-center"></div>
+
+    <div class="input-group w-50">
+        <input class="form-control" type="search" name="query" placeholder="Search Member by National ID" aria-label="Search" />
+        <button class="btn btn-outline-primary" type="submit">
+            <i class="fas fa-search"></i> Search
+        </button>
+    </div>
+</form>
+
+<!-- Registration Form -->
+<div class="card p-4 mx-auto" style="max-width: 900px;">
+    <form asp-controller="Registration" asp-action="Index" method="post" novalidate>
+        @Html.AntiForgeryToken()
+
+        <!-- Personal Information -->
+        <div class="row mb-3">
+            <div class="col-md-4">
+                <div class="input-group">
+                    <span class="input-group-text"><i class="fas fa-user"></i></span>
+                    <input asp-for="FirstName" class="form-control" placeholder="First Name" />
+                </div>
+                <span asp-validation-for="FirstName" class="text-danger"></span>
+            </div>
+            <div class="col-md-4">
+                <div class="input-group">
+                    <span class="input-group-text"><i class="fas fa-user-edit"></i></span>
+                    <input asp-for="MiddleName" class="form-control" placeholder="Middle Name (optional)" />
+                </div>
+                <span asp-validation-for="MiddleName" class="text-danger"></span>
+            </div>
+            <div class="col-md-4">
+                <div class="input-group">
+                    <span class="input-group-text"><i class="fas fa-user"></i></span>
+                    <input asp-for="LastName" class="form-control" placeholder="Last Name" />
+                </div>
+                <span asp-validation-for="LastName" class="text-danger"></span>
+            </div>
+        </div>
+
+        <!-- Identification & Contact -->
+        <div class="row mb-3">
+            <div class="col-md-4">
+                <div class="input-group">
+                    <span class="input-group-text"><i class="fas fa-calendar-alt"></i></span>
+                    <input asp-for="DOB" type="date" class="form-control" />
+                </div>
+                <span asp-validation-for="DOB" class="text-danger"></span>
+            </div>
+            <div class="col-md-4">
+                <div class="input-group">
+                    <span class="input-group-text"><i class="fas fa-id-card"></i></span>
+                    <input asp-for="NationalID" class="form-control" placeholder="e.g. 85071200G23" />
+                </div>
+                <span asp-validation-for="NationalID" class="text-danger"></span>
+            </div>
+            <div class="col-md-4">
+                <div class="input-group">
+                    <span class="input-group-text"><i class="fas fa-phone"></i></span>
+                    <input asp-for="Phone" class="form-control" placeholder="e.g. 0772123456" />
+                </div>
+                <span asp-validation-for="Phone" class="text-danger"></span>
+            </div>
+        </div>
+
+        <!-- Email & Gender -->
+        <div class="row mb-3">
+            <div class="col-md-6">
+                <div class="input-group">
+                    <span class="input-group-text"><i class="fas fa-envelope"></i></span>
+                    <input asp-for="Email" type="email" class="form-control" placeholder="you@example.com" />
+                </div>
+                <span asp-validation-for="Email" class="text-danger"></span>
+            </div>
+            <div class="col-md-6">
+                <div class="input-group">
+                    <span class="input-group-text"><i class="fas fa-venus-mars"></i></span>
+                    <select asp-for="GenderID" asp-items="ViewBag.GenderList" class="form-control">
+                        <option value="">-- Select Gender --</option>
+                    </select>
+                </div>
+                <span asp-validation-for="GenderID" class="text-danger"></span>
+            </div>
+        </div>
+
+        <!-- Address -->
+        <div class="row mb-3">
+            <div class="col-12">
+                <div class="input-group">
+                    <span class="input-group-text"><i class="fas fa-home"></i></span>
+                    <textarea asp-for="Address" class="form-control" rows="3" placeholder="Enter your address here..."></textarea>
+                </div>
+                <span asp-validation-for="Address" class="text-danger"></span>
+            </div>
+        </div>
+
+        <!-- Registration Date -->
+        <div class="row mb-4">
+            <div class="col-md-6 mx-auto">
+                <div class="input-group">
+                    <span class="input-group-text"><i class="fas fa-calendar-check"></i></span>
+                    <input asp-for="RegistrationDate" type="date" class="form-control" value="@DateTime.Now.ToString("yyyy-MM-dd")" readonly />
+                </div>
+                <span asp-validation-for="RegistrationDate" class="text-danger"></span>
+            </div>
+        </div>
+
+        <!-- Login Details -->
+        <div class="row mb-3">
+            <div class="col-12">
+                <div class="form-section-title">Login Details</div>
+            </div>
+            <div class="col-md-4">
+                <div class="input-group">
+                    <span class="input-group-text"><i class="fas fa-user-circle"></i></span>
+                    <input asp-for="Username" class="form-control" placeholder="Choose a username" />
+                </div>
+                <span asp-validation-for="Username" class="text-danger"></span>
+            </div>
+            <div class="col-md-4">
+                <div class="input-group">
+                    <span class="input-group-text"><i class="fas fa-lock"></i></span>
+                    <input asp-for="Password" type="password" class="form-control" placeholder="Enter password" />
+                </div>
+                <span asp-validation-for="Password" class="text-danger"></span>
+            </div>
+            <div class="col-md-4">
+                <div class="input-group">
+                    <span class="input-group-text"><i class="fas fa-lock"></i></span>
+                    <input asp-for="ConfirmPassword" type="password" class="form-control" placeholder="Confirm password" />
+                </div>
+                <span asp-validation-for="ConfirmPassword" class="text-danger"></span>
+            </div>
+        </div>
+
+        <!-- Buttons -->
+        <div class="row mt-4">
+            <div class="col-md-6 text-start">
+                <small class="text-muted d-block mb-2">Normal Group Member?</small>
+                <button type="submit" name="actionType" value="Register" class="btn btn-primary btn-sm">
+                    <i class="fas fa-user-plus me-1"></i> Register
+                </button>
+            </div>
+            <div class="col-md-6 text-end">
+                <small class="text-muted d-block mb-2">Admin and create own group?</small>
+                <button type="submit" name="actionType" value="Admin" class="btn btn-primary btn-sm">
+                    <i class="fas fa-user-shield me-1"></i> Create Admin Account
+                </button>
+            </div>
+        </div>
+    </form>
+</div>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+}

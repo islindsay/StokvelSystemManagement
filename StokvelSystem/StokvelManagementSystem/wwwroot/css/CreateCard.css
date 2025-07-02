@@ -1,0 +1,40 @@
+﻿#paymentDetailsCard {
+    max-width: 320px;
+    background-color: #e6f2ff; /* light blue */
+    text-align: left;
+    border-radius: 12px;
+    box-shadow: 0 4px 12px rgba(0, 123, 255, 0.25); /* soft blue glow */
+    padding: 1rem !important;
+    margin-left: 0;
+}
+
+    /* Make input fields a bit smaller */
+    #paymentDetailsCard input.form-control {
+        font-size: 0.9rem;
+        padding: 0.35rem 0.5rem;
+    }
+
+    /* Label style - adjusted for blue theme */
+    #paymentDetailsCard label {
+        font-size: 0.85rem;
+        font-weight: 600;
+        color: #0d6efd; /* Bootstrap blue or choose another */
+    }
+
+    /* Adjust card body padding */
+    #paymentDetailsCard .card-body {
+        padding: 0.5rem !important;
+    }
+
+
+.generate-receipt-link {
+    text-decoration: none;
+    color: #007bff; /* Bootstrap's link blue */
+    font-weight: 500;
+}
+
+    .generate-receipt-link:hover {
+        text-decoration: underline;
+        color: #0056b3; /* A darker shade on hover */
+    }
+

@@ -1,0 +1,353 @@
+﻿@model StokvelManagementSystem.Models.Group
+
+@{
+    ViewData["Title"] = "Group Dashboard";
+
+    var showNewTab = Context.Request.Query["showNewTab"] == "true";
+    var showJoinedTab = !showNewTab;
+}
+
+<link rel="stylesheet" href="~/css/stokvel-cards.css" />
+
+<h2>Group Dashboard</h2>
+
+@if (Model.GroupCreated)
+{
+    <div class="alert alert-success alert-dismissible fade show" role="alert">
+        Group created successfully!
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+    </div>
+}
+
+<ul class="nav nav-tabs" id="groupTabs" role="tablist">
+    <li class="nav-item" role="presentation">
+        <a class="nav-link @(showJoinedTab ? "active" : "")" id="joined-tab" data-bs-toggle="tab" href="#joined" role="tab">Joined</a>
+    </li>
+    <li class="nav-item" role="presentation">
+        <a class="nav-link @(showNewTab ? "active" : "")" id="new-tab" data-bs-toggle="tab" href="#new" role="tab">New</a>
+    </li>
+    @if (Model.CanCreate)
+    {
+        <li class="nav-item" role="presentation">
+            <a class="nav-link" id="create-tab" data-bs-toggle="tab" href="#create" role="tab">Create</a>
+        </li>
+    }
+</ul>
+
+<div class="tab-content" id="groupTabsContent">
+    <!-- Joined Tab -->
+    <div class="tab-pane fade @(showJoinedTab ? "show active" : "") p-3" id="joined" role="tabpanel">
+        <form asp-action="ListGroups" asp-controller="Groups" method="get" class="mb-3">
+            <label for="nationalId" class="form-label">Enter National ID:</label>
+            <div class="input-group">
+                <input type="hidden" name="memberId" value="@Model.MemberId" />
+                <input type="text" id="nationalId" name="nationalId" value="@Model.SearchNationalId" class="form-control" placeholder="Enter National ID" required />
+                <button type="submit" class="btn btn-primary">Search</button>
+            </div>
+        </form>
+
+        @* Existing Joined tab rendering unchanged *@
+        @if (Model.MyGroups != null && Model.MyGroups.Any())
+        {
+            var frequencies = new[] { "Daily", "Weekly", "Monthly", "Yearly" };
+
+            foreach (var freq in frequencies)
+            {
+                var groups = Model.MyGroups.Where(g => g.FrequencyName == freq).ToList();
+                if (groups.Any())
+                {
+                    <div class="group-section mb-5">
+                        <h4 class="mb-3">@freq Groups</h4>
+                        <div class="row">
+                            @foreach (var group in groups)
+                            {
+                                <div class="col-md-4">
+                                    <div class="card shadow-sm mb-4">
+                                        <div class="frequency-accent @freq"></div>
+                                        <div class="card-body">
+
+                                            <div class="d-flex justify-content-between align-items-center mb-3">
+                                                <h5 class="card-title mb-0">@group.GroupName</h5>
+                                                <a asp-controller="Groups"
+                                                   asp-action="JoinRequestsDashboard"
+                                                   asp-route-groupId="@group.ID"
+                                                   class="btn btn-sm btn-outline-primary">
+                                                    <i class="fas fa-tachometer-alt"></i> Dashboard
+                                                </a>
+                                            </div>
+                                            <p class="card-text"><strong>Contribution:</strong> @($"{(group.Currency ?? "R")} {(group.ContributionAmount?.ToString("0.00") ?? "0.00")}")</p>
+                                            <p class="card-text"><strong>Members:</strong> Up to @group.MemberLimit</p>
+                                            <p class="card-text"><strong>Payout Type:</strong> @group.PayoutType</p>
+                                            <p class="card-text"><strong>Frequency:</strong> @group.FrequencyName</p>
+                                            <p class="card-text"><strong>Duration:</strong> @group.Duration</p>
+                                            <p class="card-text"><strong>Start Date:</strong> @(group.StartDate?.ToShortDateString() ?? "Not Set")</p>
+                                            <p class="card-text"><strong>Penalty:</strong> @($"{(group.Currency ?? "R")} {(group.PenaltyAmount.ToString("0.00") ?? "0.00")} after {group.PenaltyGraceDays} days")</p>
+                                            <p class="card-text"><strong>Deferrals:</strong> @(group.AllowDeferrals ? "Allowed" : "Not Allowed")</p>
+
+                                            <div class="card-actions">
+                                                <!-- Leave Group Button -->
+                                                <form asp-action="LeaveGroup" method="post">
+                                                    <input type="hidden" name="GroupId" value="@group.ID" />
+                                                    <button type="submit" class="btn btn-outline-danger">
+                                                        <i class="fas fa-sign-out-alt"></i> Leave Group
+                                                    </button>
+                                                </form>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            }
+                        </div>
+                    </div>
+                }
+            }
+        }
+        else if (Model.MemberId > 0)
+        {
+            <p class="text-muted">You haven't joined any groups yet.</p>
+        }
+    </div>
+
+    <!-- New Tab -->
+    <div class="tab-pane fade @(showNewTab ? "show active" : "") p-3" id="new" role="tabpanel">
+        <form asp-action="ListGroups" asp-controller="Groups" method="get" class="mb-3">
+            <label for="searchNationalId" class="form-label">Enter National ID to Find New Groups:</label>
+            <div class="input-group">
+                <input type="text" id="searchNationalId" name="nationalId" value="@Model.SearchNationalId" class="form-control" placeholder="National ID" required />
+                <input type="hidden" name="memberId" value="@Model.MemberId" />
+                <input type="hidden" name="showNewGroups" value="true" />
+                <input type="hidden" name="showNewTab" value="true" />
+                <button type="submit" class="btn btn-primary">Search</button>
+            </div>
+        </form>
+
+
+        @if (!string.IsNullOrEmpty(Model.SearchNationalId))
+        {
+            if (Model.NewGroups != null && Model.NewGroups.Any())
+            {
+                var frequencies = new[] { "Daily", "Weekly", "Monthly", "Yearly" };
+                foreach (var freq in frequencies)
+                {
+                    var groups = Model.NewGroups.Where(g => g.FrequencyName == freq).ToList();
+                    if (groups.Any())
+                    {
+                        <div class="group-section mb-5">
+                            <h4 class="mb-3">@freq Groups</h4>
+                            <div class="row">
+                                @foreach (var group in groups)
+                                {
+                                    <div class="col-md-4">
+                                        <div class="card shadow-sm mb-4">
+                                            <div class="frequency-accent @freq"></div>
+                                            <div class="card-body">
+                                                <h5 class="card-title">@group.GroupName</h5>
+                                                <p class="card-text"><strong>Contribution:</strong> @($"{(group.Currency ?? "R")} {(group.ContributionAmount?.ToString("0.00") ?? "0.00")}")</p>
+                                                <p class="card-text"><strong>Members:</strong> Up to @group.MemberLimit</p>
+                                                <p class="card-text"><strong>Payout Type:</strong> @group.PayoutType</p>
+                                                <p class="card-text"><strong>Frequency:</strong> @group.FrequencyName</p>
+                                                <p class="card-text"><strong>Duration:</strong> @group.Duration</p>
+                                                <p class="card-text"><strong>Start Date:</strong> @(group.StartDate?.ToShortDateString() ?? "Not Set")</p>
+                                                <p class="card-text"><strong>Penalty:</strong> @($"{(group.Currency ?? "R")} {(group.PenaltyAmount.ToString("0.00") ?? "0.00")} after {group.PenaltyGraceDays} days")</p>
+                                                <p class="card-text"><strong>Deferrals:</strong> @(group.AllowDeferrals ? "Allowed" : "Not Allowed")</p>
+
+                                                <form asp-action="RequestToJoin" asp-controller="Groups" method="get">
+                                                    <input type="hidden" name="GroupId" value="@group.ID" />
+                                                    <input type="hidden" name="NationalId" value="@Model.SearchNationalId" />
+                                                    <button type="submit" class="btn btn-success w-100">Request To Join Group</button>
+                                                </form>
+                                            </div>
+                                        </div>
+                                    </div>
+                                }
+                            </div>
+                        </div>
+                    }
+                }
+            }
+            else
+            {
+                <p class="text-muted">No new groups found for the provided National ID.</p>
+            }
+        }
+    </div>
+
+    <!-- Create Tab -->
+    @if (Model.CanCreate)
+    {
+        <div class="tab-pane fade p-3" id="create" role="tabpanel">
+            <h4 class="mb-4"><i class="bi bi-plus-circle me-2"></i>Create a New Group</h4>
+
+            <form asp-controller="Groups" asp-action="CreateGroup" method="post" id="createGroupForm">
+                @Html.AntiForgeryToken()
+                <input type="hidden" name="MemberId" value="@Model.MemberId" />
+
+                @if (!ViewData.ModelState.IsValid)
+                {
+                    <div class="alert alert-danger">
+                        <h5 class="mb-2">Please correct the following errors:</h5>
+                        <ul>
+                            @foreach (var error in ViewData.ModelState.Values.SelectMany(v => v.Errors))
+                            {
+                                <li>@error.ErrorMessage</li>
+                            }
+                        </ul>
+                    </div>
+                }
+
+                <div class="row mb-3">
+                    <div class="col-md-6">
+                        <label class="form-label">Confirm Your National ID</label>
+                        <div class="input-group">
+                            <span class="input-group-text"><i class="bi bi-card-text"></i></span>
+                            <input type="text" name="NationalID" class="form-control" placeholder="National ID" required />
+                        </div>
+                    </div>
+                </div>
+
+                <div class="row mb-3">
+                    <div class="col-md-6">
+                        <label asp-for="GroupName" class="form-label"></label>
+                        <div class="input-group">
+                            <span class="input-group-text"><i class="bi bi-people-fill"></i></span>
+                            <input asp-for="GroupName" class="form-control" />
+                        </div>
+                        <span asp-validation-for="GroupName" class="text-danger"></span>
+                    </div>
+
+                    <div class="col-md-6">
+                        <label asp-for="PayoutTypeID" class="form-label"></label>
+                        <div class="input-group">
+                            <span class="input-group-text"><i class="bi bi-shuffle"></i></span>
+                            <select asp-for="PayoutTypeID" asp-items="Model.PayoutTypes" class="form-select">
+                                <option value="">-- Select Payout Type --</option>
+                            </select>
+                        </div>
+                        <span asp-validation-for="PayoutTypeID" class="text-danger"></span>
+                    </div>
+                </div>
+
+                <div class="row mb-3">
+                    <div class="col-md-4">
+                        <label asp-for="Duration" class="form-label"></label>
+                        <div class="input-group">
+                            <span class="input-group-text"><i class="bi bi-hourglass-split"></i></span>
+                            <input asp-for="Duration" class="form-control" />
+                        </div>
+                        <span asp-validation-for="Duration" class="text-danger"></span>
+                    </div>
+
+                    <div class="col-md-4">
+                        <label asp-for="MemberLimit" class="form-label"></label>
+                        <div class="input-group">
+                            <span class="input-group-text"><i class="bi bi-person-plus-fill"></i></span>
+                            <input asp-for="MemberLimit" class="form-control" />
+                        </div>
+                        <span asp-validation-for="MemberLimit" class="text-danger"></span>
+                    </div>
+
+                    <div class="col-md-4">
+                        <label asp-for="ContributionAmount" class="form-label"></label>
+                        <div class="input-group">
+                            <span class="input-group-text"><i class="bi bi-cash-coin"></i></span>
+                            <input asp-for="ContributionAmount" class="form-control" />
+                        </div>
+                        <span asp-validation-for="ContributionAmount" class="text-danger"></span>
+                    </div>
+                </div>
+
+                <div class="row mb-3">
+                    <div class="col-md-6">
+                        <label asp-for="CurrencyID" class="form-label"></label>
+                        <div class="input-group">
+                            <span class="input-group-text"><i class="bi bi-currency-exchange"></i></span>
+                            <select asp-for="CurrencyID" asp-items="Model.Currencies" class="form-select">
+                                <option value="">-- Select Currency --</option>
+                            </select>
+                        </div>
+                        <span asp-validation-for="CurrencyID" class="text-danger"></span>
+                    </div>
+
+                    <div class="col-md-6">
+                        <label asp-for="CreatedDate" class="form-label"></label>
+                        <div class="input-group">
+                            <span class="input-group-text"><i class="bi bi-calendar-check"></i></span>
+                            <input type="date" class="form-control" value="@Model.CreatedDate.ToString("yyyy-MM-dd")" disabled />
+                            <input asp-for="CreatedDate" type="hidden" />
+                        </div>
+                    </div>
+                </div>
+
+                <div class="row mb-3">
+                    <div class="col-md-6">
+                        <label asp-for="PenaltyAmount" class="form-label"></label>
+                        <div class="input-group">
+                            <span class="input-group-text"><i class="bi bi-exclamation-triangle"></i></span>
+                            <input asp-for="PenaltyAmount" class="form-control" />
+                        </div>
+                        <span asp-validation-for="PenaltyAmount" class="text-danger"></span>
+                    </div>
+
+                    <div class="col-md-6">
+                        <label asp-for="PenaltyGraceDays" class="form-label"></label>
+                        <div class="input-group">
+                            <span class="input-group-text"><i class="bi bi-clock-history"></i></span>
+                            <input asp-for="PenaltyGraceDays" class="form-control" />
+                        </div>
+                        <span asp-validation-for="PenaltyGraceDays" class="text-danger"></span>
+                    </div>
+                </div>
+
+                <div class="mb-4">
+                    <div class="form-check">
+                        <input asp-for="AllowDeferrals" class="form-check-input" />
+                        <label asp-for="AllowDeferrals" class="form-check-label ms-1"></label>
+                    </div>
+                </div>
+                <div class="row mb-3">
+                    <div class="col-md-6">
+                        <label asp-for="FrequencyID" class="form-label">Frequency</label>
+                        <div class="input-group">
+                            <span class="input-group-text"><i class="bi bi-clock"></i></span>
+                            <select asp-for="FrequencyID" asp-items="Model.FrequencyOptions" class="form-select">
+                                <option value="">-- Select Frequency --</option>
+                            </select>
+                        </div>
+                        <span asp-validation-for="FrequencyID" class="text-danger"></span>
+                    </div>
+                </div>
+
+                <div class="text-end">
+                    <button type="submit" class="btn btn-primary px-4">
+                        <i class="bi bi-plus-circle me-1"></i> Create Group
+                    </button>
+                </div>
+            </form>
+        </div>
+      
+    }
+</div>
+
+@section Scripts {
+    @await Html.PartialAsync("_ValidationScriptsPartial")
+    @if (Model.CanCreate)
+    {
+        <script>
+            document.addEventListener('DOMContentLoaded', function () {
+                // If redirected after group creation, activate Create tab
+                const urlParams = new URLSearchParams(window.location.search);
+                if (urlParams.has('showCreate')) {
+                    document.querySelectorAll('.nav-link').forEach(link => link.classList.remove('active'));
+                    document.querySelectorAll('.tab-pane').forEach(pane => pane.classList.remove('show', 'active'));
+
+                    document.getElementById('create-tab')?.classList.add('active');
+                    document.getElementById('create')?.classList.add('show', 'active');
+                }
+            });
+        </script>
+    }
+}
+
+
+
+

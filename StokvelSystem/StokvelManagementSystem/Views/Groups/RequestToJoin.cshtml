@@ -1,0 +1,35 @@
+﻿@model StokvelManagementSystem.Models.RequestToJoinView
+
+@{
+    ViewData["Title"] = "Confirm Join Request";
+}
+<link rel="stylesheet" href="~/css/stokvel-cards.css" />
+<h2>Request To Join </h2>
+<h12>If you are sure you want to join the Group then check out the information before hitting the "ConfirmRequest"</h12>
+
+<div class="card">
+    <div class="card-body">
+        <h5 class="card-title">@Model.GroupName</h5>
+        <p class="card-text"><strong>Contribution:</strong> @($"{(Model.Currency ?? "R")} {(Model.ContributionAmount?.ToString("0.00") ?? "0.00")}")</p>
+        <p class="card-text"><strong>Members:</strong> Up to @Model.MemberLimit</p>
+        <p class="card-text"><strong>Payout Type:</strong> @Model.PayoutType</p>
+        <p class="card-text"><strong>Frequency:</strong> @Model.FrequencyName</p>
+        <p class="card-text"><strong>Duration:</strong>@Model.Duration</p>
+        <p class="card-text"><strong>Start Date:</strong> @(Model.StartDate?.ToShortDateString() ?? "Not Set")</p>
+        <p class="card-text"><strong>Penalty:</strong> @($"{(Model.Currency ?? "R")} {Model.PenaltyAmount.ToString("0.00")} after {Model.PenaltyGraceDays} days")</p>
+        <p class="card-text"><strong>Deferrals:</strong> @(Model.AllowDeferrals ? "Allowed" : "Not Allowed")</p>
+
+       <form asp-action="JoinGroupConfirmed" asp-controller="Groups" method="post">
+    <input type="hidden" name="GroupId" value="@Model.GroupId" />
+    <input type="hidden" name="NationalId" value="@Model.NationalId" />
+    <button type="submit" class="btn btn-primary">Confirm Request</button>
+
+
+    <a asp-action="ListGroups" asp-controller="Groups" 
+       asp-route-memberId="@Model.MemberId" 
+       asp-route-nationalId="@Model.NationalId" 
+       class="btn btn-secondary">Cancel</a>
+</form>
+
+    </div>
+</div>

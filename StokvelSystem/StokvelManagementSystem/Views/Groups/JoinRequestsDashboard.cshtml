@@ -1,0 +1,116 @@
+﻿@model DashboardModel
+
+<div class="row">
+    <!-- Left Sidebar -->
+    <div class="col-md-3 sidebar">
+        <a asp-action="JoinRequestsDashboard" asp-route-status="Pending" asp-route-groupId="@Model.Group.ID"
+           class="@(Model.SelectedStatus == "Pending" ? "active" : "")">
+            <i class="fas fa-clock"></i> Pending
+        </a>
+        <a asp-action="JoinRequestsDashboard" asp-route-status="Approved" asp-route-groupId="@Model.Group.ID"
+           class="@(Model.SelectedStatus == "Approved" ? "active" : "")">
+            <i class="fas fa-check-circle"></i> Approved
+        </a>
+        <a asp-action="JoinRequestsDashboard" asp-route-status="Denied" asp-route-groupId="@Model.Group.ID"
+           class="@(Model.SelectedStatus == "Denied" ? "active" : "")">
+            <i class="fas fa-times-circle"></i> Denied
+        </a>
+
+        @if (!Model.IsMemberView)
+        {
+            <div class="admin-actions mt-4">
+                <a asp-action="GroupSettings" asp-route-id="@Model.Group.ID"
+                   class="btn btn-sm btn-outline-primary">
+                    <i class="fas fa-cog"></i> Group Settings
+                </a>
+            </div>
+        }
+    </div>
+
+    <!-- Main Content -->
+    <div class="col-md-9 main-content">
+        <div class="d-flex justify-content-between align-items-center mb-3">
+            <h2>
+                <i class="fas fa-user-friends"></i>
+                @Model.Group.Name - @Model.SelectedStatus Requests
+            </h2>
+            <span class="badge bg-@(Model.IsMemberView ? "warning" : "success")">
+                @(Model.IsMemberView ? "Member View" : "Admin View")
+            </span>
+        </div>
+
+        @if (!Model.Requests.Any())
+        {
+            <div class="alert alert-info">
+                No @Model.SelectedStatus.ToLower() requests found.
+            </div>
+        }
+        else
+        {
+            <div class="table-responsive">
+                <table class="table table-striped">
+                    <thead>
+                        <tr>
+                            @if (Model.AdminTools)
+                            {
+                                <th>Member</th>
+                                <th>National ID</th>
+                            }
+                            <th>Group</th>
+                            <th>Contribution</th>
+                            <th>Date</th>
+                            @if (Model.SelectedStatus == "Pending" && Model.AdminTools)
+                            {
+                                <th>Actions</th>
+                            }
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var request in Model.Requests)
+                        {
+                            <tr>
+                                @if (Model.AdminTools)
+                                {
+                                    <td>@request.FirstName @request.LastName</td>
+                                    <td>@request.NationalID</td>
+                                }
+                                <td>@request.GroupName</td>
+                                <td>@Model.Group.Currency @request.ContributionAmount.ToString("N2")</td>
+                                <td>@request.RequestedDate.ToString("dd MMM yyyy")</td>
+                                @if (Model.SelectedStatus == "Pending" && Model.AdminTools)
+                                {
+                                    <td>
+                                        <form asp-action="ProcessRequest" method="post">
+                                            <input type="hidden" name="requestId" value="@request.RequestId" />
+                                            <button type="submit" name="action" value="approve" class="btn btn-sm btn-success">
+                                                Approve
+                                            </button>
+                                            <button type="submit" name="action" value="deny" class="btn btn-sm btn-danger ms-1">
+                                                Deny
+                                            </button>
+                                        </form>
+                                    </td>
+                                }
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        }
+
+        <!-- Member-Specific Sections -->
+        @if (Model.IsMemberView)
+        {
+            <div class="member-sections mt-4">
+                <div class="card">
+                    <div class="card-header">
+                        <h5><i class="fas fa-history"></i> Your Contribution History</h5>
+                    </div>
+                    <div class="card-body">
+                        @await Component.InvokeAsync("MemberContributions", new { groupId = Model.Group.ID })
+                    </div>
+                </div>
+            </div>
+        }
+    </div>
+</div>

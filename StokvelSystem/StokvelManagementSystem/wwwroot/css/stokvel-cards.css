@@ -1,0 +1,84 @@
+﻿
+
+.card {
+    border-radius: 15px;
+    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.12);
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+    background: #fff;
+    width: 300px;
+    margin: 1rem;
+  
+}
+
+.card:hover {
+    transform: translateY(-10px);
+    box-shadow: 0 16px 40px rgba(0, 0, 0, 0.2);
+}
+
+.card-body {
+    padding: 1.5rem;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+}
+
+.card h4 {
+    font-weight: 700;
+    margin-bottom: 0.75rem;
+    color: #2c3e50;
+}
+
+.card p {
+    margin-bottom: 0.5rem;
+    color: #555;
+    font-size: 0.95rem;
+}
+
+.frequency-accent {
+    height: 5px;
+    border-radius: 15px 15px 0 0;
+    margin-bottom: 1rem;
+}
+
+.Daily {
+    background: #4caf50; /* green */
+}
+
+.Weekly {
+    background: #2196f3; /* blue */
+}
+
+.Monthly {
+    background: #ff9800; /* orange */
+}
+
+.Yearly {
+    background: #9c27b0; /* purple */
+}
+
+.btn-join {
+    background: linear-gradient(45deg, #6a11cb, #2575fc);
+    border: none;
+    padding: 10px 18px;
+    color: white;
+    font-weight: 600;
+    border-radius: 50px;
+    cursor: pointer;
+    transition: background 0.3s ease;
+    width: 100%;
+    margin-top: 1rem;
+}
+
+.btn-join:hover {
+    background: linear-gradient(45deg, #2575fc, #6a11cb);
+}
+
+.card-container {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 1rem;
+}
+
+h4 {
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    color: #333;
+}
