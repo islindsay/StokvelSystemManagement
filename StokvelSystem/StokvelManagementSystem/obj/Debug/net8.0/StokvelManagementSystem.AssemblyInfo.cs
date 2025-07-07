@@ -13,7 +13,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyCompanyAttribute("StokvelManagementSystem")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+5d0a792285a7a8278e3e17ace6bd2ca1b5f84ad1")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+c77b39887a5f8802e3a471da1afef5382366eba2")]
 [assembly: System.Reflection.AssemblyProductAttribute("StokvelManagementSystem")]
 [assembly: System.Reflection.AssemblyTitleAttribute("StokvelManagementSystem")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]

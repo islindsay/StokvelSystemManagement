@@ -1,9 +1,9 @@
 {
   "Version": 1,
-  "WorkspaceRootPath": "C:\\Users\\UrbanTech\\Downloads\\StokvelSystemManagementProject-master\\StokvelSystemManagementProject-master\\",
+  "WorkspaceRootPath": "C:\\Users\\UrbanTech\\source\\repos\\StokvelSystemManagement\\StokvelSystem\\",
   "Documents": [
     {
-      "AbsoluteMoniker": "D:0:0:{9C8490FD-8295-40F4-8930-F3A0C64B24D9}|StokvelManagementSystem\\StokvelManagementSystem.csproj|c:\\users\\urbantech\\downloads\\stokvelsystemmanagementproject-master\\stokvelsystemmanagementproject-master\\stokvelmanagementsystem\\models\\genders.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "AbsoluteMoniker": "D:0:0:{9C8490FD-8295-40F4-8930-F3A0C64B24D9}|StokvelManagementSystem\\StokvelManagementSystem.csproj|c:\\users\\urbantech\\source\\repos\\stokvelsystemmanagement\\stokvelsystem\\stokvelmanagementsystem\\models\\genders.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
       "RelativeMoniker": "D:0:0:{9C8490FD-8295-40F4-8930-F3A0C64B24D9}|StokvelManagementSystem\\StokvelManagementSystem.csproj|solutionrelative:stokvelmanagementsystem\\models\\genders.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
     }
   ],
@@ -24,9 +24,9 @@
               "$type": "Document",
               "DocumentIndex": 0,
               "Title": "Genders.cs",
-              "DocumentMoniker": "C:\\Users\\UrbanTech\\Downloads\\StokvelSystemManagementProject-master\\StokvelSystemManagementProject-master\\StokvelManagementSystem\\Models\\Genders.cs",
+              "DocumentMoniker": "C:\\Users\\UrbanTech\\source\\repos\\StokvelSystemManagement\\StokvelSystem\\StokvelManagementSystem\\Models\\Genders.cs",
               "RelativeDocumentMoniker": "StokvelManagementSystem\\Models\\Genders.cs",
-              "ToolTip": "C:\\Users\\UrbanTech\\Downloads\\StokvelSystemManagementProject-master\\StokvelSystemManagementProject-master\\StokvelManagementSystem\\Models\\Genders.cs",
+              "ToolTip": "C:\\Users\\UrbanTech\\source\\repos\\StokvelSystemManagement\\StokvelSystem\\StokvelManagementSystem\\Models\\Genders.cs",
               "RelativeToolTip": "StokvelManagementSystem\\Models\\Genders.cs",
               "ViewState": "AQIAAAAAAAAAAAAAAAAAAAQAAAAjAAAA",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
