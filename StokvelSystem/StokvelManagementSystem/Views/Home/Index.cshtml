@@ -28,11 +28,18 @@
 
             <div class="collapse navbar-collapse" id="navbarContent">
                 <ul class="navbar-nav ms-auto align-items-center fw-semibold gap-3">
-                    <li class="nav-item">
-                        <a class="nav-link text-dark d-flex align-items-center" asp-controller="Account" asp-action="Login">
-                            <i class="fas fa-sign-in-alt me-2"></i> Login
-                        </a>
-                    </li>
+                    @{
+                        var jwtCookie = Context.Request.Cookies["jwt"];
+                    }
+
+                    @if (string.IsNullOrEmpty(jwtCookie))
+                    {
+                        <li class="nav-item">
+                            <a class="nav-link text-dark d-flex align-items-center" asp-controller="Account" asp-action="Login">
+                                <i class="fas fa-sign-in-alt me-2"></i> Login
+                            </a>
+                        </li>
+                    }</a></li>
 
                     <li class="nav-item">
                         <a class="nav-link text-dark d-flex align-items-center" asp-controller="Registration" asp-action="Index">
@@ -79,6 +86,8 @@
                         </a>
                     </li>
 
+                     @if (!string.IsNullOrEmpty(jwtCookie))
+                    {
                     <li class="nav-item">
                         <form asp-controller="Account" asp-action="Logout" method="post" class="d-inline">
                             @Html.AntiForgeryToken()
@@ -87,6 +96,7 @@
                             </button>
                         </form>
                     </li>
+                    }
                 </ul>
             </div>
         </div>
