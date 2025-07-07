@@ -627,19 +627,24 @@
     ]
   },
   "packageFolders": {
-    "C:\\Users\\UrbanTech\\.nuget\\packages\\": {}
+    "C:\\Users\\Va Marecha\\.nuget\\packages\\": {},
+    "C:\\Program Files (x86)\\Microsoft Visual Studio\\Shared\\NuGetPackages": {}
   },
   "project": {
     "version": "1.0.0",
     "restore": {
-      "projectUniqueName": "C:\\Users\\UrbanTech\\Downloads\\StokvelSystemManagementProject-master\\StokvelSystemManagementProject-master\\StokvelManagementSystem\\StokvelManagementSystem.csproj",
+      "projectUniqueName": "C:\\Users\\Va Marecha\\PycharmProjects\\StokvelSystemManagement\\StokvelSystem\\StokvelManagementSystem\\StokvelManagementSystem.csproj",
       "projectName": "StokvelManagementSystem",
-      "projectPath": "C:\\Users\\UrbanTech\\Downloads\\StokvelSystemManagementProject-master\\StokvelSystemManagementProject-master\\StokvelManagementSystem\\StokvelManagementSystem.csproj",
-      "packagesPath": "C:\\Users\\UrbanTech\\.nuget\\packages\\",
-      "outputPath": "C:\\Users\\UrbanTech\\Downloads\\StokvelSystemManagementProject-master\\StokvelSystemManagementProject-master\\StokvelManagementSystem\\obj\\",
+      "projectPath": "C:\\Users\\Va Marecha\\PycharmProjects\\StokvelSystemManagement\\StokvelSystem\\StokvelManagementSystem\\StokvelManagementSystem.csproj",
+      "packagesPath": "C:\\Users\\Va Marecha\\.nuget\\packages\\",
+      "outputPath": "C:\\Users\\Va Marecha\\PycharmProjects\\StokvelSystemManagement\\StokvelSystem\\StokvelManagementSystem\\obj\\",
       "projectStyle": "PackageReference",
+      "fallbackFolders": [
+        "C:\\Program Files (x86)\\Microsoft Visual Studio\\Shared\\NuGetPackages"
+      ],
       "configFilePaths": [
-        "C:\\Users\\UrbanTech\\AppData\\Roaming\\NuGet\\NuGet.Config",
+        "C:\\Users\\Va Marecha\\AppData\\Roaming\\NuGet\\NuGet.Config",
+        "C:\\Program Files (x86)\\NuGet\\Config\\Microsoft.VisualStudio.FallbackLocation.config",
         "C:\\Program Files (x86)\\NuGet\\Config\\Microsoft.VisualStudio.Offline.config"
       ],
       "originalTargetFrameworks": [
@@ -647,6 +652,7 @@
       ],
       "sources": {
         "C:\\Program Files (x86)\\Microsoft SDKs\\NuGetPackages\\": {},
+        "C:\\Program Files\\dotnet\\library-packs": {},
         "https://api.nuget.org/v3/index.json": {}
       },
       "frameworks": {
@@ -664,7 +670,8 @@
         "enableAudit": "true",
         "auditLevel": "low",
         "auditMode": "direct"
-      }
+      },
+      "SdkAnalysisLevel": "9.0.300"
     },
     "frameworks": {
       "net8.0": {
@@ -694,6 +701,24 @@
         ],
         "assetTargetFallback": true,
         "warn": true,
+        "downloadDependencies": [
+          {
+            "name": "Microsoft.AspNetCore.App.Ref",
+            "version": "[8.0.17, 8.0.17]"
+          },
+          {
+            "name": "Microsoft.NETCore.App.Host.win-x64",
+            "version": "[8.0.17, 8.0.17]"
+          },
+          {
+            "name": "Microsoft.NETCore.App.Ref",
+            "version": "[8.0.17, 8.0.17]"
+          },
+          {
+            "name": "Microsoft.WindowsDesktop.App.Ref",
+            "version": "[8.0.17, 8.0.17]"
+          }
+        ],
         "frameworkReferences": {
           "Microsoft.AspNetCore.App": {
             "privateAssets": "none"
@@ -702,7 +727,7 @@
             "privateAssets": "all"
           }
         },
-        "runtimeIdentifierGraphPath": "C:\\Program Files\\dotnet\\sdk\\8.0.204/PortableRuntimeIdentifierGraph.json"
+        "runtimeIdentifierGraphPath": "C:\\Program Files\\dotnet\\sdk\\9.0.301/PortableRuntimeIdentifierGraph.json"
       }
     }
   }
