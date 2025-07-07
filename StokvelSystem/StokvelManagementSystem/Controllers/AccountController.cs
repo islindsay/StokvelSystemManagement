@@ -34,8 +34,8 @@ public class AccountController : Controller
             return Unauthorized("Invalid username or password.");
 
         bool isAdmin = CheckIsAdmin(loginUser.ID);
-        if (!isAdmin)
-            return Unauthorized("You are not authorized as admin.");
+        // if (!isAdmin)
+        //     return Unauthorized("You are not authorized as admin.");
 
         var token = GenerateJwtToken(loginUser.ID, loginUser.Username, loginUser.FirstName);
 
@@ -43,6 +43,15 @@ public class AccountController : Controller
         {
             HttpOnly = true,
             Secure = true, 
+            SameSite = SameSiteMode.Strict,
+            Expires = DateTime.UtcNow.AddHours(2)
+        });
+
+            // Store isAdmin (less secure, so HttpOnly = false to allow view access)
+        Response.Cookies.Append("isAdmin", isAdmin.ToString().ToLower(), new CookieOptions
+        {
+            HttpOnly = false, // allow access in Razor View (only do this for non-sensitive flags!)
+            Secure = true,
             SameSite = SameSiteMode.Strict,
             Expires = DateTime.UtcNow.AddHours(2)
         });

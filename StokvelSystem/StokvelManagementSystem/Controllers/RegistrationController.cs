@@ -136,6 +136,8 @@ namespace StokvelManagementSystem.Controllers
                 }
                 string token = GenerateJwtToken(newMemberId, model.Username); // Add this method (see below)
 
+                bool isAdmin = CheckIsAdmin(newMemberId);
+
                 // Store the token in a cookie (or return it however your frontend expects)
                 HttpContext.Response.Cookies.Append("jwt", token, new CookieOptions
                 {
@@ -145,14 +147,15 @@ namespace StokvelManagementSystem.Controllers
                     Expires = DateTime.UtcNow.AddHours(2)
                 });
 
-                if (actionType == "Admin")
+
+                if (isAdmin)
                 {
                     return RedirectToAction("ListGroups", "Groups", new { memberId = newMemberId, showCreate = true });
                 }
                 else
                 {
-                    
-                    return RedirectToAction("ListGroups", "Groups", new { memberId = newMemberId, showCreate = false });
+
+                    return RedirectToAction("ListGroups", "Groups", new { memberId = newMemberId, showJoinedTab = true });
                 }
             }
             catch (Exception ex)
@@ -170,6 +173,20 @@ namespace StokvelManagementSystem.Controllers
             return Convert.ToBase64String(hash);
         }
 
+        private bool CheckIsAdmin(int userId)
+        {
+            
+            using var conn = new SqlConnection(_connectionString);
+            conn.Open();
+
+            string query = @" SELECT COUNT(*) FROM MemberGroups WHERE MemberID = (SELECT MemberID FROM Logins WHERE ID = @UserId ) AND RoleID = 1"; 
+            using var cmd = new SqlCommand(query, conn);
+            cmd.Parameters.AddWithValue("@UserId", userId);
+
+            int count = (int)cmd.ExecuteScalar();
+            return count > 0;
+        }
+
         private string GenerateJwtToken(int userId, string username)
         {
             var key = Encoding.ASCII.GetBytes(_configuration["Jwt:Key"]);
@@ -179,7 +196,7 @@ namespace StokvelManagementSystem.Controllers
             {
         new Claim(ClaimTypes.NameIdentifier, userId.ToString()),
         new Claim(ClaimTypes.Name, username),
-        new Claim(ClaimTypes.Role, "Admin") 
+        new Claim(ClaimTypes.Role, "Admin")
     };
 
             var tokenDescriptor = new SecurityTokenDescriptor
