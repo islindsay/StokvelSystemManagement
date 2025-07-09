@@ -1,5 +1,7 @@
 ﻿@{
     ViewData["Title"] = "Home Page";
+    var isAdminCookie = Context.Request.Cookies["isAdmin"];
+    var isAdmin = isAdminCookie != null && isAdminCookie.ToLower() == "true";
 }
 <!DOCTYPE html>
 <html lang="en">
@@ -47,11 +49,15 @@
                         </a>
                     </li>
 
-                    <li class="nav-item">
-                        <a class="nav-link text-dark d-flex align-items-center" asp-controller="Groups" asp-action="ListGroups" asp-route-showCreate="true">
-                            <i class="fas fa-users me-2"></i> Stokvel Groups
-                        </a>
-                    </li>
+                        <li class="nav-item">
+                            <a class="nav-link text-dark d-flex align-items-center"
+                            asp-controller="Groups"
+                            asp-action="ListGroups"
+                            asp-route-showCreate="true">
+                                <i class="fas fa-users me-2"></i> Stokvel Groups
+                            </a>
+                        </li>
+
 
                     <li class="nav-item">
                         <a class="nav-link text-dark d-flex align-items-center" asp-controller="Groups" asp-action="JoinRequestsDashboard">
