@@ -120,21 +120,22 @@ namespace StokvelManagementSystem.Controllers
                 using (SqlConnection connection = new SqlConnection(_connectionString))
                 {
                     string loginQuery = @"
-                INSERT INTO Logins (Username, PasswordHash, PasswordSalt, MemberID)
-                VALUES (@Username, @PasswordHash, @PasswordSalt, @MemberID)";
+                INSERT INTO Logins (Username, PasswordHash, PasswordSalt, MemberID, NationalID)
+                VALUES (@Username, @PasswordHash, @PasswordSalt, @MemberID, @NationalID)";
 
                     using (SqlCommand cmd = new SqlCommand(loginQuery, connection))
                     {
                         cmd.Parameters.AddWithValue("@Username", model.Username);
                         cmd.Parameters.AddWithValue("@PasswordHash", hashedPassword);
                         cmd.Parameters.AddWithValue("@PasswordSalt", salt);
+                        cmd.Parameters.AddWithValue("@NationalID", model.NationalID);
                         cmd.Parameters.AddWithValue("@MemberID", newMemberId);
 
                         connection.Open();
                         cmd.ExecuteNonQuery();
                     }
                 }
-                string token = GenerateJwtToken(newMemberId, model.Username); // Add this method (see below)
+                string token = GenerateJwtToken(newMemberId, model.Username, model.FirstName, model.NationalID); // Add this method (see below)
 
                 bool isAdmin = CheckIsAdmin(newMemberId);
 
@@ -187,16 +188,19 @@ namespace StokvelManagementSystem.Controllers
             return count > 0;
         }
 
-        private string GenerateJwtToken(int userId, string username)
+        private string GenerateJwtToken(int memberId, string username, string firstname, string nationalId)
         {
             var key = Encoding.ASCII.GetBytes(_configuration["Jwt:Key"]);
             var tokenHandler = new JwtSecurityTokenHandler();
 
             var claims = new[]
             {
-        new Claim(ClaimTypes.NameIdentifier, userId.ToString()),
+        new Claim(ClaimTypes.NameIdentifier, memberId.ToString()),
         new Claim(ClaimTypes.Name, username),
-        new Claim(ClaimTypes.Role, "Admin")
+        new Claim(ClaimTypes.GivenName, firstname),
+        new Claim(ClaimTypes.Role, "Admin"),
+        new Claim("member_id", memberId.ToString()),
+        new Claim("national_id", nationalId)
     };
 
             var tokenDescriptor = new SecurityTokenDescriptor

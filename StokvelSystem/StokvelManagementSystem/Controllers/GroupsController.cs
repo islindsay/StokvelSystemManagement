@@ -24,7 +24,7 @@ namespace StokvelManagementSystem.Controllers
         }
         [HttpGet]
         public IActionResult ListGroups(bool created = false, bool showCreate = false, bool showNewGroups = false, bool showNewTab = false)
-        {
+            {
 
             var nationalId = User.Claims.FirstOrDefault(c => c.Type == "national_id")?.Value;
             var memberIdStr = User.Claims.FirstOrDefault(c => c.Type == "member_id")?.Value;
@@ -63,6 +63,18 @@ namespace StokvelManagementSystem.Controllers
             }
 
             return View(viewModel);
+                }
+
+        [HttpGet]
+        public IActionResult GetNewGroups()
+        {
+            var memberIdClaim = User.FindFirst(ClaimTypes.NameIdentifier) ?? User.FindFirst("member_id");
+            if (memberIdClaim == null) return Unauthorized();
+
+            int memberId = int.Parse(memberIdClaim.Value);
+            var newGroups = GetNewGroupsForMember(memberId); // your existing data retrieval method
+
+            return Json(newGroups); // return JSON list of groups
         }
 
         private List<Group> GetMyGroups(int memberId)

@@ -140,12 +140,12 @@ private string GenerateJwtToken(int memberId, string username, string firstname,
 
     var claims = new[]
     {
-        new Claim(ClaimTypes.NameIdentifier, memberId.ToString()), // Existing
-        new Claim(ClaimTypes.Name, username),                      // Existing
-        new Claim(ClaimTypes.GivenName, firstname),                // Existing
-        new Claim(ClaimTypes.Role, "Admin"),                       // Existing
+        new Claim(ClaimTypes.NameIdentifier, memberId.ToString()),
+        new Claim(ClaimTypes.Name, username),                     
+        new Claim(ClaimTypes.GivenName, firstname),                
+        new Claim(ClaimTypes.Role, "Admin"),                      
 
-        // ✅ Add these custom claims:
+        
         new Claim("member_id", memberId.ToString()),
         new Claim("national_id", nationalId)
     };

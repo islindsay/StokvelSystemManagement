@@ -37,15 +37,6 @@
 <div class="tab-content" id="groupTabsContent">
     <!-- Joined Tab -->
     <div class="tab-pane fade @(showJoinedTab ? "show active" : "") p-3" id="joined" role="tabpanel">
-        <form asp-action="ListGroups" asp-controller="Groups" method="get" class="mb-3">
-            <label for="nationalId" class="form-label">Enter National ID:</label>
-            <div class="input-group">
-                <input type="hidden" name="memberId" value="@Model.MemberId" />
-                <input type="text" id="nationalId" name="nationalId" value="@Model.SearchNationalId" class="form-control" placeholder="Enter National ID" required />
-                <button type="submit" class="btn btn-primary">Search</button>
-            </div>
-        </form>
-
         @* Existing Joined tab rendering unchanged *@
         @if (Model.MyGroups != null && Model.MyGroups.Any())
         {
@@ -109,71 +100,17 @@
     </div>
 
     <!-- New Tab -->
-    <div class="tab-pane fade @(showNewTab ? "show active" : "") p-3" id="new" role="tabpanel">
-        <form asp-action="ListGroups" asp-controller="Groups" method="get" class="mb-3">
-            <label for="searchNationalId" class="form-label">Enter National ID to Find New Groups:</label>
-            <div class="input-group">
-                <input type="text" id="searchNationalId" name="nationalId" value="@Model.SearchNationalId" class="form-control" placeholder="National ID" required />
-                <input type="hidden" name="memberId" value="@Model.MemberId" />
-                <input type="hidden" name="showNewGroups" value="true" />
-                <input type="hidden" name="showNewTab" value="true" />
-                <button type="submit" class="btn btn-primary">Search</button>
+        
+        <div class="tab-pane fade @(showNewTab ? "show active" : "") p-3" id="new" role="tabpanel">
+           
+            <div id="newGroupsContainer">
+                
+                <p class="text-muted">Loading groups...</p>
             </div>
-        </form>
-
-
-        @if (!string.IsNullOrEmpty(Model.SearchNationalId))
-        {
-            if (Model.NewGroups != null && Model.NewGroups.Any())
-            {
-                var frequencies = new[] { "Daily", "Weekly", "Monthly", "Yearly" };
-                foreach (var freq in frequencies)
-                {
-                    var groups = Model.NewGroups.Where(g => g.FrequencyName == freq).ToList();
-                    if (groups.Any())
-                    {
-                        <div class="group-section mb-5">
-                            <h4 class="mb-3">@freq Groups</h4>
-                            <div class="row">
-                                @foreach (var group in groups)
-                                {
-                                    <div class="col-md-4">
-                                        <div class="card shadow-sm mb-4">
-                                            <div class="frequency-accent @freq"></div>
-                                            <div class="card-body">
-                                                <h5 class="card-title">@group.GroupName</h5>
-                                                <p class="card-text"><strong>Contribution:</strong> @($"{(group.Currency ?? "R")} {(group.ContributionAmount?.ToString("0.00") ?? "0.00")}")</p>
-                                                <p class="card-text"><strong>Members:</strong> Up to @group.MemberLimit</p>
-                                                <p class="card-text"><strong>Payout Type:</strong> @group.PayoutType</p>
-                                                <p class="card-text"><strong>Frequency:</strong> @group.FrequencyName</p>
-                                                <p class="card-text"><strong>Duration:</strong> @group.Duration</p>
-                                                <p class="card-text"><strong>Start Date:</strong> @(group.StartDate?.ToShortDateString() ?? "Not Set")</p>
-                                                <p class="card-text"><strong>Penalty:</strong> @($"{(group.Currency ?? "R")} {(group.PenaltyAmount.ToString("0.00") ?? "0.00")} after {group.PenaltyGraceDays} days")</p>
-                                                <p class="card-text"><strong>Deferrals:</strong> @(group.AllowDeferrals ? "Allowed" : "Not Allowed")</p>
-
-                                                <form asp-action="RequestToJoin" asp-controller="Groups" method="get">
-                                                    <input type="hidden" name="GroupId" value="@group.ID" />
-                                                    <input type="hidden" name="NationalId" value="@Model.SearchNationalId" />
-                                                    <button type="submit" class="btn btn-success w-100">Request To Join Group</button>
-                                                </form>
-                                            </div>
-                                        </div>
-                                    </div>
-                                }
-                            </div>
-                        </div>
-                    }
-                }
-            }
-            else
-            {
-                <p class="text-muted">No new groups found for the provided National ID.</p>
-            }
-        }
-    </div>
+        </div>
 
     <!-- Create Tab -->
-    @if (Model.CanCreate)
+    @if (Model.CanCreate )
     {
         <div class="tab-pane fade p-3" id="create" role="tabpanel">
             <h4 class="mb-4"><i class="bi bi-plus-circle me-2"></i>Create a New Group</h4>
@@ -343,11 +280,83 @@
                     document.getElementById('create-tab')?.classList.add('active');
                     document.getElementById('create')?.classList.add('show', 'active');
                 }
+
+                // Optionally, load groups if New Groups tab is active on page load
+                const activeTab = document.querySelector('.tab-pane.show.active');
+                if (activeTab && activeTab.id === 'newGroupsTab') { // Replace with actual new groups tab pane id
+                    loadNewGroups();
+                }
             });
+
+            async function loadNewGroups() {
+                try {
+                    const response = await fetch('/Groups/GetNewGroups');
+                    if (!response.ok) throw new Error('Network response was not ok');
+                    const groups = await response.json();
+
+                    const container = document.getElementById('newGroupsContainer');
+                    container.innerHTML = ''; // clear old content
+
+                    if (groups.length === 0) {
+                        container.innerHTML = '<p class="text-muted">No new groups found.</p>';
+                        return;
+                    }
+
+                    const frequencies = ["Daily", "Weekly", "Monthly", "Yearly"];
+
+                    frequencies.forEach(freq => {
+                        const freqGroups = groups.filter(g => g.frequencyName === freq);
+                        if (freqGroups.length > 0) {
+                            let html = `<div class="group-section mb-5">
+                                            <h4 class="mb-3">${freq} Groups</h4>
+                                            <div class="row">`;
+
+                            freqGroups.forEach(group => {
+                                // Get nationalId from hidden input if you want to send it with form
+                                const nationalId = document.getElementById('nationalId')?.value || '';
+
+                                html += `
+                                <div class="col-md-4">
+                                    <div class="card shadow-sm mb-4">
+                                        <div class="frequency-accent ${freq}"></div>
+                                        <div class="card-body">
+                                            <h5 class="card-title">${group.groupName}</h5>
+                                            <p class="card-text"><strong>Contribution:</strong> ${(group.currency ?? "R")} ${parseFloat(group.contributionAmount).toFixed(2)}</p>
+                                            <p class="card-text"><strong>Members:</strong> Up to ${group.memberLimit}</p>
+                                            <p class="card-text"><strong>Payout Type:</strong> ${group.payoutType}</p>
+                                            <p class="card-text"><strong>Frequency:</strong> ${group.frequencyName}</p>
+                                            <p class="card-text"><strong>Duration:</strong> ${group.duration}</p>
+                                            <p class="card-text"><strong>Start Date:</strong> ${group.startDate ? new Date(group.startDate).toLocaleDateString() : 'Not Set'}</p>
+                                            <p class="card-text"><strong>Penalty:</strong> ${(group.currency ?? "R")} ${parseFloat(group.penaltyAmount).toFixed(2)} after ${group.penaltyGraceDays} days</p>
+                                            <p class="card-text"><strong>Deferrals:</strong> ${group.allowDeferrals ? 'Allowed' : 'Not Allowed'}</p>
+
+                                            <form action="/Groups/RequestToJoin" method="get">
+                                                <input type="hidden" name="GroupId" value="${group.id}" />
+                                                <input type="hidden" name="NationalId" value="${nationalId}" />
+                                                <button type="submit" class="btn btn-success w-100">Request To Join Group</button>
+                                            </form>
+                                        </div>
+                                    </div>
+                                </div>`;
+                            });
+
+                            html += `</div></div>`;
+                            container.insertAdjacentHTML('beforeend', html);
+                        }
+                    });
+                } catch (error) {
+                    console.error('Failed to load new groups:', error);
+                    document.getElementById('newGroupsContainer').innerHTML = '<p class="text-danger">Failed to load groups.</p>';
+                }
+            }
+
+            // Add event listener to tab button safely
+            const newTabBtn = document.getElementById('new-tab');
+                if (newTabBtn) {
+                    newTabBtn.addEventListener('shown.bs.tab', loadNewGroups);
+                }
+
         </script>
     }
 }
-
-
-
 
