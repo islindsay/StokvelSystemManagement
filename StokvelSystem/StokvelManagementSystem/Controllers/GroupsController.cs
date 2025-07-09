@@ -17,10 +17,12 @@ namespace StokvelManagementSystem.Controllers
     public class GroupsController : Controller
     {
         private readonly IConfiguration _configuration;
+        private readonly ILogger<GroupsController> _logger;
 
-        public GroupsController(IConfiguration configuration)
+        public GroupsController(IConfiguration configuration, ILogger<GroupsController> logger)
         {
             _configuration = configuration;
+            _logger = logger;
         }
         [HttpGet]
         public IActionResult ListGroups(bool created = false, bool showCreate = false, bool showNewGroups = false, bool showNewTab = false)
@@ -65,17 +67,49 @@ namespace StokvelManagementSystem.Controllers
             return View(viewModel);
                 }
 
-        [HttpGet]
-        public IActionResult GetNewGroups()
-        {
-            var memberIdClaim = User.FindFirst(ClaimTypes.NameIdentifier) ?? User.FindFirst("member_id");
-            if (memberIdClaim == null) return Unauthorized();
 
-            int memberId = int.Parse(memberIdClaim.Value);
-            var newGroups = GetNewGroupsForMember(memberId); // your existing data retrieval method
 
-            return Json(newGroups); // return JSON list of groups
-        }
+            [HttpGet]
+            public IActionResult GetNewGroups()
+            {
+                var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier) 
+                                ?? User.FindFirst("user_id") 
+                                ?? User.FindFirst("sub");
+
+                if (userIdClaim == null)
+                    return Unauthorized();
+
+                int userId = int.Parse(userIdClaim.Value);
+
+                int memberId;
+                using (var conn = new SqlConnection(_configuration.GetConnectionString("DefaultConnection")))
+                {
+                    conn.Open();
+
+                    // You can use either "Users" or "Members" depending on your schema.
+                    using (var cmd = new SqlCommand(
+                      "SELECT ID FROM Members WHERE UserID = @UserId", conn)) // Assumes userId is also used as MemberID
+                    {
+                        cmd.Parameters.AddWithValue("@UserId", userId);
+                        var result = cmd.ExecuteScalar();
+
+                        if (result == null)
+                        {
+                            _logger.LogWarning("No MemberID found for userId: {UserId}", userId);
+                            return NotFound("User not associated with any MemberID.");
+                        }
+
+                        memberId = Convert.ToInt32(result);
+                    }
+                }
+
+                _logger.LogInformation("Fetching new groups for memberId: {MemberId}", memberId);
+                var newerGroups = GetNewGroupsForMember(memberId);
+
+                return Json(newerGroups);
+            }
+
+
 
         private List<Group> GetMyGroups(int memberId)
         {
@@ -147,6 +181,7 @@ namespace StokvelManagementSystem.Controllers
 
         private List<Group> GetNewGroupsForMember(int memberId)
         {
+            _logger.LogInformation("GetNewGroupsForMember called with memberId: {MemberId}", memberId);
             var newGroups = new List<Group>();
 
             using (var conn = new SqlConnection(_configuration.GetConnectionString("DefaultConnection")))
@@ -160,6 +195,7 @@ namespace StokvelManagementSystem.Controllers
                                  WHERE g.ID NOT IN (SELECT GroupID FROM MemberGroups WHERE MemberID = @MemberID)";
                             
                 using (var cmd = new SqlCommand(query, conn))
+            
                 {
                     cmd.Parameters.AddWithValue("@MemberID", memberId);
                     conn.Open();
