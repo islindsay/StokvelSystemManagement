@@ -13,6 +13,7 @@ using System.Text;
 
 namespace StokvelManagementSystem.Controllers
 {
+    [Authorize]
     public class GroupsController : Controller
     {
         private readonly IConfiguration _configuration;
@@ -21,9 +22,15 @@ namespace StokvelManagementSystem.Controllers
         {
             _configuration = configuration;
         }
-
-        public IActionResult ListGroups(int memberId, string? nationalId = null, bool created = false, bool showCreate = false, bool showNewGroups = false, bool showNewTab = false)
+        [HttpGet]
+        public IActionResult ListGroups(bool created = false, bool showCreate = false, bool showNewGroups = false, bool showNewTab = false)
         {
+
+            var nationalId = User.Claims.FirstOrDefault(c => c.Type == "national_id")?.Value;
+            var memberIdStr = User.Claims.FirstOrDefault(c => c.Type == "member_id")?.Value;
+
+            int memberId = int.TryParse(memberIdStr, out var id) ? id : 0;
+
             var viewModel = new Group
             {
                 CreatedDate = DateTime.Now,

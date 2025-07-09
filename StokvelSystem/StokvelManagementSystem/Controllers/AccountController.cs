@@ -37,9 +37,10 @@ public class AccountController : Controller
         // if (!isAdmin)
         //     return Unauthorized("You are not authorized as admin.");
 
-        var token = GenerateJwtToken(loginUser.ID, loginUser.Username, loginUser.FirstName);
+        var token = GenerateJwtToken(loginUser.ID, loginUser.Username, loginUser.FirstName, loginUser.NationalID); 
 
-        Response.Cookies.Append("jwt", token, new CookieOptions
+
+        Response.Cookies.Append("jwt", token, new CookieOptions 
         {
             HttpOnly = true,
             Secure = true, 
@@ -68,12 +69,12 @@ public class AccountController : Controller
 
 
     private LoginUser ValidateUser(string username, string password)
-    {
+        {
        
         using var conn = new SqlConnection(_connectionString);
         conn.Open();
 
-        string query = @"SELECT l.ID, l.Username, l.PasswordHash, l.PasswordSalt, m.FirstName
+        string query = @"SELECT l.ID, l.Username, l.PasswordHash, l.PasswordSalt, l.NationalID, m.FirstName
                      FROM Logins l
                      JOIN Members m ON l.MemberID = m.ID
                      WHERE l.Username = @Username";
@@ -86,17 +87,25 @@ public class AccountController : Controller
             string storedHash = reader["PasswordHash"].ToString();
             string storedSalt = reader["PasswordSalt"].ToString();
             int id = Convert.ToInt32(reader["ID"]);
+            string nationalId = reader["NationalID"].ToString();
             string firstName = reader["FirstName"].ToString();
 
             string inputHash = HashPassword(password, storedSalt);
-           
+
             Console.WriteLine($"StoredHash: {storedHash}");
             Console.WriteLine($"InputHash: {inputHash}");
 
             if (inputHash == storedHash)
             {
-                return new LoginUser { ID = id, Username = username, FirstName = firstName };
+                return new LoginUser 
+                { 
+                    ID = id, 
+                    Username = username, 
+                    FirstName = firstName,
+                    NationalID = nationalId  // ✅ Add this
+                };
             }
+
         }
 
         return null;
@@ -124,36 +133,41 @@ public class AccountController : Controller
     }
 
 
-    private string GenerateJwtToken(int memberId, string username, string firstname)
-    {
-        var key = Encoding.ASCII.GetBytes(_configuration["Jwt:Key"]);
-        var tokenHandler = new JwtSecurityTokenHandler();
+private string GenerateJwtToken(int memberId, string username, string firstname, string nationalId)
+{
+    var key = Encoding.ASCII.GetBytes(_configuration["Jwt:Key"]);
+    var tokenHandler = new JwtSecurityTokenHandler();
 
-        var claims = new[]
-        {
-        new Claim(ClaimTypes.NameIdentifier, memberId.ToString()), // Use MemberID here
-        new Claim(ClaimTypes.Name, username),
-        new Claim(ClaimTypes.GivenName, firstname),
-        new Claim(ClaimTypes.Role, "Admin")
+    var claims = new[]
+    {
+        new Claim(ClaimTypes.NameIdentifier, memberId.ToString()), // Existing
+        new Claim(ClaimTypes.Name, username),                      // Existing
+        new Claim(ClaimTypes.GivenName, firstname),                // Existing
+        new Claim(ClaimTypes.Role, "Admin"),                       // Existing
+
+        // ✅ Add these custom claims:
+        new Claim("member_id", memberId.ToString()),
+        new Claim("national_id", nationalId)
     };
 
-        var tokenDescriptor = new SecurityTokenDescriptor
-        {
-            Subject = new ClaimsIdentity(claims),
-            Expires = DateTime.UtcNow.AddDays(7),
-            SigningCredentials = new SigningCredentials(
-                new SymmetricSecurityKey(key),
-                SecurityAlgorithms.HmacSha256Signature)
-        };
+    var tokenDescriptor = new SecurityTokenDescriptor
+    {
+        Subject = new ClaimsIdentity(claims),
+        Expires = DateTime.UtcNow.AddDays(7),
+        SigningCredentials = new SigningCredentials(
+            new SymmetricSecurityKey(key),
+            SecurityAlgorithms.HmacSha256Signature)
+    };
 
-        var token = tokenHandler.CreateToken(tokenDescriptor);
-        return tokenHandler.WriteToken(token);
-    }
+    var token = tokenHandler.CreateToken(tokenDescriptor);
+    return tokenHandler.WriteToken(token);
+}
 
     private class LoginUser
     {
         public int ID { get; set; }
         public string Username { get; set; }
+        public string NationalID { get; set; }
         public string FirstName{ get; set; }
     }
 }
