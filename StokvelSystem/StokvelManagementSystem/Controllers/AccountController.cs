@@ -34,24 +34,38 @@ public class AccountController : Controller
             return Unauthorized("Invalid username or password.");
 
         bool isAdmin = CheckIsAdmin(loginUser.ID);
-        // if (!isAdmin)
-        //     return Unauthorized("You are not authorized as admin.");
 
-        var token = GenerateJwtToken(loginUser.ID, loginUser.Username, loginUser.FirstName, loginUser.NationalID); 
+        // 🔎 Step 1: Retrieve MemberID from DB
+        int memberId;
+        using (var conn = new SqlConnection(_configuration.GetConnectionString("DefaultConnection")))
+        {
+            conn.Open();
+            using (var cmd = new SqlCommand("SELECT ID FROM Members WHERE UserID = @UserId", conn))
+            {
+                cmd.Parameters.AddWithValue("@UserId", loginUser.ID);
+                var result = cmd.ExecuteScalar();
+                if (result == null)
+                    return Unauthorized("No member associated with this user.");
+                memberId = Convert.ToInt32(result);
+            }
+        }
 
+        // 🔐 Step 2: Include MemberID in token
+        var token = GenerateJwtToken(memberId, loginUser.ID, loginUser.Username, loginUser.FirstName, loginUser.NationalID);
 
+        // 🍪 Set JWT cookie
         Response.Cookies.Append("jwt", token, new CookieOptions 
         {
             HttpOnly = true,
-            Secure = true, 
+            Secure = true,
             SameSite = SameSiteMode.Strict,
             Expires = DateTime.UtcNow.AddHours(2)
         });
 
-            // Store isAdmin (less secure, so HttpOnly = false to allow view access)
+        // 🍪 Set isAdmin cookie
         Response.Cookies.Append("isAdmin", isAdmin.ToString().ToLower(), new CookieOptions
         {
-            HttpOnly = false, // allow access in Razor View (only do this for non-sensitive flags!)
+            HttpOnly = false,
             Secure = true,
             SameSite = SameSiteMode.Strict,
             Expires = DateTime.UtcNow.AddHours(2)
@@ -59,6 +73,8 @@ public class AccountController : Controller
 
         return RedirectToAction("Index", "Home"); 
     }
+
+    
 
     [HttpPost]
     public IActionResult Logout()
@@ -133,7 +149,7 @@ public class AccountController : Controller
     }
 
 
-private string GenerateJwtToken(int memberId, string username, string firstname, string nationalId)
+private string GenerateJwtToken(int memberId, int userId, string username, string firstname, string nationalId)
 {
     var key = Encoding.ASCII.GetBytes(_configuration["Jwt:Key"]);
     var tokenHandler = new JwtSecurityTokenHandler();
@@ -145,7 +161,7 @@ private string GenerateJwtToken(int memberId, string username, string firstname,
         new Claim(ClaimTypes.GivenName, firstname),                
         new Claim(ClaimTypes.Role, "Admin"),                      
 
-        
+        new Claim("user_id", userId.ToString()),
         new Claim("member_id", memberId.ToString()),
         new Claim("national_id", nationalId)
     };

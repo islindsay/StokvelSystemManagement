@@ -72,9 +72,7 @@ namespace StokvelManagementSystem.Controllers
             [HttpGet]
             public IActionResult GetNewGroups()
             {
-                var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier) 
-                                ?? User.FindFirst("user_id") 
-                                ?? User.FindFirst("sub");
+                var userIdClaim = User.FindFirst("user_id");
 
                 if (userIdClaim == null)
                     return Unauthorized();
@@ -332,6 +330,11 @@ namespace StokvelManagementSystem.Controllers
         [HttpPost]
         public IActionResult JoinGroupConfirmed(int groupId, string nationalId)
         {
+            if (string.IsNullOrWhiteSpace(nationalId))
+            {
+                return BadRequest("National ID must be provided.");
+            }
+
             int memberId;
 
             using (var conn = new SqlConnection(_configuration.GetConnectionString("DefaultConnection")))
@@ -341,6 +344,7 @@ namespace StokvelManagementSystem.Controllers
                 using (var cmd = new SqlCommand("SELECT ID FROM Members WHERE NationalID = @NationalID", conn))
                 {
                     cmd.Parameters.AddWithValue("@NationalID", nationalId);
+
                     var result = cmd.ExecuteScalar();
                     if (result == null)
                     {
@@ -351,7 +355,7 @@ namespace StokvelManagementSystem.Controllers
                 }
 
                 var insertSql = @"INSERT INTO JoinRequests (MemberID, GroupID) 
-                          VALUES (@MemberID, @GroupID)";
+                                VALUES (@MemberID, @GroupID)";
 
                 using (var cmd = new SqlCommand(insertSql, conn))
                 {
@@ -363,6 +367,7 @@ namespace StokvelManagementSystem.Controllers
 
             return RedirectToAction("ListGroups", new { memberId, nationalId });
         }
+
         [HttpGet]
         public IActionResult RequestToJoin(int groupId, string nationalId)
         {
@@ -563,38 +568,31 @@ namespace StokvelManagementSystem.Controllers
         //    // Your existing approval/denial logic
         //}
 
+    //     private string GenerateJwtToken(int memberId, string username, string firstname)
+    //     {
+    //         var key = Encoding.ASCII.GetBytes(_configuration["Jwt:Key"]);
+    //         var tokenHandler = new JwtSecurityTokenHandler();
 
+    //         var claims = new[]
+    //         {
+    //     new Claim(ClaimTypes.NameIdentifier, memberId.ToString()),
+    //     new Claim(ClaimTypes.Name, username),
+    //     new Claim(ClaimTypes.GivenName, firstname),
+    // //     new Claim(ClaimTypes.Role, "Admin")
+    // // };
 
+    //         var tokenDescriptor = new SecurityTokenDescriptor
+    //         {
+    //             Subject = new ClaimsIdentity(claims),
+    //             Expires = DateTime.UtcNow.AddDays(7),
+    //             SigningCredentials = new SigningCredentials(
+    //                 new SymmetricSecurityKey(key),
+    //                 SecurityAlgorithms.HmacSha256Signature)
+    //         };
 
-
-
-
-
-        private string GenerateJwtToken(int memberId, string username, string firstname)
-        {
-            var key = Encoding.ASCII.GetBytes(_configuration["Jwt:Key"]);
-            var tokenHandler = new JwtSecurityTokenHandler();
-
-            var claims = new[]
-            {
-        new Claim(ClaimTypes.NameIdentifier, memberId.ToString()),
-        new Claim(ClaimTypes.Name, username),
-        new Claim(ClaimTypes.GivenName, firstname),
-        new Claim(ClaimTypes.Role, "Admin")
-    };
-
-            var tokenDescriptor = new SecurityTokenDescriptor
-            {
-                Subject = new ClaimsIdentity(claims),
-                Expires = DateTime.UtcNow.AddDays(7),
-                SigningCredentials = new SigningCredentials(
-                    new SymmetricSecurityKey(key),
-                    SecurityAlgorithms.HmacSha256Signature)
-            };
-
-            var token = tokenHandler.CreateToken(tokenDescriptor);
-            return tokenHandler.WriteToken(token);
-        }
+    //         var token = tokenHandler.CreateToken(tokenDescriptor);
+    //         return tokenHandler.WriteToken(token);
+    //     }
         private void LogModelStateErrors()
         {
             foreach (var key in ModelState.Keys)

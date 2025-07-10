@@ -18,10 +18,13 @@ namespace StokvelManagementSystem.Controllers
     {
         private readonly string _connectionString;
         private readonly IConfiguration _configuration;
-        public RegistrationController(IConfiguration configuration)
+        private readonly ILogger<GroupsController> _logger;
+
+        public RegistrationController(IConfiguration configuration, ILogger<GroupsController> logger)
         {
             _configuration = configuration;
             _connectionString = configuration.GetConnectionString("DefaultConnection");
+            _logger = logger;
         }
 
         private void LoadGenderDropdown()
@@ -48,6 +51,7 @@ namespace StokvelManagementSystem.Controllers
             }
             ViewBag.GenderList = new SelectList(genderList, "ID", "Gender");
         }
+
 
         public IActionResult Index()
         {
@@ -81,63 +85,85 @@ namespace StokvelManagementSystem.Controllers
 
 
             int newMemberId;
+            int newLoginId;
 
             try
             {
                 using (SqlConnection connection = new SqlConnection(_connectionString))
                 {
-                    string query = @"
-                INSERT INTO Members (FirstName, MiddleName, LastName, DOB, NationalID, Phone, Email, GenderID, Address, RegistrationDate, StatusID)
-                VALUES (@FirstName, @MiddleName, @LastName, @DOB, @NationalID, @Phone, @Email, @GenderID, @Address, @RegistrationDate, @StatusID);
-                SELECT CAST(scope_identity() AS int)";
-
-                    using (SqlCommand command = new SqlCommand(query, connection))
+                    connection.Open();
+                    using (SqlTransaction transaction = connection.BeginTransaction())
                     {
-                        command.Parameters.AddWithValue("@FirstName", model.FirstName);
-                        command.Parameters.AddWithValue("@MiddleName", (object)model.MiddleName ?? DBNull.Value);
-                        command.Parameters.AddWithValue("@LastName", model.LastName);
-                        command.Parameters.AddWithValue("@DOB", model.DOB);
-                        command.Parameters.AddWithValue("@NationalID", model.NationalID);
-                        command.Parameters.AddWithValue("@Phone", (object)model.Phone ?? DBNull.Value);
-                        command.Parameters.AddWithValue("@Email", model.Email);
-                        command.Parameters.AddWithValue("@GenderID", model.GenderID);
-                        command.Parameters.AddWithValue("@Address", (object)model.Address ?? DBNull.Value);
-                        command.Parameters.AddWithValue("@RegistrationDate", DateTime.Now);
-                        command.Parameters.AddWithValue("@StatusID", 1);
+                        try
+                        {
+                            // Step 1: Insert into Members
+                            string memberQuery = @"
+                                INSERT INTO Members (FirstName, MiddleName, LastName, DOB, NationalID, Phone, Email, GenderID, Address, RegistrationDate, StatusID)
+                                VALUES (@FirstName, @MiddleName, @LastName, @DOB, @NationalID, @Phone, @Email, @GenderID, @Address, @RegistrationDate, @StatusID);
+                                SELECT CAST(scope_identity() AS int)";
 
-                        connection.Open();
-                        newMemberId = (int)command.ExecuteScalar();
+                            using (SqlCommand memberCommand = new SqlCommand(memberQuery, connection, transaction))
+                            {
+                                memberCommand.Parameters.AddWithValue("@FirstName", model.FirstName);
+                                memberCommand.Parameters.AddWithValue("@MiddleName", (object)model.MiddleName ?? DBNull.Value);
+                                memberCommand.Parameters.AddWithValue("@LastName", model.LastName);
+                                memberCommand.Parameters.AddWithValue("@DOB", model.DOB);
+                                memberCommand.Parameters.AddWithValue("@NationalID", model.NationalID);
+                                memberCommand.Parameters.AddWithValue("@Phone", (object)model.Phone ?? DBNull.Value);
+                                memberCommand.Parameters.AddWithValue("@Email", model.Email);
+                                memberCommand.Parameters.AddWithValue("@GenderID", model.GenderID);
+                                memberCommand.Parameters.AddWithValue("@Address", (object)model.Address ?? DBNull.Value);
+                                memberCommand.Parameters.AddWithValue("@RegistrationDate", DateTime.Now);
+                                memberCommand.Parameters.AddWithValue("@StatusID", 1);
+                                newMemberId = (int)memberCommand.ExecuteScalar();
+                            }
+
+                            // Step 2: Create login credentials
+                            var saltBytes = new byte[16];
+                            using (var rng = new System.Security.Cryptography.RNGCryptoServiceProvider())
+                            {
+                                rng.GetBytes(saltBytes);
+                            }
+                            string salt = Convert.ToBase64String(saltBytes);
+                            string hashedPassword = HashPassword(model.Password, salt);
+
+                            // Step 3: Insert into Logins and get the new Login ID
+                            string loginQuery = @"
+                                INSERT INTO Logins (Username, PasswordHash, PasswordSalt, MemberID, NationalID)
+                                VALUES (@Username, @PasswordHash, @PasswordSalt, @MemberID, @NationalID);
+                                SELECT CAST(scope_identity() AS int)";
+
+                            using (SqlCommand loginCommand = new SqlCommand(loginQuery, connection, transaction))
+                            {
+                                loginCommand.Parameters.AddWithValue("@Username", model.Username);
+                                loginCommand.Parameters.AddWithValue("@PasswordHash", hashedPassword);
+                                loginCommand.Parameters.AddWithValue("@PasswordSalt", salt);
+                                loginCommand.Parameters.AddWithValue("@NationalID", model.NationalID);
+                                loginCommand.Parameters.AddWithValue("@MemberID", newMemberId);
+                                newLoginId = (int)loginCommand.ExecuteScalar();
+                            }
+
+                            // Step 4: Update the Members table with the new UserID from Logins
+                            string updateMemberQuery = "UPDATE Members SET UserID = @UserID WHERE ID = @MemberID";
+                            using (SqlCommand updateCommand = new SqlCommand(updateMemberQuery, connection, transaction))
+                            {
+                                updateCommand.Parameters.AddWithValue("@UserID", newLoginId);
+                                updateCommand.Parameters.AddWithValue("@MemberID", newMemberId);
+                                updateCommand.ExecuteNonQuery();
+                            }
+
+                            transaction.Commit();
+                        }
+                        catch
+                        {
+                            transaction.Rollback();
+                            throw;
+                        }
                     }
-
                 }
-                var saltBytes = new byte[16];
-                using (var rng = new System.Security.Cryptography.RNGCryptoServiceProvider())
-                {
-                    rng.GetBytes(saltBytes);
-                }
-                string salt = Convert.ToBase64String(saltBytes);
-                string hashedPassword = HashPassword(model.Password, salt);
-                using (SqlConnection connection = new SqlConnection(_connectionString))
-                {
-                    string loginQuery = @"
-                INSERT INTO Logins (Username, PasswordHash, PasswordSalt, MemberID, NationalID)
-                VALUES (@Username, @PasswordHash, @PasswordSalt, @MemberID, @NationalID)";
+                string token = GenerateJwtToken(newMemberId, newLoginId, model.Username, model.FirstName, model.NationalID);
 
-                    using (SqlCommand cmd = new SqlCommand(loginQuery, connection))
-                    {
-                        cmd.Parameters.AddWithValue("@Username", model.Username);
-                        cmd.Parameters.AddWithValue("@PasswordHash", hashedPassword);
-                        cmd.Parameters.AddWithValue("@PasswordSalt", salt);
-                        cmd.Parameters.AddWithValue("@NationalID", model.NationalID);
-                        cmd.Parameters.AddWithValue("@MemberID", newMemberId);
-
-                        connection.Open();
-                        cmd.ExecuteNonQuery();
-                    }
-                }
-                string token = GenerateJwtToken(newMemberId, model.Username, model.FirstName, model.NationalID); // Add this method (see below)
-
-                bool isAdmin = CheckIsAdmin(newMemberId);
+                bool isAdmin = CheckIsAdmin(newLoginId);
 
                 // Store the token in a cookie (or return it however your frontend expects)
                 HttpContext.Response.Cookies.Append("jwt", token, new CookieOptions
@@ -149,15 +175,8 @@ namespace StokvelManagementSystem.Controllers
                 });
 
 
-                if (isAdmin)
-                {
-                    return RedirectToAction("ListGroups", "Groups", new { memberId = newMemberId, showCreate = true });
-                }
-                else
-                {
+                    return RedirectToAction("ListGroups", "Groups", new { showCreate = true });
 
-                    return RedirectToAction("ListGroups", "Groups", new { memberId = newMemberId, showJoinedTab = true });
-                }
             }
             catch (Exception ex)
             {
@@ -188,20 +207,26 @@ namespace StokvelManagementSystem.Controllers
             return count > 0;
         }
 
-        private string GenerateJwtToken(int memberId, string username, string firstname, string nationalId)
+        private string GenerateJwtToken(int memberId, int userId, string username, string firstname, string nationalId)
         {
+
+            _logger.LogInformation("Generating JWT Token with values: MemberId={MemberId}, UserId={UserId}, Username={Username}, FirstName={FirstName}, NationalID={NationalID}",
+            memberId, userId, username, firstname, nationalId);
+
             var key = Encoding.ASCII.GetBytes(_configuration["Jwt:Key"]);
             var tokenHandler = new JwtSecurityTokenHandler();
 
             var claims = new[]
             {
-        new Claim(ClaimTypes.NameIdentifier, memberId.ToString()),
-        new Claim(ClaimTypes.Name, username),
-        new Claim(ClaimTypes.GivenName, firstname),
-        new Claim(ClaimTypes.Role, "Admin"),
-        new Claim("member_id", memberId.ToString()),
-        new Claim("national_id", nationalId)
-    };
+                new Claim(ClaimTypes.NameIdentifier, memberId.ToString()),
+                new Claim(ClaimTypes.Name, username),
+                new Claim(ClaimTypes.GivenName, firstname),
+                new Claim(ClaimTypes.Role, "Admin"),
+
+                new Claim("member_id", memberId.ToString()),
+                new Claim("national_id", nationalId),
+                new Claim("user_id", userId.ToString()) // ✅ THIS IS WHAT YOU NEED
+            };
 
             var tokenDescriptor = new SecurityTokenDescriptor
             {
@@ -214,6 +239,7 @@ namespace StokvelManagementSystem.Controllers
             var token = tokenHandler.CreateToken(tokenDescriptor);
             return tokenHandler.WriteToken(token);
         }
+
 
 
 
