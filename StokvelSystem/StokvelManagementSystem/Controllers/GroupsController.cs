@@ -327,45 +327,48 @@ namespace StokvelManagementSystem.Controllers
             }
         }
 
-        [HttpPost]
-        public IActionResult JoinGroupConfirmed(int groupId, string nationalId)
+       [HttpPost]
+        public IActionResult JoinGroupConfirmed(int groupId)
         {
-            if (string.IsNullOrWhiteSpace(nationalId))
+            var memberIdClaim = User.FindFirst("member_id");
+        
+            if (memberIdClaim == null || !int.TryParse(memberIdClaim.Value, out int memberId))
             {
-                return BadRequest("National ID must be provided.");
+                return Unauthorized("Member ID not found in token.");
             }
-
-            int memberId;
-
+        
             using (var conn = new SqlConnection(_configuration.GetConnectionString("DefaultConnection")))
             {
                 conn.Open();
-
-                using (var cmd = new SqlCommand("SELECT ID FROM Members WHERE NationalID = @NationalID", conn))
+        
+                // Check if this request already exists
+                using (var checkCmd = new SqlCommand(
+                    "SELECT COUNT(*) FROM JoinRequests WHERE MemberID = @MemberID AND GroupID = @GroupID", conn))
                 {
-                    cmd.Parameters.AddWithValue("@NationalID", nationalId);
-
-                    var result = cmd.ExecuteScalar();
-                    if (result == null)
+                    checkCmd.Parameters.AddWithValue("@MemberID", memberId);
+                    checkCmd.Parameters.AddWithValue("@GroupID", groupId);
+                    int count = (int)checkCmd.ExecuteScalar();
+        
+                    if (count > 0)
                     {
-                        return NotFound("Member not found.");
+                        return BadRequest("Join request already exists.");
                     }
-
-                    memberId = Convert.ToInt32(result);
                 }
-
-                var insertSql = @"INSERT INTO JoinRequests (MemberID, GroupID) 
-                                VALUES (@MemberID, @GroupID)";
+        
+                // Insert new join request
+                var insertSql = @"INSERT INTO JoinRequests (MemberID, GroupID, Status) 
+                                VALUES (@MemberID, @GroupID, @Status)";
 
                 using (var cmd = new SqlCommand(insertSql, conn))
                 {
                     cmd.Parameters.AddWithValue("@MemberID", memberId);
                     cmd.Parameters.AddWithValue("@GroupID", groupId);
+                    cmd.Parameters.AddWithValue("@Status", "Pending"); // <-- Set the status here
                     cmd.ExecuteNonQuery();
                 }
             }
-
-            return RedirectToAction("ListGroups", new { memberId, nationalId });
+        
+            return RedirectToAction("ListGroups", new { memberId });
         }
 
         [HttpGet]

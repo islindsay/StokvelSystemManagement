@@ -21,13 +21,11 @@
 
        <form asp-action="JoinGroupConfirmed" asp-controller="Groups" method="post">
     <input type="hidden" name="GroupId" value="@Model.GroupId" />
-    <input type="hidden" name="NationalId" value="@Model.NationalId" />
     <button type="submit" class="btn btn-primary">Confirm Request</button>
 
 
     <a asp-action="ListGroups" asp-controller="Groups" 
        asp-route-memberId="@Model.MemberId" 
-       asp-route-nationalId="@Model.NationalId" 
        class="btn btn-secondary">Cancel</a>
 </form>
 
