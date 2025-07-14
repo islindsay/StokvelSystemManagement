@@ -19,9 +19,9 @@
         <p class="card-text"><strong>Penalty:</strong> @($"{(Model.Currency ?? "R")} {Model.PenaltyAmount.ToString("0.00")} after {Model.PenaltyGraceDays} days")</p>
         <p class="card-text"><strong>Deferrals:</strong> @(Model.AllowDeferrals ? "Allowed" : "Not Allowed")</p>
 
-       <form asp-action="JoinGroupConfirmed" asp-controller="Groups" method="post">
+       <form asp-action="JoinGroupConfirmed" asp-controller="Groups" method="post"><!--nowhere to go from there-->
     <input type="hidden" name="GroupId" value="@Model.GroupId" />
-    <input type="hidden" name="NationalId" value="@Model.NationalId" />
+    @* <input type="hidden" name="memberId" value="@Model.MemberId" /> *@
     <button type="submit" class="btn btn-primary">Confirm Request</button>
 
 

@@ -4,9 +4,10 @@
     ViewData["Title"] = "Member Registration";
 }
 @section Styles {
-    <link rel="stylesheet" href="~/css/member-registration.css" />
-}
+<link rel="stylesheet" href="@Url.Content("~/css/registration.css")" />
 
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700&display=swap" rel="stylesheet">
+}
 
 <h2 class="text-center page-title">Member Registration</h2>
 
@@ -24,11 +25,11 @@
 </form>
 
 <!-- Registration Form -->
-<div class="card p-4 mx-auto" style="max-width: 900px;">
+<div class="card p-4 mx-auto" style="max-width: 900px;  shadow-sm bg-light">
+      <h3 class="form-section-title mb-4">Member Details</h3>
     <form asp-controller="Registration" asp-action="Index" method="post" novalidate>
         @Html.AntiForgeryToken()
 
-        <!-- Personal Information -->
         <div class="row mb-3">
             <div class="col-md-4">
                 <div class="input-group">
@@ -53,7 +54,7 @@
             </div>
         </div>
 
-        <!-- Identification & Contact -->
+       
         <div class="row mb-3">
             <div class="col-md-4">
                 <div class="input-group">
@@ -78,7 +79,6 @@
             </div>
         </div>
 
-        <!-- Email & Gender -->
         <div class="row mb-3">
             <div class="col-md-6">
                 <div class="input-group">
@@ -121,10 +121,9 @@
         </div>
 
         <!-- Login Details -->
-        <div class="row mb-3">
-            <div class="col-12">
-                <div class="form-section-title">Login Details</div>
-            </div>
+     <section class="login-details-section p-4 mb-4 rounded shadow-sm bg-light">
+         <h3 class="form-section-title mb-4">Login Details</h3>
+       <div class="row">
             <div class="col-md-4">
                 <div class="input-group">
                     <span class="input-group-text"><i class="fas fa-user-circle"></i></span>
@@ -147,22 +146,25 @@
                 <span asp-validation-for="ConfirmPassword" class="text-danger"></span>
             </div>
         </div>
+      </section>
 
+        
         <!-- Buttons -->
         <div class="row mt-4">
             <div class="col-md-6 text-start">
                 <small class="text-muted d-block mb-2">Normal Group Member?</small>
-                <button type="submit" name="actionType" value="Register" class="btn btn-primary btn-sm">
+                <a href="/Groups/Dashboard?showJoined=true" class="btn btn-primary btn-sm">
                     <i class="fas fa-user-plus me-1"></i> Register
-                </button>
+                </a>
             </div>
             <div class="col-md-6 text-end">
                 <small class="text-muted d-block mb-2">Admin and create own group?</small>
-                <button type="submit" name="actionType" value="Admin" class="btn btn-primary btn-sm">
+                <a href="/Groups/Dashboard?showCreate=true" class="btn btn-primary btn-sm">
                     <i class="fas fa-user-shield me-1"></i> Create Admin Account
-                </button>
+                </a>
             </div>
         </div>
+
     </form>
 </div>
 

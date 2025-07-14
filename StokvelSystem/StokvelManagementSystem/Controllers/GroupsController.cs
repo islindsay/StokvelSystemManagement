@@ -26,7 +26,7 @@ namespace StokvelManagementSystem.Controllers
         }
         [HttpGet]
         public IActionResult ListGroups(bool created = false, bool showCreate = false, bool showNewGroups = false, bool showNewTab = false)
-            {
+        {
 
             var nationalId = User.Claims.FirstOrDefault(c => c.Type == "national_id")?.Value;
             var memberIdStr = User.Claims.FirstOrDefault(c => c.Type == "member_id")?.Value;
@@ -43,7 +43,7 @@ namespace StokvelManagementSystem.Controllers
                 GroupCreated = created,
                 CanCreate = showCreate,
                 SearchNationalId = nationalId,
-                ShowNewGroups= showNewGroups
+                ShowNewGroups = showNewGroups
             };
             ViewData["ShowNewTab"] = showNewTab;
             viewModel.MyGroups = !string.IsNullOrEmpty(nationalId)
@@ -52,12 +52,12 @@ namespace StokvelManagementSystem.Controllers
 
             if (showNewGroups && !string.IsNullOrEmpty(nationalId))
             {
-                var myGroups = GetMyGroupsByNationalId(nationalId); 
-                var allGroups = GetNewGroupsForMember(memberId);    
+                var myGroups = GetMyGroupsByNationalId(nationalId);
+                var allGroups = GetNewGroupsForMember(memberId);
 
-                    viewModel.NewGroups = allGroups
-                    .Where(g => !myGroups.Any(mg => mg.ID == g.ID))
-                    .ToList();
+                viewModel.NewGroups = allGroups
+                .Where(g => !myGroups.Any(mg => mg.ID == g.ID))
+                .ToList();
             }
             else
             {
@@ -65,47 +65,47 @@ namespace StokvelManagementSystem.Controllers
             }
 
             return View(viewModel);
-                }
+        }
 
 
 
-            [HttpGet]
-            public IActionResult GetNewGroups()
+        [HttpGet]
+        public IActionResult GetNewGroups()
+        {
+            var userIdClaim = User.FindFirst("user_id");
+
+            if (userIdClaim == null)
+                return Unauthorized();
+
+            int userId = int.Parse(userIdClaim.Value);
+
+            int memberId;
+            using (var conn = new SqlConnection(_configuration.GetConnectionString("DefaultConnection")))
             {
-                var userIdClaim = User.FindFirst("user_id");
+                conn.Open();
 
-                if (userIdClaim == null)
-                    return Unauthorized();
-
-                int userId = int.Parse(userIdClaim.Value);
-
-                int memberId;
-                using (var conn = new SqlConnection(_configuration.GetConnectionString("DefaultConnection")))
+                // You can use either "Users" or "Members" depending on your schema.
+                using (var cmd = new SqlCommand(
+                  "SELECT ID FROM Members WHERE UserID = @UserId", conn)) // Assumes userId is also used as MemberID
                 {
-                    conn.Open();
+                    cmd.Parameters.AddWithValue("@UserId", userId);
+                    var result = cmd.ExecuteScalar();
 
-                    // You can use either "Users" or "Members" depending on your schema.
-                    using (var cmd = new SqlCommand(
-                      "SELECT ID FROM Members WHERE UserID = @UserId", conn)) // Assumes userId is also used as MemberID
+                    if (result == null)
                     {
-                        cmd.Parameters.AddWithValue("@UserId", userId);
-                        var result = cmd.ExecuteScalar();
-
-                        if (result == null)
-                        {
-                            _logger.LogWarning("No MemberID found for userId: {UserId}", userId);
-                            return NotFound("User not associated with any MemberID.");
-                        }
-
-                        memberId = Convert.ToInt32(result);
+                        _logger.LogWarning("No MemberID found for userId: {UserId}", userId);
+                        return NotFound("User not associated with any MemberID.");
                     }
+
+                    memberId = Convert.ToInt32(result);
                 }
-
-                _logger.LogInformation("Fetching new groups for memberId: {MemberId}", memberId);
-                var newerGroups = GetNewGroupsForMember(memberId);
-
-                return Json(newerGroups);
             }
+
+            _logger.LogInformation("Fetching new groups for memberId: {MemberId}", memberId);
+            var newerGroups = GetNewGroupsForMember(memberId);
+
+            return Json(newerGroups);
+        }
 
 
 
@@ -191,9 +191,9 @@ namespace StokvelManagementSystem.Controllers
                                  JOIN Frequencies f ON g.FrequencyID = f.ID
                                  LEFT JOIN GroupSettings gs ON g.ID = gs.GroupID
                                  WHERE g.ID NOT IN (SELECT GroupID FROM MemberGroups WHERE MemberID = @MemberID)";
-                            
+
                 using (var cmd = new SqlCommand(query, conn))
-            
+
                 {
                     cmd.Parameters.AddWithValue("@MemberID", memberId);
                     conn.Open();
@@ -327,47 +327,77 @@ namespace StokvelManagementSystem.Controllers
             }
         }
 
-        [HttpPost]
-        public IActionResult JoinGroupConfirmed(int groupId, string nationalId)
+       [HttpPost]
+
+        public IActionResult JoinGroupConfirmed(int groupId)
+
         {
-            if (string.IsNullOrWhiteSpace(nationalId))
+
+            var memberIdClaim = User.FindFirst("member_id");
+        
+            if (memberIdClaim == null || !int.TryParse(memberIdClaim.Value, out int memberId))
+
             {
-                return BadRequest("National ID must be provided.");
+
+                return Unauthorized("Member ID not found in token.");
+
             }
-
-            int memberId;
-
+        
             using (var conn = new SqlConnection(_configuration.GetConnectionString("DefaultConnection")))
+
             {
+
                 conn.Open();
+        
+                // Check if this request already exists
 
-                using (var cmd = new SqlCommand("SELECT ID FROM Members WHERE NationalID = @NationalID", conn))
+                using (var checkCmd = new SqlCommand(
+
+                    "SELECT COUNT(*) FROM JoinRequests WHERE MemberID = @MemberID AND GroupID = @GroupID", conn))
+
                 {
-                    cmd.Parameters.AddWithValue("@NationalID", nationalId);
 
-                    var result = cmd.ExecuteScalar();
-                    if (result == null)
+                    checkCmd.Parameters.AddWithValue("@MemberID", memberId);
+
+                    checkCmd.Parameters.AddWithValue("@GroupID", groupId);
+
+                    int count = (int)checkCmd.ExecuteScalar();
+        
+                    if (count > 0)
+
                     {
-                        return NotFound("Member not found.");
+
+                        return BadRequest("Join request already exists.");
+
                     }
 
-                    memberId = Convert.ToInt32(result);
                 }
+        
+                // Insert new join request
 
                 var insertSql = @"INSERT INTO JoinRequests (MemberID, GroupID) 
+
                                 VALUES (@MemberID, @GroupID)";
-
+        
                 using (var cmd = new SqlCommand(insertSql, conn))
-                {
-                    cmd.Parameters.AddWithValue("@MemberID", memberId);
-                    cmd.Parameters.AddWithValue("@GroupID", groupId);
-                    cmd.ExecuteNonQuery();
-                }
-            }
 
-            return RedirectToAction("ListGroups", new { memberId, nationalId });
+                {
+
+                    cmd.Parameters.AddWithValue("@MemberID", memberId);
+
+                    cmd.Parameters.AddWithValue("@GroupID", groupId);
+
+                    cmd.ExecuteNonQuery();
+
+                }
+
+            }
+        
+            return RedirectToAction("ListGroups", new { memberId });
+
         }
 
+ 
         [HttpGet]
         public IActionResult RequestToJoin(int groupId, string nationalId)
         {
@@ -520,7 +550,7 @@ namespace StokvelManagementSystem.Controllers
 
                     }
                 }
-                
+
 
                 // Get additional dashboard data
                 var model = new DashboardModel
@@ -568,31 +598,31 @@ namespace StokvelManagementSystem.Controllers
         //    // Your existing approval/denial logic
         //}
 
-    //     private string GenerateJwtToken(int memberId, string username, string firstname)
-    //     {
-    //         var key = Encoding.ASCII.GetBytes(_configuration["Jwt:Key"]);
-    //         var tokenHandler = new JwtSecurityTokenHandler();
+        //     private string GenerateJwtToken(int memberId, string username, string firstname)
+        //     {
+        //         var key = Encoding.ASCII.GetBytes(_configuration["Jwt:Key"]);
+        //         var tokenHandler = new JwtSecurityTokenHandler();
 
-    //         var claims = new[]
-    //         {
-    //     new Claim(ClaimTypes.NameIdentifier, memberId.ToString()),
-    //     new Claim(ClaimTypes.Name, username),
-    //     new Claim(ClaimTypes.GivenName, firstname),
-    // //     new Claim(ClaimTypes.Role, "Admin")
-    // // };
+        //         var claims = new[]
+        //         {
+        //     new Claim(ClaimTypes.NameIdentifier, memberId.ToString()),
+        //     new Claim(ClaimTypes.Name, username),
+        //     new Claim(ClaimTypes.GivenName, firstname),
+        // //     new Claim(ClaimTypes.Role, "Admin")
+        // // };
 
-    //         var tokenDescriptor = new SecurityTokenDescriptor
-    //         {
-    //             Subject = new ClaimsIdentity(claims),
-    //             Expires = DateTime.UtcNow.AddDays(7),
-    //             SigningCredentials = new SigningCredentials(
-    //                 new SymmetricSecurityKey(key),
-    //                 SecurityAlgorithms.HmacSha256Signature)
-    //         };
+        //         var tokenDescriptor = new SecurityTokenDescriptor
+        //         {
+        //             Subject = new ClaimsIdentity(claims),
+        //             Expires = DateTime.UtcNow.AddDays(7),
+        //             SigningCredentials = new SigningCredentials(
+        //                 new SymmetricSecurityKey(key),
+        //                 SecurityAlgorithms.HmacSha256Signature)
+        //         };
 
-    //         var token = tokenHandler.CreateToken(tokenDescriptor);
-    //         return tokenHandler.WriteToken(token);
-    //     }
+        //         var token = tokenHandler.CreateToken(tokenDescriptor);
+        //         return tokenHandler.WriteToken(token);
+        //     }
         private void LogModelStateErrors()
         {
             foreach (var key in ModelState.Keys)
@@ -662,7 +692,7 @@ namespace StokvelManagementSystem.Controllers
                 PenaltyAmount = reader["PenaltyAmount"] != DBNull.Value ? Convert.ToDecimal(reader["PenaltyAmount"]) : 0,
                 PenaltyGraceDays = reader["PenaltyGraceDays"] != DBNull.Value ? Convert.ToInt32(reader["PenaltyGraceDays"]) : 0,
                 Currency = reader["Currency"] != DBNull.Value ? reader["Currency"].ToString() : null,
-                Duration= reader["Duration"].ToString(),
+                Duration = reader["Duration"].ToString(),
                 AllowDeferrals = reader["AllowDeferrals"] != DBNull.Value && Convert.ToBoolean(reader["AllowDeferrals"])
             };
         }
@@ -680,7 +710,7 @@ namespace StokvelManagementSystem.Controllers
                     {
                         options.Add(new SelectListItem
                         {
-                            Value = reader["ID"].ToString(), 
+                            Value = reader["ID"].ToString(),
                             Text = reader["FrequencyName"].ToString()
                         });
                     }
@@ -689,6 +719,71 @@ namespace StokvelManagementSystem.Controllers
 
             return options;
         }
+        [HttpPost]
+        public IActionResult RequestToLeave(int groupId, string nationalId)
+        {
+            int memberId;
+            var model = new RequestToLeaveView();
+
+            using (var conn = new SqlConnection(_configuration.GetConnectionString("DefaultConnection")))
+            {
+                conn.Open();
+
+                // Get member ID
+                using (var cmd = new SqlCommand("SELECT ID FROM Members WHERE NationalID = @NationalID", conn))
+                {
+                    cmd.Parameters.AddWithValue("@NationalID", nationalId);
+                    var result = cmd.ExecuteScalar();
+
+                    if (result == null)
+                    {
+                        return NotFound("Member not found.");
+                    }
+
+                    memberId = Convert.ToInt32(result);
+                }
+
+                // Check if member is in group
+                using (var cmd = new SqlCommand("SELECT COUNT(*) FROM MemberGroups WHERE MemberID = @MemberID AND GroupID = @GroupID", conn))
+                {
+                    cmd.Parameters.AddWithValue("@MemberID", memberId);
+                    cmd.Parameters.AddWithValue("@GroupID", groupId);
+
+                    int count = (int)cmd.ExecuteScalar();
+                    if (count == 0)
+                    {
+                        return BadRequest("Member is not part of the group.");
+                    }
+                }
+
+                // Check if there's already a pending leave request
+                using (var cmd = new SqlCommand("SELECT COUNT(*) FROM LeaveRequests WHERE MemberID = @MemberID AND GroupID = @GroupID AND StatusID = (SELECT ID FROM Statii WHERE Status = 'Pending')", conn))
+                {
+                    cmd.Parameters.AddWithValue("@MemberID", memberId);
+                    cmd.Parameters.AddWithValue("@GroupID", groupId);
+
+                    int existing = (int)cmd.ExecuteScalar();
+                    if (existing > 0)
+                    {
+                        return BadRequest("A leave request is already pending.");
+                    }
+                }
+
+                // Insert into LeaveRequests table
+                string insertSql = @"INSERT INTO LeaveRequests (MemberID, GroupID, RequestedDate, StatusID)
+                            VALUES (@MemberID, @GroupID, GETDATE(), (SELECT ID FROM Statii WHERE Status = 'Pending'))";
+
+                using (var cmd = new SqlCommand(insertSql, conn))
+                {
+                    cmd.Parameters.AddWithValue("@MemberID", memberId);
+                    cmd.Parameters.AddWithValue("@GroupID", groupId);
+                    cmd.ExecuteNonQuery();
+                }
+            }
+
+            return View("RequestToLeave",model);
+            }
+
 
     }
 }

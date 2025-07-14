@@ -52,19 +52,7 @@
         public string SelectedStatus { get; set; }
         public bool IsMemberView { get; set; }
         public bool AdminTools => !IsMemberView;
-        // Join request counts
-        public int PendingJoinCount { get; set; }
-        public int ApprovedJoinCount { get; set; }
-        public int DeniedJoinCount { get; set; }
-
-        // Leave request properties
-        public List<LeaveRequestView> LeaveRequests { get; set; }
-        public string SelectedLeaveStatus { get; set; }
-        public int PendingLeaveCount { get; set; }
-        public int ApprovedLeaveCount { get; set; }
-        public int DeniedLeaveCount { get; set; }
-
-
+     
         // Additional properties for both roles
         public int PendingRequestCount { get; set; }
         public DateTime? NextContributionDate { get; set; }

@@ -46,5 +46,12 @@ namespace StokvelManagementSystem.Models
         public string GroupName { get; set; }
         public string FirstName { get; set; }
         public string CreatedBy { get; set; }
+        public List<PaymentMethod> PaymentMethods { get; set; } = new List<PaymentMethod>();
+
+    }
+    public class PaymentMethod
+    {
+        public int Id { get; set; }
+        public string Method { get; set; }
     }
 }
