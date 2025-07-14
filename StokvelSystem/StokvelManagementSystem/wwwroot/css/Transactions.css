@@ -1,0 +1,76 @@
+/* Global card styling */
+.card {
+    border-radius: 12px;
+    overflow: hidden;
+}
+
+.card-header {
+    padding: 1rem 1.5rem;
+    font-size: 1.25rem;
+    font-weight: 600;
+}
+
+/* Labels and Inputs */
+.form-label {
+    font-weight: 500;
+    margin-bottom: 0.4rem;
+}
+
+.form-control,
+.form-select {
+    border-radius: 8px;
+    transition: border-color 0.3s, box-shadow 0.3s;
+}
+
+.form-control:focus,
+.form-select:focus {
+    border-color: #0d6efd;
+    box-shadow: 0 0 0 0.2rem rgba(13, 110, 253, 0.25);
+}
+
+.input-group-text {
+    background-color: #f0f0f0;
+    border-radius: 8px 0 0 8px;
+}
+
+/* File Upload */
+input[type="file"].form-control {
+    padding: 0.5rem;
+    border: 2px dashed #ced4da;
+    background-color: #f9f9f9;
+    cursor: pointer;
+    transition: border-color 0.3s ease;
+}
+
+input[type="file"].form-control:hover {
+    border-color: #0d6efd;
+}
+
+/* Buttons */
+.btn-primary {
+    border-radius: 8px;
+    padding: 0.5rem 1.5rem;
+    font-weight: 500;
+}
+
+.btn-outline-secondary {
+    border-radius: 8px;
+    padding: 0.5rem 1.5rem;
+}
+
+.btn-primary:hover {
+    background-color: #0b5ed7;
+}
+
+/* Spacing */
+.form-group {
+    margin-bottom: 1.25rem;
+}
+
+.row + .row {
+    margin-top: 1rem;
+}
+
+.text-muted {
+    font-size: 0.875rem;
+}

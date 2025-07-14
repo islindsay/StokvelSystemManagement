@@ -1,146 +1,60 @@
-﻿.admin-dashboard {
+﻿
+.sidebar {
+    background-color: #f0f0f0;
+    min-height: 100vh;
     padding: 20px;
-    max-width: 1200px;
-    margin: 0 auto;
+    width: 260px;
 }
 
-.dashboard-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: 30px;
-}
-
-.member-counter-card {
-    background: #f8f9fa;
-    border-radius: 10px;
-    padding: 15px 20px;
-    min-width: 300px;
-    text-align: center;
-    box-shadow: 0 2px 5px rgba(0,0,0,0.1);
-}
-
-.counter-display {
-    font-size: 1.5rem;
-    margin-bottom: 10px;
-}
-
-.counter-number {
-    font-weight: bold;
-    color: #2c3e50;
-}
-
-.progress-container {
-    height: 10px;
-    background: #e9ecef;
-    border-radius: 5px;
-    margin-bottom: 15px;
-    overflow: hidden;
-}
-
-.progress-bar {
-    height: 100%;
-    background: #4CAF50;
-    transition: width 0.3s ease;
-}
-
-.btn-start-stokvel {
-    background: #28a745;
-    color: white;
-    border: none;
-    padding: 8px 15px;
-    border-radius: 5px;
-    cursor: pointer;
-    transition: background 0.3s;
-}
-
-.stokvel-active-badge {
-    color: #28a745;
+.sidebar .btn-toggle {
+    width: 100%;
+    text-align: left;
     font-weight: bold;
 }
 
-.admin-controls {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
-    gap: 20px;
+.collapse-toggle {
+    transition: transform 0.2s ease-in-out;
+    /* Remove float: right as we're using flexbox now */
+    pointer-events: none !important; /* Force this to override any other styles */
 }
 
-.control-panel {
-    background: white;
-    border-radius: 10px;
-    box-shadow: 0 2px 10px rgba(0,0,0,0.1);
-    overflow: hidden;
-}
-
-.panel-header {
-    padding: 15px 20px;
-    background: #2c3e50;
-    color: white;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    cursor: pointer;
-}
-
-.panel-content {
-    max-height: 0;
-    overflow: hidden;
-    transition: max-height 0.3s ease;
-}
-
-    .panel-content.active {
-        max-height: 1000px;
-    }
-
-.status-tabs {
-    display: flex;
-    border-bottom: 1px solid #dee2e6;
-}
-
-.tab-btn {
-    flex: 1;
-    padding: 10px;
+.list-group-item {
     border: none;
-    background: none;
-    cursor: pointer;
-    border-bottom: 3px solid transparent;
+    padding-left: 1.5rem;
 }
 
-    .tab-btn.active {
-        border-bottom-color: #2c3e50;
-        font-weight: bold;
-    }
-
-.tab-content {
-    display: none;
-    padding: 15px;
+.progress {
+    height: 14px;
+    width: 50%;
+    background-color: white
 }
-
-    .tab-content.active {
-        display: block;
-    }
-
-.settings-item {
+/* Prevent dropdown from closing when clicking inside */
+.list-group-flush {
+    position: static;
     display: block;
-    padding: 12px 15px;
-    color: #495057;
-    text-decoration: none;
-    transition: background 0.2s;
 }
 
-    .settings-item:hover {
-        background: #f8f9fa;
-    }
-
-    .settings-item i {
-        margin-right: 10px;
-        width: 20px;
-        text-align: center;
-    }
-
-/* Modal styles */
-.modal {
-    display: none;
-    position: fixed;
-    /* ... rest of modal styles ... */
+/* Rotate arrow when expanded */
+.btn-toggle[aria-expanded="true"] .collapse-toggle {
+    transform: rotate(180deg);
 }
+
+.btn-toggle {
+    width: 100%;
+    text-align: left;
+    font-weight: bold;
+    padding-right: 2rem;
+    position: relative;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+/* Active state for selected items */
+.list-group-item.active {
+    background-color: rgba(0, 123, 255, 0.1);
+    color: #007bff;
+    font-weight: 500;
+}
+
+

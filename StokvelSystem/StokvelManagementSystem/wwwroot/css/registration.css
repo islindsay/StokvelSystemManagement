@@ -1,0 +1,109 @@
+body {
+    background-color: #f8f9fc;
+    font-family: 'Poppins', sans-serif;
+}
+
+.page-title {
+    font-weight: 700;
+    font-size: 2rem;
+    margin-top: 2rem;
+    margin-bottom: 2rem;
+    color: #1f3f5b;
+}
+
+.card {
+    border-radius: 1rem;
+    background-color: #ffffff;
+    border: none;
+    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.05);
+}
+
+.input-group-text {
+    background-color: #e9f1ff;
+    border: none;
+    color: #007bff;
+    font-size: 1.1rem;
+}
+
+.form-control,
+textarea,
+select {
+    border-radius: 0.5rem;
+    border: 1px solid #ced4da;
+    transition: border-color 0.3s ease, box-shadow 0.3s ease;
+}
+
+.form-control:focus,
+textarea:focus,
+select:focus {
+    border-color: #007bff;
+    box-shadow: 0 0 0 0.15rem rgba(0, 123, 255, 0.2);
+}
+
+.form-section-title {
+    font-size: 1.2rem;
+    font-weight: 600;
+    margin-bottom: 1rem;
+    color: #495057;
+}
+
+.btn-sm {
+    padding: 0.45rem 1.2rem;
+    font-weight: 600;
+    font-size: 0.9rem;
+    border-radius: 0.4rem;
+    transition: all 0.2s ease-in-out;
+}
+
+.btn-sm:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 10px rgba(0, 123, 255, 0.2);
+}
+
+small.text-muted {
+    font-size: 0.85rem;
+    font-weight: 500;
+    color: #6c757d !important;
+}
+
+/* Search Bar */
+form[method="get"] .form-control {
+    border-right: none;
+    border-top-left-radius: 0.5rem;
+    border-bottom-left-radius: 0.5rem;
+}
+
+form[method="get"] .btn {
+    border-top-right-radius: 0.5rem;
+    border-bottom-right-radius: 0.5rem;
+}
+
+/* Responsive tweaks */
+@media (max-width: 576px) {
+    .form-control,
+    .input-group-text {
+        font-size: 0.9rem;
+    }
+
+    .btn-sm {
+        width: 100%;
+        margin-bottom: 0.5rem;
+    }
+
+    .row.mt-4 .col-md-6 {
+        text-align: center !important;
+    }
+}
+.login-details-section {
+    background-color: #e9f1ff; /* subtle light blue */
+    border-radius: 1rem;
+    border: 1px solid #007bff;
+}
+
+.login-details-section .form-section-title {
+    color: #004085; /* darker blue */
+    font-weight: 700;
+    font-size: 1.4rem;
+    border-bottom: 2px solid #007bff;
+    padding-bottom: 0.3rem;
+}
