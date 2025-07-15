@@ -483,7 +483,6 @@ namespace StokvelManagementSystem.Controllers
                FROM JoinRequests jr
                JOIN Members m ON jr.MemberID = m.ID
                JOIN Groups g ON jr.GroupID = g.ID
-               JOIN Statii s ON jr.StatusID = s.ID
                JOIN Currencies c ON g.CurrencyID = c.ID
                JOIN Frequencies f ON g.FrequencyID = f.ID
                WHERE jr.GroupID = @groupId AND jr.Status = @status";
