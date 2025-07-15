@@ -502,7 +502,6 @@ namespace StokvelManagementSystem.Controllers
                                 RequestId = reader.GetInt32(reader.GetOrdinal("ID")),
                                 MemberId = reader.GetInt32(reader.GetOrdinal("MemberID")),
                                 RequestedDate = reader.GetDateTime(reader.GetOrdinal("RequestedDate")),
-                                StatusID = reader.GetInt32(reader.GetOrdinal("StatusID")),
                                 Status = reader.GetString(reader.GetOrdinal("Status")),
                                 GroupName = reader.GetString(reader.GetOrdinal("GroupName")),
                                 ContributionAmount = decimal.Parse(reader["ContributionAmount"].ToString()),
@@ -742,8 +741,8 @@ namespace StokvelManagementSystem.Controllers
                 }
 
                 // Insert into LeaveRequests table
-                string insertSql = @"INSERT INTO LeaveRequests (MemberID, GroupID, RequestedDate, StatusID)
-                            VALUES (@MemberID, @GroupID, GETDATE(), (SELECT ID FROM Statii WHERE Status = 'Pending'))";
+                string insertSql = @"  INSERT INTO LeaveRequests (MemberID, GroupID, RequestedDate, Status)
+                            VALUES (@memberId, @groupId, GETDATE(),@status) ";
 
                 using (var cmd = new SqlCommand(insertSql, conn))
                 {
