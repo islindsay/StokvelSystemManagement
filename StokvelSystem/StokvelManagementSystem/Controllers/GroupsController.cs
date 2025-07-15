@@ -328,20 +328,15 @@ namespace StokvelManagementSystem.Controllers
         }
 
        [HttpPost]
-
         public IActionResult JoinGroupConfirmed(int groupId)
-
         {
-
             var memberIdClaim = User.FindFirst("member_id");
         
             if (memberIdClaim == null || !int.TryParse(memberIdClaim.Value, out int memberId))
-
             {
-
                 return Unauthorized("Member ID not found in token.");
-
             }
+        
         
             using (var conn = new SqlConnection(_configuration.GetConnectionString("DefaultConnection")))
 
@@ -350,35 +345,23 @@ namespace StokvelManagementSystem.Controllers
                 conn.Open();
         
                 // Check if this request already exists
-
                 using (var checkCmd = new SqlCommand(
-
                     "SELECT COUNT(*) FROM JoinRequests WHERE MemberID = @MemberID AND GroupID = @GroupID", conn))
-
                 {
-
                     checkCmd.Parameters.AddWithValue("@MemberID", memberId);
-
                     checkCmd.Parameters.AddWithValue("@GroupID", groupId);
-
                     int count = (int)checkCmd.ExecuteScalar();
         
                     if (count > 0)
-
                     {
-
                         return BadRequest("Join request already exists.");
-
                     }
-
                 }
         
                 // Insert new join request
+                var insertSql = @"INSERT INTO JoinRequests (MemberID, GroupID, Status) 
+                                VALUES (@MemberID, @GroupID, @Status)";
 
-                var insertSql = @"INSERT INTO JoinRequests (MemberID, GroupID) 
-
-                                VALUES (@MemberID, @GroupID)";
-        
                 using (var cmd = new SqlCommand(insertSql, conn))
 
                 {
@@ -386,7 +369,7 @@ namespace StokvelManagementSystem.Controllers
                     cmd.Parameters.AddWithValue("@MemberID", memberId);
 
                     cmd.Parameters.AddWithValue("@GroupID", groupId);
-
+                    cmd.Parameters.AddWithValue("@Status", "Pending"); // <-- Set the status here
                     cmd.ExecuteNonQuery();
 
                 }
@@ -394,7 +377,6 @@ namespace StokvelManagementSystem.Controllers
             }
         
             return RedirectToAction("ListGroups", new { memberId });
-
         }
 
  
