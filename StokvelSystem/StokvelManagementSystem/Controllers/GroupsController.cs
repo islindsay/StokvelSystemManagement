@@ -564,38 +564,7 @@ namespace StokvelManagementSystem.Controllers
                 return View(model);
             }
         }
-        //[Authorize(Roles = "Admin")]
-        //[HttpPost]
-        //public IActionResult ProcessRequest(int requestId, string action)
-        //{
-        //    // Your existing approval/denial logic
-        //}
 
-        //     private string GenerateJwtToken(int memberId, string username, string firstname)
-        //     {
-        //         var key = Encoding.ASCII.GetBytes(_configuration["Jwt:Key"]);
-        //         var tokenHandler = new JwtSecurityTokenHandler();
-
-        //         var claims = new[]
-        //         {
-        //     new Claim(ClaimTypes.NameIdentifier, memberId.ToString()),
-        //     new Claim(ClaimTypes.Name, username),
-        //     new Claim(ClaimTypes.GivenName, firstname),
-        // //     new Claim(ClaimTypes.Role, "Admin")
-        // // };
-
-        //         var tokenDescriptor = new SecurityTokenDescriptor
-        //         {
-        //             Subject = new ClaimsIdentity(claims),
-        //             Expires = DateTime.UtcNow.AddDays(7),
-        //             SigningCredentials = new SigningCredentials(
-        //                 new SymmetricSecurityKey(key),
-        //                 SecurityAlgorithms.HmacSha256Signature)
-        //         };
-
-        //         var token = tokenHandler.CreateToken(tokenDescriptor);
-        //         return tokenHandler.WriteToken(token);
-        //     }
         private void LogModelStateErrors()
         {
             foreach (var key in ModelState.Keys)
@@ -730,7 +699,7 @@ namespace StokvelManagementSystem.Controllers
                 }
 
                 // Check if there's already a pending leave request
-                using (var cmd = new SqlCommand("SELECT COUNT(*) FROM LeaveRequests WHERE MemberID = @MemberID AND GroupID = @GroupID AND Status = 'Pending')", conn))
+                using (var cmd = new SqlCommand("SELECT COUNT(*) FROM LeaveRequests WHERE MemberID = @MemberID AND GroupID = @GroupID AND Status = 'Pending'", conn))
                 {
                     cmd.Parameters.AddWithValue("@MemberID", memberId);
                     cmd.Parameters.AddWithValue("@GroupID", groupId);
@@ -743,7 +712,7 @@ namespace StokvelManagementSystem.Controllers
                 }
 
                 // Insert into LeaveRequests table
-                string insertSql = @"INSERT INTO LeaveRequests (MemberID, GroupID, RequestedDate, Status)
+                string insertSql = @"INSERT INTO LeaveRequests (MemberID, GroupID, RequestedAt, Status)
                             VALUES (@MemberID, @GroupID, GETDATE(),  'Pending')";
 
                 using (var cmd = new SqlCommand(insertSql, conn))
@@ -753,8 +722,7 @@ namespace StokvelManagementSystem.Controllers
                     cmd.ExecuteNonQuery();
                 }
             }
-
-            return View("RequestToLeave",model);
+            return Ok("Leave request submitted successfully.");
             }
 
 
