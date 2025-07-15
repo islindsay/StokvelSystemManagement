@@ -477,8 +477,7 @@ namespace StokvelManagementSystem.Controllers
 
                 // Get Requests
                 var requests = new List<JoinRequestView>();
-                string query = isAdmin
-                    ? @"SELECT jr.ID, jr.MemberID, jr.RequestedDate, jr.StatusID, s.Status,
+                string query = @"SELECT jr.ID, jr.MemberID, jr.RequestedDate,jr.Status,
                      m.FirstName, m.LastName, m.NationalID,
                      g.GroupName AS GroupName, g.ContributionAmount, c.Currency, f.FrequencyName
                FROM JoinRequests jr
@@ -487,15 +486,7 @@ namespace StokvelManagementSystem.Controllers
                JOIN Statii s ON jr.StatusID = s.ID
                JOIN Currencies c ON g.CurrencyID = c.ID
                JOIN Frequencies f ON g.FrequencyID = f.ID
-               WHERE jr.GroupID = @groupId AND s.Status = @status"
-                    : @"SELECT jr.ID, jr.MemberID, jr.RequestedDate, jr.StatusID, s.Status,
-                     g.GroupName AS GroupName, g.ContributionAmount, c.Currency, f.FrequencyName
-               FROM JoinRequests jr
-               JOIN Groups g ON jr.GroupID = g.ID
-               JOIN Statii s ON jr.StatusID = s.ID
-               JOIN Currencies c ON g.CurrencyID = c.ID
-               JOIN Frequencies f ON g.FrequencyID = f.ID
-               WHERE jr.MemberID = @userId AND jr.GroupID = @groupId";
+               WHERE jr.GroupID = @groupId AND jr.Status = @status";
 
                 using (var cmd = new SqlCommand(query, conn))
                 {
