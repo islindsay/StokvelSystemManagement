@@ -20,10 +20,12 @@
                 </div>
 
                 <!-- Member Count -->
-                <h9>Member Count</h9>
+                <h9 id="group-stats">Loading stats...</h9>
+
                 <div class="progress mb-4">
                     <div class="progress-bar progress-bar-striped bg-success" style="width: 0%;" id="MemberLimit"></div>
                 </div>
+
 
                 <!-- Join Requests -->
                 <div class="mb-2">
@@ -201,7 +203,10 @@
                                                     <button type="button" class="btn btn-sm btn-success" onclick="approveRequest(@request.RequestId, this)">
                                                         Approve
                                                     </button>
-                                                    <button type="submit" name="action" value="deny" class="btn btn-sm btn-danger ms-1">
+                                                    <button type="button" class="btn btn-sm btn-warning ms-1" onclick="rejectRequest(@request.RequestId, this)">
+                                                        Reject
+                                                    </button>
+                                                     <button type="button" class="btn btn-sm btn-danger ms-1" onclick="deleteRequest(@request.RequestId, this)">
                                                         Delete
                                                     </button>
                                                 </form>
@@ -220,19 +225,10 @@
    
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script>
-     
-      
-       document.addEventListener('DOMContentLoaded', () => {
-            const bar = document.getElementById('MemberLimit');
-            let value = 0;
-            const interval = setInterval(() => {
-                if (value >= 40) {
-                    clearInterval(interval);
-                } else {
-                    value++;
-                    bar.style.width = value + "%";
-                }
-            }, 20);
+
+        document.addEventListener("DOMContentLoaded", function () {
+            const groupId = @Model.Group.ID; // Replace with actual group ID, or pass it dynamically
+            loadGroupStats(groupId);
         });
 
             document.querySelectorAll('.list-group-item').forEach(item => {
@@ -272,6 +268,85 @@
                 .catch(error => {
                     alert("Error: " + error.message);
                 });
+            }
+
+            function deleteRequest(requestId, button) {
+                fetch(`/Invites/DeleteJoinRequest/${requestId}`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    }
+                })
+                .then(response => {
+                    if (response.ok) {
+                        alert("Request deleted successfully.");
+                        // Remove the row containing the clicked button
+                        const row = button.closest('tr');
+                        if (row) row.remove();
+                    } else {
+                        alert("Failed to approve request.");
+                    }
+                })
+                .catch(error => {
+                    alert("Error: " + error.message);
+                });
+            }
+
+            function rejectRequest(requestId, button) {
+                fetch(`/Invites/RejectJoinRequest/${requestId}`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    }
+                })
+                .then(response => {
+                    if (response.ok) {
+                        alert("Request Denied.");
+                        // Remove the row containing the clicked button
+                        const row = button.closest('tr');
+                        if (row) row.remove();
+                    } else {
+                        alert("Failed to approve request.");
+                    }
+                })
+                .catch(error => {
+                    alert("Error: " + error.message);
+                });
+            }
+            function loadGroupStats(groupId) {
+                fetch(`/Invites/GroupStats/${groupId}`)
+                    .then(response => {
+                        if (!response.ok) {
+                            throw new Error("Network response was not ok");
+                        }
+                        return response.json();
+                    })
+                    .then(data => {
+                        const statsElement = document.getElementById('group-stats');
+                        const progressBar = document.getElementById('MemberLimit');
+
+                        if (data.memberCount !== undefined && data.memberLimit !== undefined) {
+                            const count = data.memberCount;
+                            const limit = data.memberLimit;
+                            const percent = Math.round((count / limit) * 100);
+
+                            // Update the h9 text
+                            if (statsElement) {
+                                statsElement.textContent = `Member Count ${count}/${limit}`;
+                            }
+
+                            // Update the progress bar fill and text
+                            if (progressBar) {
+                                progressBar.style.width = percent + "%";
+                                progressBar.textContent = percent + "%";
+                            }
+                        }
+                    })
+                    .catch(error => {
+                        console.error("Failed to load group stats:", error);
+                        const statsElement = document.getElementById('group-stats');
+                        if (statsElement) statsElement.textContent = "Error loading stats";
+                    });
             }
 
     </script>
