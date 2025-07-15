@@ -434,6 +434,8 @@ namespace StokvelManagementSystem.Controllers
             var userId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)?.Value);
             var isAdmin = User.IsInRole("Admin");
 
+             _logger.LogInformation("The status is: {status}", status);
+
             using (var conn = new SqlConnection(_configuration.GetConnectionString("DefaultConnection")))
             {
                 conn.Open();

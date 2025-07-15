@@ -39,17 +39,17 @@
                                asp-route-groupId="@Model.Group.ID">
                                <i class="fas fa-clock me-2"></i> Pending
                             </a>
-                            <a class="list-group-item @(Model.SelectedStatus == "Approved" ? "active" : "")"
+                            <a class="list-group-item @(Model.SelectedStatus == "Accepted" ? "active" : "")"
                                asp-action="JoinRequestsDashboard"
-                               asp-route-status="Approved"
+                               asp-route-status="Accepted"
                                asp-route-groupId="@Model.Group.ID">
-                                <i class="fas fa-check-circle me-2"></i> Approved
+                                <i class="fas fa-check-circle me-2"></i> Accepted
                             </a>
-                            <a class="list-group-item @(Model.SelectedStatus == "Denied" ? "active" : "")"
+                            <a class="list-group-item @(Model.SelectedStatus == "Rejected" ? "active" : "")"
                                asp-action="JoinRequestsDashboard"
-                               asp-route-status="Denied"
+                               asp-route-status="Rejected"
                                asp-route-groupId="@Model.Group.ID">
-                                <i class="fas fa-times-circle me-2"></i> Denied
+                                <i class="fas fa-times-circle me-2"></i> Rejected
                             </a>
                         </div>
                     </div>
@@ -196,9 +196,9 @@
                                         @if (Model.SelectedStatus == "Pending" && Model.AdminTools)
                                         {
                                             <td>
-                                                <form asp-action="ProcessRequest" method="post">
+                                                <form asp-controller="Invites"  method="post">
                                                     <input type="hidden" name="requestId" value="@request.RequestId" />
-                                                    <button type="submit" name="action" value="approve" class="btn btn-sm btn-success">
+                                                    <button type="button" class="btn btn-sm btn-success" onclick="approveRequest(@request.RequestId, this)">
                                                         Approve
                                                     </button>
                                                     <button type="submit" name="action" value="deny" class="btn btn-sm btn-danger ms-1">
@@ -251,6 +251,29 @@
                     toggleBtn.setAttribute('aria-expanded', 'true');
                 }
             });
+
+            function approveRequest(requestId, button) {
+                fetch(`/Invites/AcceptJoinRequest/${requestId}`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    }
+                })
+                .then(response => {
+                    if (response.ok) {
+                        alert("Request approved successfully.");
+                        // Remove the row containing the clicked button
+                        const row = button.closest('tr');
+                        if (row) row.remove();
+                    } else {
+                        alert("Failed to approve request.");
+                    }
+                })
+                .catch(error => {
+                    alert("Error: " + error.message);
+                });
+            }
+
     </script>
 </body>
 </html>
