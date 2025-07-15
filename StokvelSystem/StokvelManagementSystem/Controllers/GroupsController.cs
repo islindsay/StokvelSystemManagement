@@ -270,7 +270,7 @@ namespace StokvelManagementSystem.Controllers
                     model.MemberId = memberId;
 
                     int groupId;
-                    var insertGroupQuery = @"INSERT INTO Groups (GroupName, PayoutTypeID, Duration, ContributionAmount, MemberLimit, StatusID, CreatedDate, StartDate, CurrencyID,FrequencyID)
+                    var insertGroupQuery = @"INSERT INTO Groups (GroupName, PayoutTypeID, Duration, ContributionAmount, MemberLimit, Status, CreatedDate, StartDate, CurrencyID,FrequencyID)
                                              VALUES (@GroupName, @PayoutTypeID, @Duration, @ContributionAmount, @MemberLimit, 1, @CreatedDate, @StartDate, @CurrencyID, @FrequencyID);
                                              SELECT CAST(SCOPE_IDENTITY() AS INT);";
 
@@ -502,7 +502,6 @@ namespace StokvelManagementSystem.Controllers
                                 RequestId = reader.GetInt32(reader.GetOrdinal("ID")),
                                 MemberId = reader.GetInt32(reader.GetOrdinal("MemberID")),
                                 RequestedDate = reader.GetDateTime(reader.GetOrdinal("RequestedDate")),
-                                StatusID = reader.GetInt32(reader.GetOrdinal("StatusID")),
                                 Status = reader.GetString(reader.GetOrdinal("Status")),
                                 GroupName = reader.GetString(reader.GetOrdinal("GroupName")),
                                 ContributionAmount = decimal.Parse(reader["ContributionAmount"].ToString()),
@@ -537,7 +536,7 @@ namespace StokvelManagementSystem.Controllers
                 if (isAdmin)
                 {
                     using (var cmd = new SqlCommand(
-                        "SELECT COUNT(*) FROM JoinRequests WHERE GroupID = @groupId AND StatusID = (SELECT ID FROM Statii WHERE Status = 'Pending')",
+                        "SELECT COUNT(*) FROM JoinRequests WHERE GroupID = @groupId AND Status = 'Pending'",
                         conn))
                     {
                         cmd.Parameters.AddWithValue("@groupId", groupId);
@@ -729,7 +728,7 @@ namespace StokvelManagementSystem.Controllers
                 }
 
                 // Check if there's already a pending leave request
-                using (var cmd = new SqlCommand("SELECT COUNT(*) FROM LeaveRequests WHERE MemberID = @MemberID AND GroupID = @GroupID AND StatusID = (SELECT ID FROM Statii WHERE Status = 'Pending')", conn))
+                using (var cmd = new SqlCommand("SELECT COUNT(*) FROM LeaveRequests WHERE MemberID = @MemberID AND GroupID = @GroupID AND Status = 'Pending')", conn))
                 {
                     cmd.Parameters.AddWithValue("@MemberID", memberId);
                     cmd.Parameters.AddWithValue("@GroupID", groupId);
@@ -742,8 +741,8 @@ namespace StokvelManagementSystem.Controllers
                 }
 
                 // Insert into LeaveRequests table
-                string insertSql = @"INSERT INTO LeaveRequests (MemberID, GroupID, RequestedDate, StatusID)
-                            VALUES (@MemberID, @GroupID, GETDATE(), (SELECT ID FROM Statii WHERE Status = 'Pending'))";
+                string insertSql = @"INSERT INTO LeaveRequests (MemberID, GroupID, RequestedDate, Status)
+                            VALUES (@MemberID, @GroupID, GETDATE(),  'Pending')";
 
                 using (var cmd = new SqlCommand(insertSql, conn))
                 {
