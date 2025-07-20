@@ -226,10 +226,11 @@
                                                     @if (Model.SelectedStatus == "Pending" && Model.AdminTools)
                                                     {
                                                         <td>
-                                                            <form asp-controller="LeaveRequests" method="post">
+                                                            <form asp-controller="Leave" method="post">
                                                                 <input type="hidden" name="requestId" value="@request.RequestId" />
-                                                                <button type="submit" class="btn btn-sm btn-success">Approve</button>
-                                                                <button type="submit" class="btn btn-sm btn-danger ms-1">Reject</button>
+                                                                 <button type="button" class="btn btn-sm btn-success" onclick="approveLeaveRequest(@request.RequestId, this)">Approve</button>
+                                                                <button type="button" class="btn btn-sm btn-warning ms-1" onclick="rejectLeaveRequest(@request.RequestId, this)">Reject</button>
+                                                                <button type="button" class="btn btn-sm btn-danger ms-1" onclick="deleteLeaveRequest(@request.RequestId, this)">Delete</button>
                                                             </form>
                                                         </td>
                                                     }
@@ -292,6 +293,28 @@
                 });
             }
 
+            function approveLeaveRequest(requestId, button) {
+                fetch(`/Leave/ApproveLeaveRequest?requestId=${requestId}`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    }
+                })
+                .then(response => {
+                    if (response.ok) {
+                        alert("Request approved successfully.");
+                        const row = button.closest('tr');
+                        if (row) row.remove(); // remove row from table
+                    } else {
+                        response.text().then(text => alert("Failed: " + text));
+                    }
+                })
+                .catch(error => {
+                    alert("Error: " + error.message);
+                });
+            }
+
+
             function deleteRequest(requestId, button) {
                 fetch(`/Invites/DeleteJoinRequest/${requestId}`, {
                     method: 'POST',
@@ -314,6 +337,30 @@
                 });
             }
 
+            function deleteLeaveRequest(requestId, button) {
+                if (!confirm("Are you sure you want to delete this pending request?")) return;
+
+                fetch(`/Leave/DeleteLeaveRequest?requestId=${requestId}`, {
+                    method: 'DELETE',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    }
+                })
+                .then(response => {
+                    if (response.ok) {
+                        alert("Request deleted successfully.");
+                        const row = button.closest('tr');
+                        if (row) row.remove();
+                    } else {
+                        response.text().then(text => alert("Failed: " + text));
+                    }
+                })
+                .catch(error => {
+                    alert("Error: " + error.message);
+                });
+            }
+
+
             function rejectRequest(requestId, button) {
                 fetch(`/Invites/RejectJoinRequest/${requestId}`, {
                     method: 'POST',
@@ -335,6 +382,29 @@
                     alert("Error: " + error.message);
                 });
             }
+
+            function rejectLeaveRequest(requestId, button) {
+                fetch(`/Leave/RejectLeaveRequest?requestId=${requestId}`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    }
+                })
+                .then(response => {
+                    if (response.ok) {
+                        alert("Request rejected successfully.");
+                        const row = button.closest('tr');
+                        if (row) row.remove();
+                    } else {
+                        response.text().then(text => alert("Failed: " + text));
+                    }
+                })
+                .catch(error => {
+                    alert("Error: " + error.message);
+                });
+            }
+
+            
             function loadGroupStats(groupId) {
                 fetch(`/Invites/GroupStats/${groupId}`)
                     .then(response => {
