@@ -35,19 +35,19 @@
                     </button>
                     <div class="collapse mt-1" id="joinRequestsCollapse">
                         <div class="list-group list-group-flush">
-                            <a class="list-group-item @(Model.SelectedStatus == "Pending" ? "active" : "")"
+                           <a class="list-group-item @(Model.SelectedStatus == "Pending" && Model.RequestType == "Join" ? "active" : "")"
                                asp-action="JoinRequestsDashboard"
                                asp-route-status="Pending"
                                asp-route-groupId="@Model.Group.ID">
                                <i class="fas fa-clock me-2"></i> Pending
                             </a>
-                            <a class="list-group-item @(Model.SelectedStatus == "Accepted" ? "active" : "")"
+                            <a class="list-group-item @(Model.SelectedStatus == "Accepted" && Model.RequestType == "Join" ? "active" : "")"
                                asp-action="JoinRequestsDashboard"
                                asp-route-status="Accepted"
                                asp-route-groupId="@Model.Group.ID">
                                 <i class="fas fa-check-circle me-2"></i> Accepted
                             </a>
-                            <a class="list-group-item @(Model.SelectedStatus == "Rejected" ? "active" : "")"
+                            <a class="list-group-item @(Model.SelectedStatus == "Rejected" && Model.RequestType == "Join" ? "active" : "")"
                                asp-action="JoinRequestsDashboard"
                                asp-route-status="Rejected"
                                asp-route-groupId="@Model.Group.ID">
@@ -119,25 +119,28 @@
                     </button>
                     <div class="collapse mt-1" id="leaveRequestsCollapse">
                         <div class="list-group list-group-flush">
-                            <a class="list-group-item @(Model.SelectedStatus == "Approved" ? "active" : "")"
-                               asp-action="LeaveRequests"
-                               asp-route-status="Approved"
-                               asp-route-groupId="@Model.Group.ID">
-                                <i class="fas fa-check-circle me-2"></i> Approved
-                            </a>
+                          
                             @if (User.IsInRole("Admin"))
                             {
-                                <a class="list-group-item @(Model.SelectedStatus == "Pending" ? "active" : "")"
+                              
+                               <a class="list-group-item @(Model.SelectedStatus == "Pending" && Model.RequestType == "Leave" ? "active" : "")"
+
                                    asp-action="LeaveRequests"
                                    asp-route-status="Pending"
                                    asp-route-groupId="@Model.Group.ID">
                                     <i class="fas fa-clock me-2"></i> Pending
                                 </a>
-                                <a class="list-group-item @(Model.SelectedStatus == "Denied" ? "active" : "")"
+                                 <a class="list-group-item @(Model.SelectedStatus == "Accepted" && Model.RequestType == "Leave" ? "active" : "")"
+                                    asp-action="LeaveRequests"
+                                    asp-route-status="Accepted"
+                                    asp-route-groupId="@Model.Group.ID">
+                                        <i class="fas fa-check-circle me-2"></i> Accepted
+                                </a>
+                                <a class="list-group-item @(Model.SelectedStatus == "Rejected" && Model.RequestType == "Leave" ? "active" : "")"
                                    asp-action="LeaveRequests"
-                                   asp-route-status="Denied"
+                                   asp-route-status="Rejected"
                                    asp-route-groupId="@Model.Group.ID">
-                                    <i class="fas fa-times-circle me-2"></i> Denied
+                                    <i class="fas fa-times-circle me-2"></i> Rejected
                                 </a>
                             }
                         </div>
@@ -157,63 +160,82 @@
                     </span>
                 </div>
 
-                @if (!Model.Requests.Any())
-                {
-                    <div class="alert alert-info">
-                        No @Model.SelectedStatus.ToLower() requests found.
-                    </div>
+                @{
+                    var isJoin = Model.RequestType == "Join";
+                    var requests = isJoin
+                        ? Model.Requests?.Cast<object>().ToList()
+                        : Model.LeaveRequests?.Cast<object>().ToList();
                 }
+                @if (requests == null || !requests.Any())
+                    {
+                        <div class="alert alert-info">
+                            No @Model.SelectedStatus.ToLower() requests found.
+                        </div>
+                    }
                 else
                 {
                     <div class="table-responsive">
                         <table class="table table-striped">
-                            <thead>
-                                <tr>
-                                    @if (Model.AdminTools)
-                                    {
-                                        <th>Member</th>
-                                        <th>National ID</th>
-                                    }
-                                    <th>Group</th>
-                                    <th>Contribution</th>
-                                    <th>Date</th>
-                                    @if (Model.SelectedStatus == "Pending" && Model.AdminTools)
-                                    {
-                                        <th>Actions</th>
-                                    }
-                                </tr>
-                            </thead>
+                                       <thead>
+                                            <tr>
+                                                <th>Member</th>
+                                                @if (isJoin)
+                                                {
+                                                    <th>National ID</th>
+                                                    <th>Group</th>
+                                                    <th>Contribution</th>
+                                                }
+                                                <th>Date</th>
+                                                @if (Model.SelectedStatus == "Pending" && Model.AdminTools)
+                                                {
+                                                    <th>Actions</th>
+                                                }
+                                            </tr>
+                                        </thead>
                             <tbody>
-                                @foreach (var request in Model.Requests)
-                                {
-                                    <tr>
-                                        @if (Model.AdminTools)
+                                @foreach (var r in requests)
                                         {
-                                            <td>@request.FirstName @request.LastName</td>
-                                            <td>@request.NationalID</td>
+                                            if (isJoin)
+                                            {
+                                                var request = (JoinRequestView)r;
+                                                <tr>
+                                                    <td>@request.FirstName @request.LastName</td>
+                                                    <td>@request.NationalID</td>
+                                                    <td>@request.GroupName</td>
+                                                    <td>@Model.Group.Currency @request.ContributionAmount.ToString("N2")</td>
+                                                    <td>@request.RequestedDate.ToString("dd MMM yyyy")</td>
+                                                    @if (Model.SelectedStatus == "Pending" && Model.AdminTools)
+                                                    {
+                                                        <td>
+                                                            <form asp-controller="Invites" method="post">
+                                                                <input type="hidden" name="requestId" value="@request.RequestId" />
+                                                                <button type="button" class="btn btn-sm btn-success" onclick="approveRequest(@request.RequestId, this)">Approve</button>
+                                                                <button type="button" class="btn btn-sm btn-warning ms-1" onclick="rejectRequest(@request.RequestId, this)">Reject</button>
+                                                                <button type="button" class="btn btn-sm btn-danger ms-1" onclick="deleteRequest(@request.RequestId, this)">Delete</button>
+                                                            </form>
+                                                        </td>
+                                                    }
+                                                </tr>
+                                            }
+                                            else
+                                            {
+                                                var request = (LeaveRequestView)r;
+                                                <tr>
+                                                    <td>@request.FirstName @request.LastName</td>
+                                                    <td>@request.RequestedDate.ToString("dd MMM yyyy")</td>
+                                                    @if (Model.SelectedStatus == "Pending" && Model.AdminTools)
+                                                    {
+                                                        <td>
+                                                            <form asp-controller="LeaveRequests" method="post">
+                                                                <input type="hidden" name="requestId" value="@request.RequestId" />
+                                                                <button type="submit" class="btn btn-sm btn-success">Approve</button>
+                                                                <button type="submit" class="btn btn-sm btn-danger ms-1">Reject</button>
+                                                            </form>
+                                                        </td>
+                                                    }
+                                                </tr>
+                                            }
                                         }
-                                        <td>@request.GroupName</td>
-                                        <td>@Model.Group.Currency @request.ContributionAmount.ToString("N2")</td>
-                                        <td>@request.RequestedDate.ToString("dd MMM yyyy")</td>
-                                        @if (Model.SelectedStatus == "Pending" && Model.AdminTools)
-                                        {
-                                            <td>
-                                                <form asp-controller="Invites"  method="post">
-                                                    <input type="hidden" name="requestId" value="@request.RequestId" />
-                                                    <button type="button" class="btn btn-sm btn-success" onclick="approveRequest(@request.RequestId, this)">
-                                                        Approve
-                                                    </button>
-                                                    <button type="button" class="btn btn-sm btn-warning ms-1" onclick="rejectRequest(@request.RequestId, this)">
-                                                        Reject
-                                                    </button>
-                                                     <button type="button" class="btn btn-sm btn-danger ms-1" onclick="deleteRequest(@request.RequestId, this)">
-                                                        Delete
-                                                    </button>
-                                                </form>
-                                            </td>
-                                        }
-                                    </tr>
-                                }
                             </tbody>
                         </table>
                     </div>

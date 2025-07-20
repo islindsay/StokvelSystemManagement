@@ -18,4 +18,5 @@ namespace StokvelManagementSystem.Models
         public int MemberId { get; set; }
         public string Duration { get; set; }
     }
+    
 }

@@ -531,6 +531,7 @@ namespace StokvelManagementSystem.Controllers
                     Group = group,
                     Requests = requests,
                     SelectedStatus = status,
+                    RequestType = "Join",
                     IsMemberView = !isAdmin
                 };
 
@@ -564,6 +565,117 @@ namespace StokvelManagementSystem.Controllers
                 return View(model);
             }
         }
+
+        [Authorize]
+        public IActionResult LeaveRequests(int? groupId, string status = "Pending")
+        {
+            var userId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)?.Value);
+            var isAdmin = User.IsInRole("Admin");
+
+            _logger.LogInformation("The leave request status is: {status}", status);
+
+            using (var conn = new SqlConnection(_configuration.GetConnectionString("DefaultConnection")))
+            {
+                conn.Open();
+
+                // For Members: Restrict to their group
+                if (!isAdmin)
+                {
+                    using (var cmd = new SqlCommand(
+                        "SELECT GroupID FROM MemberGroups WHERE MemberID = @userId", conn))
+                    {
+                        cmd.Parameters.AddWithValue("@userId", userId);
+                        groupId = (int?)cmd.ExecuteScalar();
+                        if (groupId == null) return Forbid();
+                    }
+                }
+
+                // Get Group Info
+                var group = new GroupInfoDto();
+                using (var cmd = new SqlCommand(
+                    @"SELECT g.ID, g.GroupName, c.Currency, f.FrequencyName 
+                    FROM Groups g
+                    JOIN Currencies c ON g.CurrencyID = c.ID
+                    JOIN Frequencies f ON g.FrequencyID = f.ID
+                    WHERE g.ID = @groupId", conn))
+                {
+                    cmd.Parameters.AddWithValue("@groupId", groupId);
+                    using (var reader = cmd.ExecuteReader())
+                    {
+                        if (reader.Read())
+                        {
+                            group = new GroupInfoDto
+                            {
+                                ID = reader.GetInt32(0),
+                                Name = reader.GetString(1),
+                                Currency = reader.GetString(2),
+                                FrequencyName = reader.GetString(3)
+                            };
+                        }
+                    }
+                }
+
+                // Get Leave Requests
+                var requests = new List<LeaveRequestView>();
+                string query = @"SELECT lr.ID, lr.MemberID, lr.RequestedDate, lr.Status,
+                                        m.FirstName, m.LastName, m.NationalID,
+                                        g.GroupName AS GroupName
+                                FROM LeaveRequests lr
+                                JOIN Members m ON lr.MemberID = m.ID
+                                JOIN Groups g ON lr.GroupID = g.ID
+                                WHERE lr.GroupID = @groupId AND lr.Status = @status";
+
+                using (var cmd = new SqlCommand(query, conn))
+                {
+                    cmd.Parameters.AddWithValue("@groupId", groupId);
+                    cmd.Parameters.AddWithValue("@status", status);
+
+                    using (var reader = cmd.ExecuteReader())
+                    {
+                        while (reader.Read())
+                        {
+                            var request = new LeaveRequestView
+                            {
+                                RequestId = reader.GetInt32(reader.GetOrdinal("ID")),
+                                MemberId = reader.GetInt32(reader.GetOrdinal("MemberID")),
+                                RequestedDate = reader.GetDateTime(reader.GetOrdinal("RequestedDate")),
+                                Status = reader.GetString(reader.GetOrdinal("Status")),
+                                GroupName = reader.GetString(reader.GetOrdinal("GroupName")),
+                                FirstName = reader.GetString(reader.GetOrdinal("FirstName")),
+                                LastName = reader.GetString(reader.GetOrdinal("LastName")),
+                                NationalID = reader.GetString(reader.GetOrdinal("NationalID"))
+                            };
+
+                            requests.Add(request);
+                        }
+                    }
+                }
+
+                // Create the dashboard model
+                var model = new DashboardModel
+                {
+                    Group = group,
+                    LeaveRequests = requests,
+                    SelectedStatus = status,
+                    RequestType = "Leave",
+                    IsMemberView = !isAdmin
+                };
+
+                // Pending count for admin
+                if (isAdmin)
+                {
+                    using (var cmd = new SqlCommand(
+                        "SELECT COUNT(*) FROM LeaveRequests WHERE GroupID = @groupId AND Status = 'Pending'", conn))
+                    {
+                        cmd.Parameters.AddWithValue("@groupId", groupId);
+                        model.PendingRequestCount = (int)cmd.ExecuteScalar();
+                    }
+                }
+
+                return View("JoinRequestsDashboard", model); // ✅ Explicitly render the desired view
+            }
+        }
+
 
         private void LogModelStateErrors()
         {
