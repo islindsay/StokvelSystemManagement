@@ -1,0 +1,99 @@
+﻿@model Report
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Member Contribution Report</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+   <link rel="stylesheet" href="@Url.Content("~/css/Report.css")" />
+</head>
+<body>
+    <div class="report-container">
+        <header class="report-header">
+            <h1><i class="fas fa-file-invoice-dollar me-2"></i>@($"{Model.FirstName} {Model.LastName}'s Contribution Report")</h1>
+            <div class="report-meta">
+                <span><i class="fas fa-users me-1"></i> <strong>Group:</strong> @Model.GroupName</span>
+                <span><i class="fas fa-info-circle me-1"></i> <strong>Status:</strong> <span class="status-@Model.CurrentStatus.ToLower()">@Model.CurrentStatus</span></span>
+                <span><i class="fas fa-calendar-alt me-1"></i> <strong>Generated On:</strong> @DateTime.Now.ToString("yyyy-MM-dd")</span>
+            </div>
+        </header>
+
+        <section class="summary-cards">
+            <div class="card">
+                <h3><i class="fas fa-chart-pie me-2"></i>Financial Summary</h3>
+                <div class="card-content">
+                    <p><strong>Total Paid:</strong> <span class="text-success">@(Model.TotalContributionsPaid.ToString("N2"))</span></p>
+                    <p><strong>Missed Payments:</strong> <span class="text-danger">@Model.TotalMissedPayments</span></p>
+                    <p><strong>Penalties Applied:</strong> @Model.PenaltiesApplied</p>
+                    <p><strong>Reporting Period:</strong> @Model.Period</p>
+                </div>
+            </div>
+            
+            <div class="card">
+                <h3><i class="fas fa-user me-2"></i>Member Details</h3>
+                <div class="card-content">
+                    <p><strong>Member Name:</strong> @Model.FirstName @Model.LastName</p>
+                    <p><strong>Group:</strong> @Model.GroupName</p>
+                    <p><strong>Account Status:</strong> <span class="status-@Model.CurrentStatus.ToLower()">@Model.CurrentStatus</span></p>
+                </div>
+            </div>
+        </section>
+
+        <div class="px-3">
+            <h4 class="mb-3"><i class="fas fa-list-ul me-2"></i>Contribution History</h4>
+            <div class="table-responsive">
+                <table id="contributions-table" class="table table-hover">
+                    <thead class="table-dark">
+                        <tr>
+                            <th><i class="fas fa-calendar me-1"></i> Date</th>
+                            <th><i class="fas fa-money-bill-wave me-1"></i> Amount</th>
+                            <th><i class="fas fa-coins me-1"></i> Currency</th>
+                            <th><i class="fas fa-credit-card me-1"></i> Method</th>
+                            <th><i class="fas fa-receipt me-1"></i> Proof</th>
+                            <th><i class="fas fa-check-circle me-1"></i> Status</th>
+                            <th><i class="fas fa-recycle me-1"></i> Cycle</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var c in Model.Contributions)
+                        {
+                            <tr>
+                                <td>@c.Date.ToString("yyyy-MM-dd")</td>
+                                <td>@(c.Amount.ToString("N2"))</td>
+                                <td>@c.PaymentMethod</td>
+                                <td>
+                                    <a href="/uploads/@c.ProofOfPayment" target="_blank" class="proof-link">
+                                        <i class="fas fa-eye me-1"></i> View
+                                    </a>
+                                </td>
+                                <td>
+                                    <span class="status-@c.Status.ToLower()">
+                                        <i class="@(c.Status == "Paid" ? "fas fa-check-circle" : "fas fa-times-circle") me-1"></i>
+                                        @c.Status
+                                    </span>
+                                </td>
+                                <td>@c.CycleOrMonth</td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <div class="export-options">
+            <button class="btn-export" onclick="window.print()">
+                <i class="fas fa-print"></i> Print Report
+            </button>
+            <button class="btn-export" id="downloadPdf">
+                <i class="fas fa-file-pdf"></i> Download PDF
+            </button>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    
+</body>
+</html>

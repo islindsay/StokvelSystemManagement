@@ -92,7 +92,7 @@
                             @if (User.IsInRole("Admin"))
                             {
                                 <a class="list-group-item" 
-                                asp-action="GroupReports" 
+                                asp-action="MemberReport" 
                                 asp-controller="Reports" 
                                 asp-route-groupId="@Model.Group.ID">
                                     <i class="fas fa-chart-line me-2"></i> Generate Report
@@ -101,7 +101,7 @@
                             else
                             {
                                 <a class="list-group-item" 
-                                asp-action="MyReport" 
+                                asp-action="MemberReport" 
                                 asp-controller="Reports"
                                 asp-route-groupId="@Model.Group.ID">
                                     <i class="fas fa-user-chart me-2"></i> My Report

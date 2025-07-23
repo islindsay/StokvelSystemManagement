@@ -98,8 +98,8 @@ namespace StokvelManagementSystem.Controllers
                         {
                             // Step 1: Insert into Members
                             string memberQuery = @"
-                                INSERT INTO Members (FirstName, MiddleName, LastName, DOB, NationalID, Phone, Email, GenderID, Address, RegistrationDate, StatusID)
-                                VALUES (@FirstName, @MiddleName, @LastName, @DOB, @NationalID, @Phone, @Email, @GenderID, @Address, @RegistrationDate, @StatusID);
+                                INSERT INTO Members (FirstName, MiddleName, LastName, DOB, NationalID, Phone, Email, GenderID, Address, RegistrationDate, Status)
+                                VALUES (@FirstName, @MiddleName, @LastName, @DOB, @NationalID, @Phone, @Email, @GenderID, @Address, @RegistrationDate, @Status);
                                 SELECT CAST(scope_identity() AS int)";
 
                             using (SqlCommand memberCommand = new SqlCommand(memberQuery, connection, transaction))
@@ -114,7 +114,7 @@ namespace StokvelManagementSystem.Controllers
                                 memberCommand.Parameters.AddWithValue("@GenderID", model.GenderID);
                                 memberCommand.Parameters.AddWithValue("@Address", (object)model.Address ?? DBNull.Value);
                                 memberCommand.Parameters.AddWithValue("@RegistrationDate", DateTime.Now);
-                                memberCommand.Parameters.AddWithValue("@StatusID", 1);
+                                memberCommand.Parameters.AddWithValue("@Status", "Active");
                                 newMemberId = (int)memberCommand.ExecuteScalar();
                             }
 
