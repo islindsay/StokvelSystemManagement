@@ -1,20 +1,20 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
 
 namespace StokvelManagementSystem.Models
 {
-    public class Transaction
+    public class Contribution
     {
         public int ID { get; set; }
-
+        
         [Required]
-        [Display(Name = "Member Group")]
-        public int MemberGroupID { get; set; }
-
-        [Required]
-        [Display(Name = "Transaction Type")]
-        public int TransactionTypeID { get; set; }
-
+        public int MemberGroupID { get; set; } 
+        public int MemberID { get; set; }
+        
+        public int Phone { get; set; }
+        public string Email { get; set; }
+      
         [Required]
         [Display(Name = "Contribution Amount")]
         [Range(0.01, double.MaxValue)]
@@ -46,12 +46,28 @@ namespace StokvelManagementSystem.Models
         public string GroupName { get; set; }
         public string FirstName { get; set; }
         public string CreatedBy { get; set; }
+        public DateTime? DueDate { get; set; }  
+        public decimal GroupContributionAmount { get; set; }  
+        
         public List<PaymentMethod> PaymentMethods { get; set; } = new List<PaymentMethod>();
-
     }
+
     public class PaymentMethod
     {
         public int Id { get; set; }
         public string Method { get; set; }
+    }
+
+  
+    public class GroupDetailsResponse
+    {
+        public string GroupName { get; set; }
+        public DateTime DueDate { get; set; }
+        public decimal GroupContributionAmount { get; set; }
+    }
+
+    public class PenaltySettingsResponse
+    {
+        public decimal DailyPenaltyAmount { get; set; }
     }
 }

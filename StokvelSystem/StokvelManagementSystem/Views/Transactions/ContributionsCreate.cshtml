@@ -1,103 +1,147 @@
-﻿@model StokvelManagementSystem.Models.Transaction
+﻿@model StokvelManagementSystem.Models.Contribution
 @{
     ViewData["Title"] = "Record Transaction";
 }
 
-
 <div class="container mt-4">
-    <div class="card shadow">
-        <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
+    <div class="card shadow-sm">
+        <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center py-3">
             <h4 class="mb-0">@ViewData["Title"]</h4>
-            <div><strong>Date:</strong> @DateTime.Now.ToString("dd MMMM yyyy")</div>
+            <div class="text-end">
+                <span class="badge bg-light text-dark fs-6">
+                    <i class="bi bi-calendar me-2"></i>@DateTime.Now.ToString("dd MMMM yyyy")
+                </span>
+            </div>
         </div>
 
         <div class="card-body">
-            <form asp-action="ContributionsCreate" method="post" enctype="multipart/form-data">
-                <div asp-validation-summary="ModelOnly" class="text-danger mb-3"></div>
+            <form asp-action="ContributionsCreate" method="post" enctype="multipart/form-data" class="needs-validation" novalidate>
+                <div asp-validation-summary="ModelOnly" class="alert alert-danger mb-4"></div>
 
-                <!-- File Upload First -->
-                <div class="form-group">
-                    <label for="ProofOfPayment" class="form-label">Proof of Payment</label>
-                    <input type="file" name="ProofOfPayment" class="form-control" accept=".pdf,.jpg,.png" required>
-                    <small class="text-muted">Upload receipt or proof (PDF, JPG, PNG)</small>
-                </div>
-
-                <!-- Personal + Group Info -->
-                <div class="row">
-                    <div class="col-md-6">
-                        <div class="form-group">
-                            <label class="form-label">First Name</label>
-                            <input type="text" class="form-control" required>
-                        </div>
-
-                        <div class="form-group">
-                            <label class="form-label">Group Name</label>
-                            <input type="text" class="form-control" value="@Model.GroupName" readonly>
-                        </div>
-                    </div>
-
-                    <div class="col-md-6">
-                        <div class="form-group">
-                            <label asp-for="PaymentMethodID" class="form-label">Payment Method</label>
-                            <select asp-for="PaymentMethodID" class="form-select" required
-                                    asp-items="@(new SelectList(Model.PaymentMethods, "Id", "Method"))">
-                                <option value="">-- Select Payment Method --</option>
-                            </select>
-                            <span asp-validation-for="PaymentMethodID" class="text-danger"></span>
-                        </div>
-
-                        <div class="form-group">
-                            <label asp-for="Reference" class="form-label">Reference</label>
-                            <input asp-for="Reference" class="form-control" placeholder="e.g., July Contribution" required>
-                            <span asp-validation-for="Reference" class="text-danger"></span>
+                <!-- Section 1: Proof of Payment -->
+                <div class="mb-4 p-3 border rounded bg-light">
+                    <h5 class="mb-3 text-primary">
+                        <i class="bi bi-receipt me-2"></i>Proof of Payment
+                    </h5>
+                    <div class="form-group">
+                        <label for="ProofOfPayment" class="form-label fw-bold">Upload Receipt</label>
+                        <div class="custom-file">
+                            <input type="file" class="form-control" id="ProofOfPayment" name="ProofOfPayment" accept=".pdf,.jpg,.png" required>
+                            <div class="invalid-feedback">Please upload a valid file (PDF, JPG, PNG).</div>
                         </div>
                     </div>
                 </div>
 
-                <!-- Contribution Section: Amount > Penalty > Total -->
-                <div class="row">
-                    <div class="col-md-4">
-                        <div class="form-group">
-                            <label asp-for="ContributionAmount" class="form-label">Contribution Amount</label>
-                            <div class="input-group">
-                                <span class="input-group-text">$</span>
-                                <input asp-for="ContributionAmount" class="form-control" type="number" step="0.01" required id="ContributionAmount">
+                <!-- Section 2: Member & Group Details -->
+                <div class="row mb-4">
+                    <div class="col-md-6">
+                        <div class="p-3 border rounded bg-light h-100">
+                            <h5 class="mb-3 text-primary">
+                                <i class="bi bi-person-circle me-2"></i>Member Details
+                            </h5>
+                            <div class="form-group mb-3">
+                                <label class="form-label fw-bold">Member Full Name</label>
+                                 <input type="text" class="form-control" id="MemberName" name="MemberName" readonly>
+                                <div class="invalid-feedback">Please select a member.</div>
                             </div>
-                            <span asp-validation-for="ContributionAmount" class="text-danger"></span>
-                        </div>
-                    </div>
-
-                    <div class="col-md-4">
-                        <div class="form-group">
-                            <label asp-for="PenaltyAmount" class="form-label">Penalty Amount</label>
-                            <div class="input-group">
-                                <span class="input-group-text">$</span>
-                                <input asp-for="PenaltyAmount" class="form-control" type="number" step="0.01" id="PenaltyAmount">
+                            <div class="form-group mb-3">
+                                <label class="form-label fw-bold">Phone</label>
+                                <input type="tel" class="form-control" id="Phone" name="Phone" readonly>
                             </div>
-                            <span asp-validation-for="PenaltyAmount" class="text-danger"></span>
-                        </div>
-
-                        <div class="form-group">
-                            <label asp-for="TotalAmount" class="form-label">Total Amount</label>
-                            <div class="input-group">
-                                <span class="input-group-text">$</span>
-                                <input asp-for="TotalAmount" class="form-control" type="number" step="0.01" readonly id="TotalAmount">
+                            <div class="form-group mb-3">
+                                <label class="form-label fw-bold">Email</label>
+                                <input type="email" class="form-control" id="Email" name="Email" readonly>
                             </div>
                         </div>
                     </div>
 
-                    <div class="col-md-4">
-                        <div class="form-group">
-                            <label class="form-label">Supposed Contribution</label>
-                            <input type="number" class="form-control" id="SupposedContribution" readonly value="100.00">
+                    <div class="col-md-6">
+                        <div class="p-3 border rounded bg-light h-100">
+                            <h5 class="mb-3 text-primary">
+                                <i class="bi bi-people-fill me-2"></i>Group & Payment
+                            </h5>
+                            <div class="form-group mb-3">
+                                <label class="form-label fw-bold">Group Name</label>
+                                <input type="text" class="form-control" id="GroupName" name="GroupName" readonly>
+                            </div>
+                            <div class="form-group mb-3">
+                                <label class="form-label fw-bold">Due Date</label>
+                                <input type="date" class="form-control" id="DueDate" readonly>
+                            </div>
+                            <div class="form-group mb-3">
+                                <label asp-for="PaymentMethodID" class="form-label fw-bold">Payment Method</label>
+                                <select asp-for="PaymentMethodID" class="form-select" required
+                                        asp-items="@(new SelectList(Model.PaymentMethods, "Id", "Method"))">
+                                    <option value="">-- Select --</option>
+                                </select>
+                                <span asp-validation-for="PaymentMethodID" class="text-danger"></span>
+                            </div>
+                            <div class="form-group">
+                                <label asp-for="Reference" class="form-label fw-bold">Reference Note</label>
+                                <input asp-for="Reference" class="form-control" placeholder="e.g., July Contribution" required>
+                                <span asp-validation-for="Reference" class="text-danger"></span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Section 3: Contribution Amounts -->
+                <div class="mb-4 p-3 border rounded bg-light">
+                    <h5 class="mb-3 text-primary">
+                        <i class="bi bi-cash-stack me-2"></i>Contribution Details
+                    </h5>
+                    <div class="row">
+                        <div class="col-md-4">
+                            <div class="form-group mb-3">
+                                <label asp-for="ContributionAmount" class="form-label fw-bold">Contribution Amount</label>
+                                <div class="input-group">
+                                    <span class="input-group-text">$</span>
+                                    <input asp-for="ContributionAmount" class="form-control" type="number" step="0.01" min="0" required id="ContributionAmount">
+                                </div>
+                                <span asp-validation-for="ContributionAmount" class="text-danger"></span>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="form-group mb-3">
+                                <label asp-for="PenaltyAmount" class="form-label fw-bold">Penalty Amount</label>
+                                <div class="input-group">
+                                    <span class="input-group-text">$</span>
+                                    <input asp-for="PenaltyAmount" class="form-control" type="number" step="0.01" min="0" id="PenaltyAmount" readonly>
+                                </div>
+                                <span asp-validation-for="PenaltyAmount" class="text-danger"></span>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="form-group mb-3">
+                                <label class="form-label fw-bold">Supposed Contribution</label>
+                                <div class="input-group">
+                                    <span class="input-group-text">$</span>
+                                    <input type="number" class="form-control" id="SupposedContribution" name="GroupContributionAmount" readonly>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-4 offset-md-8">
+                            <div class="form-group">
+                                <label asp-for="TotalAmount" class="form-label fw-bold">Total Amount</label>
+                                <div class="input-group">
+                                    <span class="input-group-text">$</span>
+                                    <input asp-for="TotalAmount" class="form-control fw-bold text-success" type="number" step="0.01" readonly id="TotalAmount">
+                                </div>
+                            </div>
                         </div>
                     </div>
                 </div>
 
                 <!-- Buttons -->
-                <div class="d-flex justify-content-end mt-4">
-                    <a asp-action="ContributionsIndex" class="btn btn-outline-secondary me-2">Cancel</a>
-                    <button type="submit" class="btn btn-primary">Submit Transaction</button>
+                <div class="d-flex justify-content-end gap-2 mt-4">
+                    <a asp-action="ContributionsIndex" class="btn btn-outline-secondary px-4">
+                        <i class="bi bi-x-circle me-2"></i>Cancel
+                    </a>
+                    <button type="submit" class="btn btn-primary px-4">
+                        <i class="bi bi-check-circle me-2"></i>Submit Transaction
+                    </button>
                 </div>
             </form>
         </div>
@@ -106,22 +150,89 @@
 
 @section Styles {
     <link rel="stylesheet" href="~/css/transactions.css" />
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.8.0/font/bootstrap-icons.css">
+    <style>
+        .card {
+            border-radius: 10px;
+        }
+        .form-control:read-only {
+            background-color: #f8f9fa;
+        }
+        .input-group-text {
+            background-color: #e9ecef;
+        }
+    </style>
 }
 
 @section Scripts {
     @await Html.PartialAsync("_ValidationScriptsPartial")
     <script>
         $(document).ready(function () {
+            // Fetch member details when member is selected
+            $('#MemberId').change(function() {
+                const memberId = $(this).val();
+                if (memberId) {
+                    // Get group details
+                    $.get(`/Contributions/GetGroupDetails?memberId=${memberId}`, function(data) {
+                        $('#GroupName').val(data.groupName);
+                        
+                        // Format date for display
+                        const dueDate = new Date(data.dueDate);
+                        const formattedDate = dueDate.toISOString().split('T')[0];
+                        $('#DueDate').val(formattedDate);
+                        
+                        $('#SupposedContribution').val(data.groupContributionAmount.toFixed(2));
+                        
+                        // Calculate penalty based on due date
+                        calculatePenalty(dueDate);
+                    });
+                    
+                    // Get member details (phone, email)
+                    // You might need to implement another endpoint for this
+                }
+            });
+
+            // Calculate penalty based on due date
+            function calculatePenalty(dueDate) {
+                const today = new Date();
+                const daysLate = Math.floor((today - new Date(dueDate)) / (1000 * 60 * 60 * 24));
+                
+                if (daysLate > 0) {
+                    const groupName = $('#GroupName').val();
+                    $.get(`/Contributions/GetPenaltySettings?groupName=${encodeURIComponent(groupName)}`, function(data) {
+                        const penaltyAmount = daysLate * data.dailyPenaltyAmount;
+                        $('#PenaltyAmount').val(penaltyAmount.toFixed(2));
+                        calculateTotal();
+                    });
+                } else {
+                    $('#PenaltyAmount').val('0.00');
+                    calculateTotal();
+                }
+            }
+
+            // Calculate total amount
             function calculateTotal() {
-                var contribution = parseFloat($('#ContributionAmount').val()) || 0;
-                var penalty = parseFloat($('#PenaltyAmount').val()) || 0;
+                const contribution = parseFloat($('#ContributionAmount').val()) || 0;
+                const penalty = parseFloat($('#PenaltyAmount').val()) || 0;
                 $('#TotalAmount').val((contribution + penalty).toFixed(2));
             }
 
-            $('#ContributionAmount, #PenaltyAmount').on('input', calculateTotal);
+            $('#ContributionAmount').on('input', calculateTotal);
 
-            // Static value (could be dynamically fetched based on group/user)
-            $('#SupposedContribution').val('100.00');
+            // Form validation
+            (function () {
+                'use strict';
+                const forms = document.querySelectorAll('.needs-validation');
+                Array.from(forms).forEach(form => {
+                    form.addEventListener('submit', event => {
+                        if (!form.checkValidity()) {
+                            event.preventDefault();
+                            event.stopPropagation();
+                        }
+                        form.classList.add('was-validated');
+                    }, false);
+                });
+            })();
         });
     </script>
 }

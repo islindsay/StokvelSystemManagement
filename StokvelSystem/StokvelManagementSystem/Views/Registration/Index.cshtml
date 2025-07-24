@@ -11,19 +11,6 @@
 
 <h2 class="text-center page-title">Member Registration</h2>
 
-<!-- Search Bar -->
-<form asp-controller="Registration" asp-action="Search" method="get" class="d-flex justify-content-center mb-4">
-    @Html.AntiForgeryToken()
-    <div asp-validation-summary="All" class="text-danger text-center"></div>
-
-    <div class="input-group w-50">
-        <input class="form-control" type="search" name="query" placeholder="Search Member by National ID" aria-label="Search" />
-        <button class="btn btn-outline-primary" type="submit">
-            <i class="fas fa-search"></i> Search
-        </button>
-    </div>
-</form>
-
 <!-- Registration Form -->
 <div class="card p-4 mx-auto" style="max-width: 900px;  shadow-sm bg-light">
       <h3 class="form-section-title mb-4">Member Details</h3>
