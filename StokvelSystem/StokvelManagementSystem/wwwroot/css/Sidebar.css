@@ -56,5 +56,9 @@
     color: #007bff;
     font-weight: 500;
 }
+#reportPopup a:hover {
+    background-color: #f1f1f1;
+    border-radius: 4px;
+}
 
 

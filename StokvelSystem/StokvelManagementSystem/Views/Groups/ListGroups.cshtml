@@ -130,7 +130,7 @@
 
             </div>
         </div>
-            <!-- CreateTab-->
+          <!-- CreateTab -->
 @if (Model.CanCreate)
 {
     <div class="tab-pane fade p-4" id="create" role="tabpanel">
@@ -154,8 +154,9 @@
                     </ul>
                 </div>
             }
-         
-            <h16 class="mt-4 fw-semibold text-secondary">Group Information</h16>
+
+            <!-- Group Information -->
+            <h5 class="mt-4 fw-semibold text-secondary">Group Information</h5>
             <div class="row g-4">
                 <div class="col-md-6">
                     <label asp-for="GroupName" class="form-label">Group Name</label>
@@ -165,17 +166,10 @@
                     </div>
                     <span asp-validation-for="GroupName" class="text-danger small"></span>
                 </div>
-
-                <div class="col-md-6">
-                    <label class="form-label">Confirm Your National ID</label>
-                    <div class="input-group">
-                        <span class="input-group-text"><i class="bi bi-card-text"></i></span>
-                        <input type="text" name="NationalID" class="form-control" placeholder="Enter your National ID" required />
-                    </div>
-                </div>
             </div>
-   
-            <h9 class="mt-5 fw-semibold text-secondary">Contribution Details</h9>
+
+            <!-- Contribution Details -->
+            <h5 class="mt-5 fw-semibold text-secondary">Contribution Details</h5>
             <div class="row g-4">
                 <div class="col-md-4">
                     <label asp-for="ContributionAmount" class="form-label">Contribution Amount</label>
@@ -209,7 +203,8 @@
                 </div>
             </div>
 
-            <h16 class="mt-5 fw-semibold text-secondary">Group Configuration</h16>
+            <!-- Group Configuration -->
+            <h5 class="mt-5 fw-semibold text-secondary">Group Configuration</h5>
             <div class="row g-4">
                 <div class="col-md-4">
                     <label asp-for="PayoutTypeID" class="form-label">Payout Type</label>
@@ -241,7 +236,8 @@
                 </div>
             </div>
 
-            <h16 class="mt-5 fw-semibold text-secondary">Penalty Settings</h16>
+            <!-- Penalty Settings -->
+            <h5 class="mt-5 fw-semibold text-secondary">Penalty Settings</h5>
             <div class="row g-4">
                 <div class="col-md-6">
                     <label asp-for="PenaltyAmount" class="form-label">Penalty Amount</label>
@@ -261,8 +257,10 @@
                     <span asp-validation-for="PenaltyGraceDays" class="text-danger small"></span>
                 </div>
             </div>
-           
-            <div class="row g-4">
+
+            <!-- Other Settings -->
+            <h5 class="mt-5 fw-semibold text-secondary">Other Settings</h5>
+            <div class="row g-4 align-items-center">
                 <div class="col-md-6">
                     <div class="form-check mt-4">
                         <input asp-for="AllowDeferrals" class="form-check-input" />
@@ -280,6 +278,7 @@
                 </div>
             </div>
 
+            <!-- Submit Button -->
             <div class="text-end mt-5">
                 <button type="submit" class="btn btn-success px-5 py-2 shadow-sm">
                     <i class="bi bi-plus-circle me-2"></i>Create Group
