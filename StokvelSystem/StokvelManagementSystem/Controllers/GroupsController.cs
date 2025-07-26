@@ -327,23 +327,23 @@ namespace StokvelManagementSystem.Controllers
             }
         }
 
-       [HttpPost]
+        [HttpPost]
         public IActionResult JoinGroupConfirmed(int groupId)
         {
             var memberIdClaim = User.FindFirst("member_id");
-        
+
             if (memberIdClaim == null || !int.TryParse(memberIdClaim.Value, out int memberId))
             {
                 return Unauthorized("Member ID not found in token.");
             }
-        
-        
+
+
             using (var conn = new SqlConnection(_configuration.GetConnectionString("DefaultConnection")))
 
             {
 
                 conn.Open();
-        
+
                 // Check if this request already exists
                 using (var checkCmd = new SqlCommand(
                     "SELECT COUNT(*) FROM JoinRequests WHERE MemberID = @MemberID AND GroupID = @GroupID", conn))
@@ -351,13 +351,13 @@ namespace StokvelManagementSystem.Controllers
                     checkCmd.Parameters.AddWithValue("@MemberID", memberId);
                     checkCmd.Parameters.AddWithValue("@GroupID", groupId);
                     int count = (int)checkCmd.ExecuteScalar();
-        
+
                     if (count > 0)
                     {
                         return BadRequest("Join request already exists.");
                     }
                 }
-        
+
                 // Insert new join request
                 var insertSql = @"INSERT INTO JoinRequests (MemberID, GroupID, Status) 
                                 VALUES (@MemberID, @GroupID, @Status)";
@@ -375,11 +375,11 @@ namespace StokvelManagementSystem.Controllers
                 }
 
             }
-        
+
             return RedirectToAction("ListGroups", new { memberId });
         }
 
- 
+
         [HttpGet]
         public IActionResult RequestToJoin(int groupId, string nationalId)
         {
@@ -434,7 +434,7 @@ namespace StokvelManagementSystem.Controllers
             var userId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)?.Value);
             var isAdmin = User.IsInRole("Admin");
 
-             _logger.LogInformation("The status is: {status}", status);
+            _logger.LogInformation("The status is: {status}", status);
 
             using (var conn = new SqlConnection(_configuration.GetConnectionString("DefaultConnection")))
             {
@@ -835,7 +835,102 @@ namespace StokvelManagementSystem.Controllers
                 }
             }
             return Ok("Leave request submitted successfully.");
+        }
+
+        [HttpGet]
+        public IActionResult UpdateGroupPartial(int groupId)
+        {
+            GroupInfoDto groupInfo = null;
+            using (var conn = new SqlConnection(_configuration.GetConnectionString("DefaultConnection")))
+            {
+                conn.Open();
+                string query = @"
+                    SELECT 
+                        g.ID, 
+                        g.GroupName AS Name, 
+                        c.Currency, 
+                        f.FrequencyName,
+                        (SELECT COUNT(*) FROM MemberGroups WHERE GroupID = g.ID) AS CurrentMembers,
+                        g.MemberLimit AS MaxMembers,
+                        CASE WHEN g.Status = 1 THEN CAST(1 AS BIT) ELSE CAST(0 AS BIT) END AS IsActive,
+                        g.StartDate
+                    FROM Groups g
+                    JOIN Currencies c ON g.CurrencyID = c.ID
+                    JOIN Frequencies f ON g.FrequencyID = f.ID
+                    WHERE g.ID = @groupId";
+
+                using (var cmd = new SqlCommand(query, conn))
+                {
+                    cmd.Parameters.AddWithValue("@groupId", groupId);
+                    using (var reader = cmd.ExecuteReader())
+                    {
+                        if (reader.Read())
+                        {
+                            groupInfo = new GroupInfoDto
+                            {
+                                ID = Convert.ToInt32(reader["ID"]),
+                                Name = reader["Name"].ToString(),
+                                Currency = reader["Currency"].ToString(),
+                                FrequencyName = reader["FrequencyName"].ToString(),
+                                CurrentMembers = Convert.ToInt32(reader["CurrentMembers"]),
+                                MaxMembers = Convert.ToInt32(reader["MaxMembers"]),
+                                IsActive = Convert.ToBoolean(reader["IsActive"]),
+                                StartDate = reader["StartDate"] != DBNull.Value ? (DateTime?)Convert.ToDateTime(reader["StartDate"]) : null
+                            };
+                        }
+                    }
+                }
             }
+
+            if (groupInfo == null)
+            {
+                return NotFound("Group not found.");
+            }
+            return PartialView("_UpdateGroupPartial", groupInfo);
+        }
+
+        [HttpPost]
+        public IActionResult UpdateGroup(GroupInfoDto model)
+        {
+            if (!ModelState.IsValid)
+            {
+                return PartialView("_UpdateGroupPartial", model); // redisplay with errors
+            } try
+            {
+                using (var conn = new SqlConnection(_configuration.GetConnectionString("DefaultConnection")))
+                {
+                    conn.Open();
+                    string query = @"
+                        UPDATE Groups
+                        SET 
+                            GroupName = @Name,
+                            CurrencyID = (SELECT ID FROM Currencies WHERE Currency = @Currency),
+                            FrequencyID = (SELECT ID FROM Frequencies WHERE FrequencyName = @FrequencyName),
+                            MemberLimit = @MaxMembers,
+                            Status = @IsActive,
+                            StartDate = @StartDate
+                        WHERE ID = @ID";
+
+                    using (var cmd = new SqlCommand(query, conn))
+                    {
+                        cmd.Parameters.AddWithValue("@Name", model.Name);
+                        cmd.Parameters.AddWithValue("@Currency", model.Currency);
+                        cmd.Parameters.AddWithValue("@FrequencyName", model.FrequencyName);
+                        cmd.Parameters.AddWithValue("@MaxMembers", model.MaxMembers);
+                        cmd.Parameters.AddWithValue("@IsActive", model.IsActive ? 1 : 0); // Assuming Status is INT (1 for active, 0 for inactive)
+                        cmd.Parameters.AddWithValue("@StartDate", (object)model.StartDate ?? DBNull.Value);
+                        cmd.Parameters.AddWithValue("@ID", model.ID);
+                        cmd.ExecuteNonQuery();
+                    }
+                }
+                return Json(new { success = true });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, $"Error updating group: {ex.Message}");
+            }
+        }
+
 
 
     }
