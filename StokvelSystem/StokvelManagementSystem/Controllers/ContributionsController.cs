@@ -5,12 +5,12 @@ using System.IO;
 using Microsoft.Extensions.Configuration;
 using System.Collections.Generic;
 using Microsoft.AspNetCore.Authorization;
-using Microsoft.AspNetCore.Mvc.ViewEngines;
-
+using System.Linq;
+using System;
 
 namespace StokvelManagementSystem.Controllers
 {
-    [Authorize] //Authentication for all endpoints
+    [Authorize]
     public class ContributionsController : Controller
     {
         private readonly IConfiguration _configuration;
@@ -21,51 +21,84 @@ namespace StokvelManagementSystem.Controllers
         }
 
         [HttpGet]
-        [Authorize(Roles = "Admin")] // Only admins can access the create form
+        [Authorize(Roles = "Admin")]
         public IActionResult ContributionsCreate()
         {
-            var model = new Transaction
+            var model = new Contribution
             {
                 TransactionDate = DateTime.Now,
                 PaymentMethodID = 1,
                 PenaltyAmount = 0,
                 ContributionAmount = 0, 
-                TotalAmount = 0              
+                TotalAmount = 0
             };
             model.PaymentMethods = GetPaymentMethodsFromDatabase();
-            return View("~/Views/Transactions/ContributionsCreate.cshtml",model);
+            return View("~/Views/Transactions/ContributionsCreate.cshtml", model);
         }
-        private List<PaymentMethod> GetPaymentMethodsFromDatabase()
-        {
-            var paymentMethods = new List<PaymentMethod>();
 
+        [HttpGet]
+        public IActionResult GetGroupDetails(int memberId)
+        {
+            var groupDetails = new GroupDetailsResponse();
+            
             using (var connection = new SqlConnection(_configuration.GetConnectionString("DefaultConnection")))
             {
-                var query = "SELECT Id,Method FROM PaymentMethods";
+                var query = @"SELECT g.GroupName as GroupName, g.ContributionAmount as GroupContributionAmount, 
+                            DATEADD(DAY, gs.PenaltyGraceDays, DATEADD(MONTH, DATEDIFF(MONTH, 0, GETDATE()), 0)) as DueDate
+                            FROM Members m
+                            JOIN Groups g ON m.GroupID = g.ID
+                            JOIN GroupSettings gs ON g.ID = gs.GroupID
+                            WHERE m.ID = @MemberId";
+                
                 using (var command = new SqlCommand(query, connection))
                 {
+                    command.Parameters.AddWithValue("@MemberId", memberId);
                     connection.Open();
                     using (var reader = command.ExecuteReader())
                     {
-                        while (reader.Read())
+                        if (reader.Read())
                         {
-                            paymentMethods.Add(new PaymentMethod
-                            {
-                                Id = Convert.ToInt32(reader["Id"]),
-                                Method = reader["Method"].ToString()
-                            });
+                            groupDetails.GroupName = reader["GroupName"].ToString();
+                            groupDetails.DueDate = Convert.ToDateTime(reader["DueDate"]);
+                            groupDetails.GroupContributionAmount = Convert.ToDecimal(reader["GroupContributionAmount"]);
                         }
                     }
                 }
             }
+            
+            return Json(groupDetails);
+        }
 
-            return paymentMethods;
+        [HttpGet]
+        public IActionResult GetPenaltySettings(string groupName)
+        {
+            var penaltySettings = new PenaltySettingsResponse();
+            
+            using (var connection = new SqlConnection(_configuration.GetConnectionString("DefaultConnection")))
+            {
+                var query = "SELECT PenaltyAmount FROM GroupSettings WHERE GroupId = @GroupId";
+                
+                using (var command = new SqlCommand(query, connection))
+                {
+                    command.Parameters.AddWithValue("@GroupName", groupName);
+                    connection.Open();
+                    using (var reader = command.ExecuteReader())
+                    {
+                        if (reader.Read())
+                        {
+                            penaltySettings.DailyPenaltyAmount = Convert.ToDecimal(reader["PenaltyAmount"]);
+                        }
+                    }
+                }
+            }
+            
+            return Json(penaltySettings);
         }
 
         [HttpPost]
-        [Authorize(Roles = "Admin")] // Only admins can submit transactions
+        [Authorize(Roles = "Admin")]
         [ValidateAntiForgeryToken]
-        public IActionResult ContributionsCreate(Transaction model)
+        public IActionResult ContributionsCreate(Contribution model)
         {
             if (ModelState.IsValid)
             {
@@ -75,7 +108,7 @@ namespace StokvelManagementSystem.Controllers
                     // Calculate total
                     model.TotalAmount = model.ContributionAmount + model.PenaltyAmount;
 
-                    // file upload
+                    // File upload
                     if (Request.Form.Files.Count > 0)
                     {
                         var file = Request.Form.Files["ProofOfPayment"];
@@ -100,67 +133,69 @@ namespace StokvelManagementSystem.Controllers
                     // Save to database
                     using (var connection = new SqlConnection(_configuration.GetConnectionString("DefaultConnection")))
                     {
-                        var query = @"SELECT 
-    t.ID, 
-    t.PaymentMethodID, 
-    t.PenaltyAmount, 
-    t.ContributionAmount, 
-    t.TotalAmount, 
-    t.TransactionDate, 
-    t.Reference, 
-    t.ProofOfPaymentPath, 
-    t.CreatedBy,
-    g.GroupName,
-    m.FirstName
-FROM Transactions t
-LEFT JOIN Groups g ON t.MemberGroupID = g.ID
-LEFT JOIN Members m ON t.CreatedBy = m.Username
-ORDER BY t.TransactionDate DESC";
-
+                        var query = @"INSERT INTO Contributions 
+                                    (MemberGroupID, PaymentMethodID, PenaltyAmount, ContributionAmount, 
+                                    TotalAmount, TransactionDate, Reference, ProofOfPaymentPath, CreatedBy)
+                                    VALUES 
+                                    (@MemberGroupID, @PaymentMethodID, @PenaltyAmount, @ContributionAmount, 
+                                    @TotalAmount, @TransactionDate, @Reference, @ProofOfPaymentPath, @CreatedBy);
+                                    SELECT SCOPE_IDENTITY();";
 
                         using (var command = new SqlCommand(query, connection))
                         {
+                            command.Parameters.AddWithValue("@MemberGroupID", model.MemberGroupID);
                             command.Parameters.AddWithValue("@PaymentMethodID", model.PaymentMethodID);
                             command.Parameters.AddWithValue("@PenaltyAmount", model.PenaltyAmount);
                             command.Parameters.AddWithValue("@ContributionAmount", model.ContributionAmount);
                             command.Parameters.AddWithValue("@TotalAmount", model.TotalAmount);
                             command.Parameters.AddWithValue("@TransactionDate", model.TransactionDate);
                             command.Parameters.AddWithValue("@Reference", model.Reference);
-                            command.Parameters.AddWithValue("@ProofOfPaymentPath",
-                                string.IsNullOrEmpty(model.ProofOfPaymentPath) ?
+                            command.Parameters.AddWithValue("@ProofOfPaymentPath", 
+                                string.IsNullOrEmpty(model.ProofOfPaymentPath) ? 
                                 DBNull.Value : (object)model.ProofOfPaymentPath);
-                            command.Parameters.AddWithValue("@CreatedBy", model.CreatedBy);
-                            command.Parameters.AddWithValue("@GroupName", model.GroupName);
-                            command.Parameters.AddWithValue("@FirstName", model.FirstName);
+                            command.Parameters.AddWithValue("@CreatedBy", User.Identity.Name); // Use current user
+
                             connection.Open();
                             var newId = command.ExecuteScalar();
                         }
                     }
 
                     TempData["SuccessMessage"] = "Transaction recorded successfully!";
-                    return RedirectToAction("Index");
+                    return RedirectToAction("ContributionsIndex");
                 }
                 catch (Exception ex)
                 {
                     ModelState.AddModelError("", $"Error saving transaction: {ex.Message}");
-                   
                 }
             }
-            return View("~/Views/Transactions/ContributionsCreate.cshtml");
+            return View("~/Views/Transactions/ContributionsCreate.cshtml", model);
         }
 
-        [AllowAnonymous] // Allow all authenticated users to view transactions
+        [AllowAnonymous]
         public IActionResult ContributionsIndex()
         {
-            var transactions = new List<Transaction>();
+            var contributions = new List<Contribution>();
 
             using (var connection = new SqlConnection(_configuration.GetConnectionString("DefaultConnection")))
             {
-                var query = @"SELECT ID, PaymentMethodID, PenaltyAmount, 
-                            ContributionAmount, TotalAmount, TransactionDate, Reference, 
-                            ProofOfPaymentPath, CreatedBy
-                            FROM Transactions 
-                            ORDER BY TransactionDate DESC";
+                var query = @"SELECT 
+    c.ID, 
+    c.PaymentMethodID, 
+    c.PenaltyAmount, 
+    c.ContributionAmount, 
+    c.TotalAmount, 
+    c.TransactionDate, 
+    c.Reference, 
+    c.ProofOfPaymentPath, 
+    c.CreatedBy,
+    g.GroupName AS GroupName,
+    CONCAT(m.FirstName, ' ', m.LastName) AS MemberName,
+    m.Phone, 
+    m.Email
+FROM Contributions c
+JOIN Groups g ON c.MemberGroupID = g.ID
+JOIN Members m ON c.CreatedBy = m.UserID 
+ORDER BY c.TransactionDate DESC";
 
                 using (var command = new SqlCommand(query, connection))
                 {
@@ -169,7 +204,7 @@ ORDER BY t.TransactionDate DESC";
                     {
                         while (reader.Read())
                         {
-                            transactions.Add(new Transaction
+                            contributions.Add(new Contribution
                             {
                                 ID = Convert.ToInt32(reader["ID"]),
                                 PaymentMethodID = Convert.ToInt32(reader["PaymentMethodID"]),
@@ -179,14 +214,45 @@ ORDER BY t.TransactionDate DESC";
                                 TransactionDate = Convert.ToDateTime(reader["TransactionDate"]),
                                 Reference = reader["Reference"].ToString(),
                                 ProofOfPaymentPath = reader["ProofOfPaymentPath"]?.ToString(),
-                                CreatedBy = reader["CreatedBy"]?.ToString()
+                                CreatedBy = reader["CreatedBy"]?.ToString(),
+                                GroupName = reader["GroupName"].ToString(),
+                                FirstName = reader["MemberName"].ToString(),
+                                Phone = Convert.ToInt32(reader["Phone"]),
+                                Email = reader["Email"].ToString()
                             });
                         }
                     }
                 }
             }
 
-            return View("~/Views/Transactions/ContributionsIndex.cshtml",transactions);
+            return View("~/Views/Transactions/ContributionsIndex.cshtml", contributions);
+        }
+
+        private List<PaymentMethod> GetPaymentMethodsFromDatabase()
+        {
+            var paymentMethods = new List<PaymentMethod>();
+
+            using (var connection = new SqlConnection(_configuration.GetConnectionString("DefaultConnection")))
+            {
+                var query = "SELECT Id, Method FROM PaymentMethods";
+                using (var command = new SqlCommand(query, connection))
+                {
+                    connection.Open();
+                    using (var reader = command.ExecuteReader())
+                    {
+                        while (reader.Read())
+                        {
+                            paymentMethods.Add(new PaymentMethod
+                            {
+                                Id = Convert.ToInt32(reader["Id"]),
+                                Method = reader["Method"].ToString()
+                            });
+                        }
+                    }
+                }
+            }
+
+            return paymentMethods;
         }
     }
 }

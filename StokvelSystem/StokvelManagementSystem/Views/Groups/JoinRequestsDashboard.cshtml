@@ -85,25 +85,39 @@
                                     <i class="fas fa-money-check-alt me-2"></i> View Payouts
                                 </a>
                             
-                                @if (User.IsInRole("Admin"))
+                               @if (User.IsInRole("Admin"))
                                 {
-                                    <a class="list-group-item" 
-                                    asp-action="GroupReports" 
+                                    <a href="#" class="list-group-item position-relative" onclick="toggleReportPopup(event)">
+                                        <i class="fas fa-chart-line me-2"></i> Report
+                                </a>
+
+                                <!-- Pop-up panel -->
+                                <div id="reportPopup" class="card shadow position-absolute bg-white border rounded p-2" style="width: 220px; display: none; z-index: 999;">
+                                    <a class="dropdown-item text-dark mb-1" 
+                                    asp-action="MemberReport" 
                                     asp-controller="Reports" 
                                     asp-route-groupId="@Model.Group.ID">
-                                        <i class="fas fa-chart-line me-2"></i> Generate Report
+                                        <i class="bi bi-person-circle me-2"></i>My Report
                                     </a>
-                                }
+                                    <a class="dropdown-item text-dark" 
+                                        asp-action="GroupReport" 
+                                    asp-controller="Reports" 
+                                        asp-route-groupId="@Model.Group.ID">
+                                            <i class="bi bi-bar-chart-line me-2"></i>Group Report
+                                        </a>
+                                    </div>
+                            }
                                 else
                                 {
                                     <a class="list-group-item" 
-                                    asp-action="MyReport" 
+                                    asp-action="MemberReport" 
                                     asp-controller="Reports"
                                     asp-route-groupId="@Model.Group.ID">
                                         <i class="fas fa-user-chart me-2"></i> My Report
                                     </a>
                                 }
-                            </div>
+    
+                        </div>
                         </div>
                 </div>
 
@@ -375,7 +389,7 @@
                 .then(response => {
                     if (response.ok) {
                         alert("Request Denied.");
-                        // Remove the row containing the clicked button
+                      
                         const row = button.closest('tr');
                         if (row) row.remove();
                     } else {
@@ -444,6 +458,22 @@
                         if (statsElement) statsElement.textContent = "Error loading stats";
                     });
             }
+
+             //This is for theAdmin report pop up
+             function toggleReportPopup(e) {
+                e.preventDefault();
+                const popup = document.getElementById('reportPopup');
+                const rect = e.target.getBoundingClientRect();
+                popup.style.top = `${rect.bottom + window.scrollY}px`;
+                popup.style.left = `${rect.left}px`;
+                popup.style.display = popup.style.display === 'none' ? 'block' : 'none';
+                document.addEventListener('click', function handler(evt) {
+                    if (!popup.contains(evt.target) && evt.target !== e.target) {
+                        popup.style.display = 'none';
+                        document.removeEventListener('click', handler);
+                    }
+                });
+    }
 
             function groupSettings() {
                 const editLink = document.getElementById("editGroupSettingsLink");

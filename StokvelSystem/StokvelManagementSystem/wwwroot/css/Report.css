@@ -1,0 +1,215 @@
+:root {
+    /* Color Variables - Consider more professional palette */
+    --primary-color: #3498db;       /* Blue */
+    --secondary-color: #2c3e50;     /* Dark blue */
+    --success-color: #27ae60;       /* Green */
+    --danger-color: #e74c3c;        /* Red */
+    --warning-color: #f39c12;       /* Orange */
+    --light-bg: #f8f9fa;            /* Light gray */
+    --text-color: #333;             /* Dark gray */
+    --border-color: #e0e0e0;        /* Light border */
+}
+
+body {
+    font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+    background-color: #f5f7fa;
+    color: var(--text-color);
+    line-height: 1.6;
+}
+
+.report-container {
+    max-width: 1200px;
+    margin: 2rem auto;
+    background: white;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+    border-radius: 12px;
+    overflow: hidden;
+}
+
+.report-header {
+    background: linear-gradient(135deg, var(--secondary-color), var(--primary-color));
+    color: white;
+    padding: 2.5rem 2rem;
+    text-align: center;
+}
+
+.report-header h1 {
+    font-weight: 700;
+    margin-bottom: 1.2rem;
+    font-size: 2.4rem;
+    letter-spacing: -0.5px;
+}
+
+.report-meta {
+    display: flex;
+    justify-content: center;
+    gap: 2rem;
+    flex-wrap: wrap;
+    margin-top: 1.2rem;
+    font-size: 1rem;
+}
+
+.summary-cards {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+    gap: 2rem;
+    padding: 2rem;
+}
+
+.card {
+    border: none;
+    border-radius: 10px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+    transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+    overflow: hidden;
+}
+
+.card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 6px 16px rgba(0, 0, 0, 0.1);
+}
+
+.card h3 {
+    background-color: var(--light-bg);
+    padding: 1.2rem;
+    margin: 0;
+    border-bottom: 1px solid var(--border-color);
+    font-size: 1.2rem;
+    font-weight: 600;
+}
+
+.card-content {
+    padding: 1.8rem;
+}
+
+.card-content p {
+    margin: 1rem 0;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.card-content strong {
+    color: var(--secondary-color);
+    font-weight: 500;
+}
+
+#contributions-table {
+    width: 100%;
+    border-collapse: separate;
+    border-spacing: 0;
+    margin: 1.5rem 0;
+}
+
+#contributions-table th {
+    background-color: var(--secondary-color);
+    color: white;
+    padding: 1.2rem;
+    text-align: left;
+    font-weight: 500;
+    position: sticky;
+    top: 0;
+}
+
+#contributions-table td {
+    padding: 1rem;
+    border-bottom: 1px solid var(--border-color);
+    vertical-align: middle;
+}
+
+#contributions-table tr:last-child td {
+    border-bottom: none;
+}
+
+#contributions-table tr:hover {
+    background-color: rgba(52, 152, 219, 0.08);
+}
+
+.status-active, .status-paid {
+    color: var(--success-color);
+    font-weight: 600;
+}
+
+.status-missed, .status-pending {
+    color: var(--danger-color);
+    font-weight: 600;
+}
+
+.text-danger {
+    color: var(--danger-color);
+}
+
+.proof-link {
+    color: var(--primary-color);
+    text-decoration: none;
+    font-weight: 500;
+    transition: color 0.2s;
+}
+
+.proof-link:hover {
+    color: var(--secondary-color);
+    text-decoration: underline;
+}
+
+.export-options {
+    padding: 1.8rem;
+    text-align: right;
+    border-top: 1px solid var(--border-color);
+    background-color: var(--light-bg);
+}
+
+.btn-export {
+    background-color: var(--primary-color);
+    color: white;
+    border: none;
+    padding: 0.8rem 1.5rem;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.3s;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.6rem;
+    font-weight: 500;
+    margin-left: 1rem;
+}
+
+.btn-export:hover {
+    background-color: var(--secondary-color);
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+}
+
+@media (max-width: 768px) {
+    .report-header {
+        padding: 1.8rem 1.5rem;
+    }
+    
+    .report-header h1 {
+        font-size: 2rem;
+    }
+    
+    .report-meta {
+        flex-direction: column;
+        gap: 0.8rem;
+        align-items: center;
+        font-size: 0.95rem;
+    }
+    
+    .summary-cards {
+        grid-template-columns: 1fr;
+        padding: 1.5rem;
+        gap: 1.5rem;
+    }
+    
+    #contributions-table {
+        display: block;
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+    }
+    
+    .btn-export {
+        width: 100%;
+        margin: 0.5rem 0;
+        justify-content: center;
+    }
+}

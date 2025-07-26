@@ -1,0 +1,103 @@
+@model StokvelManagementSystem.Models.Report
+
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Group Report</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="~/css/Report.css" />
+</head>
+<body>
+    <div class="report-container">
+        <!-- Header -->
+        <header class="report-header">
+            <h1><i class="fas fa-users me-2"></i>@Model.GroupName Group Report</h1>
+            <div class="report-meta">
+                <span><i class="fas fa-calendar-day me-1"></i><strong>Started On:</strong> @Model.GroupStartDate?.ToString("yyyy-MM-dd")</span>
+                <span><i class="fas fa-user-friends me-1"></i><strong>Total Members:</strong> @Model.TotalMembers</span>
+                <span><i class="fas fa-clock me-1"></i><strong>Frequency:</strong> @Model.ContributionFrequency</span>
+                <span><i class="fas fa-hand-holding-usd me-1"></i><strong>Amount per Member:</strong> @Model.ContributionAmount.ToString("N2") @Model.Currency</span>
+            </div>
+        </header>
+
+        <!-- Summary Cards -->
+        <section class="summary-cards">
+            <div class="card">
+                <h3><i class="fas fa-piggy-bank me-2"></i>Contribution Summary</h3>
+                <div class="card-content">
+                    <p><strong>Total Contributions Collected:</strong> <span class="text-success">@Model.GroupTotalContributions.ToString("N2")</span></p>
+                    <p><strong>Cycles Completed:</strong> @Model.TotalCycles</p>
+                </div>
+            </div>
+          @{
+           decimal totalPenalties = Model.MemberSummaries?.Sum(m => m.Penalties) ?? 0;
+           }
+
+            <div class="card">
+                <h3><i class="fas fa-exclamation-circle me-2"></i>Penalty Summary</h3>
+                <div class="card-content">
+                    <p><strong>Number of Penalties:</strong> @Model.TotalGroupPenalties</p>
+                    <p><strong>Total Penalty Amount:</strong> @Model.TotalPenaltiesAmount.ToString("N2")</p>
+                </div>
+            </div>
+
+        </section>
+
+        <!-- Contribution Breakdown Table -->
+        <div class="px-3">
+            <h4 class="mb-3"><i class="fas fa-table me-2"></i>Member Contribution Overview</h4>
+            <div class="table-responsive">
+                <table class="table table-striped table-hover">
+                    <thead class="table-dark">
+                        <tr>
+                            <th>Member</th>
+                            <th>Total Paid</th>
+                            <th>Missed Payments</th>
+                            <th>Penalties</th>
+                            <th>Status</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+
+                        @if (Model.MemberSummaries != null)
+                        {
+                        @foreach (var member in Model.MemberSummaries)
+                        {
+                            <tr>
+                                <td>@member.FullName</td>
+                                <td class="text-success">@member.TotalPaid.ToString("N2")</td>
+                                <td class="text-danger">@member.MissedPayments</td>
+                                <td>@member.Penalties.ToString("N2")</td>
+                                <td>
+                                    <span class="status-@member.Status.ToLower()">
+                                        <i class="@(member.Status == "Active" ? "fas fa-check-circle text-success" : "fas fa-times-circle text-danger") me-1"></i>
+                                        @member.Status
+                                    </span>
+                                </td>
+                            </tr>
+                        }
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Export Options -->
+        <div class="export-options">
+            <button class="btn-export" onclick="window.print()">
+                <i class="fas fa-print"></i> Print Report
+            </button>
+            <button class="btn-export" id="downloadPdf">
+                <i class="fas fa-file-pdf"></i> Download PDF
+            </button>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>
