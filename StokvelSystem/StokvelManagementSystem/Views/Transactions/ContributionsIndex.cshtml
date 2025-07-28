@@ -1,6 +1,7 @@
 ﻿@model IEnumerable<StokvelManagementSystem.Models.Contribution>
 @{
     ViewData["Title"] = "Contributions";
+    var groupId = Context.Request.Query["groupId"];
     var contributions = Model ?? Enumerable.Empty<StokvelManagementSystem.Models.Contribution>();
 }
 
@@ -10,7 +11,7 @@
         <h2 class="mb-0">
             <i class="bi bi-cash-stack me-2"></i>@ViewData["Title"]
         </h2>
-        <a asp-action="ContributionsCreate" class="btn btn-primary">
+        <a asp-action="CreateContributionForm" asp-route-groupId="@groupId" class="btn btn-primary">
             <i class="bi bi-plus-circle me-1"></i>New Contribution
         </a>
     </div>
