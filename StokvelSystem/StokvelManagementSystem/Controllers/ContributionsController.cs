@@ -105,7 +105,7 @@ namespace StokvelManagementSystem.Controllers
             // [ValidateAntiForgeryToken]
             public IActionResult ContributionsCreate(Contribution model, int groupId)
             {
-                _logger.LogInformation("The endpoint has been hit");
+                _logger.LogInformation($"The endpoint has been hit {groupId}");
 
                 var memberIdClaim = User.Claims.FirstOrDefault(c => c.Type == "member_id");
                 if (memberIdClaim != null && int.TryParse(memberIdClaim.Value, out var memberId))
@@ -208,6 +208,12 @@ namespace StokvelManagementSystem.Controllers
                                     }
                                 }
 
+                            model.GroupId = groupId;
+
+                            // Optional: Reload member list and payment methods if needed again
+
+                            model.PaymentMethods = GetPaymentMethodsFromDatabase();
+
                             _logger.LogInformation("Model not valid");
                             return View("~/Views/Transactions/ContributionsCreate.cshtml", model);
                         }
@@ -242,12 +248,18 @@ namespace StokvelManagementSystem.Controllers
                         }
                     }
 
+                    model.GroupId = groupId;
+                    _logger.LogInformation($"Group Id being passdown: {model.GroupId} vs {groupId}");
                     TempData["SuccessMessage"] = "Transaction recorded successfully!";
-                    return RedirectToAction("ContributionsIndex", new { groupId });
+                    return RedirectToAction("ContributionsIndex", new { groupId = model.GroupId });
                 }
                 catch (Exception ex)
                 {
                     ModelState.AddModelError("", $"Error saving transaction: {ex.Message}");
+                    model.GroupId = groupId;
+
+                    // Optional: Reload member list and payment methods if needed again
+                    model.PaymentMethods = GetPaymentMethodsFromDatabase();
                     return View("~/Views/Transactions/ContributionsCreate.cshtml", model);
                 }
             }
@@ -258,11 +270,11 @@ namespace StokvelManagementSystem.Controllers
             public IActionResult ContributionsIndex(int groupId)
             {
                 var contributions = new List<Contribution>();
-
+                _logger.LogInformation($"Group Id being passdown now: {groupId}");
                 using (var connection = new SqlConnection(_configuration.GetConnectionString("DefaultConnection")))
                 {
-            var query = @"
-                SELECT 
+                    var query = @"
+                    SELECT 
                     c.ID, 
                     c.PaymentMethodID, 
                     c.PenaltyAmount, 
@@ -270,31 +282,30 @@ namespace StokvelManagementSystem.Controllers
                     c.TotalAmount, 
                     c.TransactionDate, 
                     c.Reference, 
-                    c.ProofOfPaymentPath, 
-
-                    -- Overwrite CreatedBy with full name of creator
-                    CONCAT(mcreator.FirstName, ' ', mcreator.LastName) AS CreatedBy,
+                    c.ProofOfPaymentPath,
 
                     g.GroupName AS GroupName,
 
-                    -- Member who made the contribution
                     CONCAT(m.FirstName, ' ', m.LastName) AS MemberName,
                     m.Phone, 
-                    m.Email
+                    m.Email,
+                 
+                    CONCAT(mcreator.FirstName, ' ', mcreator.LastName) AS CreatedBy
 
-                FROM Contributions c
-                JOIN Groups g ON c.MemberGroupID = g.ID
+                FROM dbo.Contributions c
 
-                -- Creator: resolve via MemberGroups and then Members
-                JOIN MemberGroups mgCreator ON mgCreator.ID = CAST(c.CreatedBy AS INT)
-                JOIN Members mcreator ON mcreator.ID = mgCreator.MemberID
+                JOIN dbo.MemberGroups mg ON mg.ID = c.MemberGroupID
 
-                -- Member who made the contribution
-                JOIN MemberGroups mg ON mg.ID = c.MemberGroupID
-                JOIN Members m ON m.ID = mg.MemberID
+                JOIN dbo.Groups g ON mg.GroupID = g.ID
 
-                WHERE g.ID = @GroupId
-                ORDER BY c.TransactionDate DESC";
+                JOIN dbo.Members m ON m.ID = mg.MemberID
+
+                LEFT JOIN dbo.Members mcreator ON mcreator.ID = TRY_CAST(c.CreatedBy AS INT)
+
+                WHERE mg.GroupID = @groupID
+                ORDER BY c.TransactionDate DESC;
+                        ";
+
 
 
                     using (var command = new SqlCommand(query, connection))
@@ -326,6 +337,7 @@ namespace StokvelManagementSystem.Controllers
                     }
                 }
 
+            //model.GroupId = groupId;
                 return View("~/Views/Transactions/ContributionsIndex.cshtml", contributions);
             }
 
