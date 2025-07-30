@@ -231,31 +231,7 @@ namespace StokvelManagementSystem.Controllers
             return View("~/Views/Transactions/PayoutIndex.cshtml", payouts);
         }
 
-        [HttpGet]
-        public IActionResult GetAvailableBalance(int memberGroupId)
-        {
-            decimal availableBalance = 0;
-            
-            using (var connection = new SqlConnection(_configuration.GetConnectionString("DefaultConnection")))
-            {
-                // Calculate available balance (contributions - payouts)
-                var query = @"
-                    SELECT 
-                        (SELECT ISNULL(SUM(TotalAmount), 0) FROM Contributions WHERE MemberGroupID = @MemberGroupID) -
-                        (SELECT ISNULL(SUM(Amount), 0) FROM Payouts WHERE MemberGroupID = @MemberGroupID) AS AvailableBalance";
-
-                using (var command = new SqlCommand(query, connection))
-                {
-                    command.Parameters.AddWithValue("@MemberGroupID", memberGroupId);
-                    connection.Open();
-                    var result = command.ExecuteScalar();
-                    availableBalance = result != DBNull.Value ? Convert.ToDecimal(result) : 0;
-                }
-            }
-            
-            return Json(new { availableBalance });
-        }
-
+        
         private List<PaymentMethod> GetPaymentMethodsFromDatabase()
         {
             var paymentMethods = new List<PaymentMethod>();
