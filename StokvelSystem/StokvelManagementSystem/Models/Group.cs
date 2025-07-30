@@ -41,7 +41,7 @@ namespace StokvelManagementSystem.Models
         [BindNever]
         [ValidateNever]
         public string? Currency { get; set; } = null;
-        public string NationalID { get; set; }
+        //public string NationalID { get; set; }
         [BindNever]
         public List<SelectListItem> PayoutTypes { get; set; } = new();
         [BindNever]

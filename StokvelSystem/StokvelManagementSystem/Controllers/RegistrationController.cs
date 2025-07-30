@@ -60,9 +60,9 @@ namespace StokvelManagementSystem.Controllers
         }
 
         [HttpPost]
-        [ValidateAntiForgeryToken]
+        //[ValidateAntiForgeryToken]
     
-        public IActionResult Index(Member model, string actionType)
+        public IActionResult Index(Member model, bool create)
         {
 
             LoadGenderDropdown();
@@ -73,7 +73,7 @@ namespace StokvelManagementSystem.Controllers
                                             .SelectMany(v => v.Errors)
                                             .Select(e => e.ErrorMessage));
 
-                Debug.WriteLine("Model validation errors: " + errors);
+                _logger.LogWarning("Model validation errors: " + errors);
 
                 return View(model);
 
@@ -81,6 +81,7 @@ namespace StokvelManagementSystem.Controllers
             if (model.Password != model.ConfirmPassword)
             {
                 ModelState.AddModelError("", "Passwords do not match.");
+                _logger.LogWarning("Passwords do not match.");
                 return View(model);
             }
 
@@ -115,7 +116,7 @@ namespace StokvelManagementSystem.Controllers
                                 memberCommand.Parameters.AddWithValue("@GenderID", model.GenderID);
                                 memberCommand.Parameters.AddWithValue("@Address", (object)model.Address ?? DBNull.Value);
                                 memberCommand.Parameters.AddWithValue("@RegistrationDate", DateTime.Now);
-                                memberCommand.Parameters.AddWithValue("@Status", "Active");
+                                memberCommand.Parameters.AddWithValue("@Status", 1);
                                 newMemberId = (int)memberCommand.ExecuteScalar();
                             }
 
@@ -155,8 +156,10 @@ namespace StokvelManagementSystem.Controllers
 
                             transaction.Commit();
                         }
-                        catch
+                        catch (Exception error)
                         {
+                            _logger.LogInformation("DB Error: " + error.Message);
+                            ModelState.AddModelError("", "Error saving member: " + error.Message);
                             transaction.Rollback();
                             throw;
                         }
@@ -175,13 +178,18 @@ namespace StokvelManagementSystem.Controllers
                     Expires = DateTime.UtcNow.AddHours(2)
                 });
 
+                if (create)
+                {
+                    // Redirect to group creation screen for admins
+                    return RedirectToAction("ListGroups", "Groups", new { showCreate = true });
+                }
 
                 return RedirectToAction("ListGroups", "Groups", new { showCreate = true });
 
             }
             catch (Exception ex)
             {
-                Debug.WriteLine("DB Error: " + ex.ToString());
+                _logger.LogInformation("DB Error: " + ex.ToString());
                 ModelState.AddModelError("", "Error saving member: " + ex.Message);
                 return View(model);
             }
@@ -238,6 +246,7 @@ namespace StokvelManagementSystem.Controllers
             };
 
             var token = tokenHandler.CreateToken(tokenDescriptor);
+            _logger.LogInformation("Generated JWT Token: {Token}", token);
             return tokenHandler.WriteToken(token);
         }
 

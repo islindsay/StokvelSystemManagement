@@ -39,14 +39,14 @@
             <i class="bi bi-stars me-1"></i>New
         </a>
     </li>
-    @if (Model.CanCreate)
-    {
+
+    
         <li class="nav-item" role="presentation">
             <a class="nav-link" id="create-tab" data-bs-toggle="tab" href="#create" role="tab">
                 <i class="bi bi-plus-circle me-1"></i>Create
             </a>
         </li>
-    }
+    
 </ul>
 
 
@@ -131,8 +131,7 @@
             </div>
         </div>
           <!-- CreateTab -->
-@if (Model.CanCreate)
-{
+
     <div class="tab-pane fade p-4" id="create" role="tabpanel">
         <h3 class="mb-4 text-primary fw-bold">
             <i class="bi bi-plus-circle me-2"></i>Create a New Group
@@ -286,120 +285,126 @@
             </div>
         </form>
     </div>
-}
+
 
 
 
 @section Scripts {
     @await Html.PartialAsync("_ValidationScriptsPartial")
-    @if (Model.CanCreate)
-    {
-        <script>
-            document.addEventListener('DOMContentLoaded', function () {
-                const urlParams = new URLSearchParams(window.location.search);
-                const isAdmin = document.cookie
-                    .split('; ')
-                    .find(row => row.startsWith('isAdmin='))
-                    ?.split('=')[1] === "true";
 
-                const showCreate = urlParams.get("showCreate") === "true";
-
-                // Activate Create tab if admin and URL param is set
-                if (showCreate && isAdmin) {
-                    activateTab('create');
-                }
-                // If not admin, default to "New" tab instead of "Joined"
-                else if (!isAdmin) {
-                    activateTab('new');
-                }
-                // Otherwise fallback to "Joined" by default (handled in HTML by default class)
-
-                function activateTab(tabId) {
-                    document.querySelectorAll('.nav-link').forEach(link => link.classList.remove('active'));
-                    document.querySelectorAll('.tab-pane').forEach(pane => pane.classList.remove('show', 'active'));
-
-                    document.getElementById(`${tabId}-tab`)?.classList.add('active');
-                    document.getElementById(tabId)?.classList.add('show', 'active');
-                }
-
-                // Optionally load new groups if "New" tab is activated
-                if (document.getElementById('new')?.classList.contains('show')) {
-                    loadNewGroups();
-                }
-
-                // Load new groups when "New" tab is clicked
-                document.getElementById('new-tab')?.addEventListener('shown.bs.tab', loadNewGroups);
-            });
-
-            async function loadNewGroups() {
-                try {
-                    const response = await fetch('/Groups/GetNewGroups');
-                    if (!response.ok) throw new Error('Network response was not ok');
-                    const groups = await response.json();
-
-                    const container = document.getElementById('newGroupsContainer');
-                    container.innerHTML = ''; // clear old content
-
-                    if (groups.length === 0) {
-                        container.innerHTML = '<p class="text-muted">No new groups found.</p>';
-                        return;
-                    }
-
-                    const frequencies = ["Daily", "Weekly", "Monthly", "Yearly"];
-
-                    frequencies.forEach(freq => {
-                        const freqGroups = groups.filter(g => g.frequencyName === freq);
-                        if (freqGroups.length > 0) {
-                            let html = `<div class="group-section mb-5">
-                                            <h4 class="mb-3">${freq} Groups</h4>
-                                            <div class="row">`;
-
-                            freqGroups.forEach(group => {
-                                // Get nationalId from hidden input if you want to send it with form
-                                const nationalId = document.getElementById('nationalId')?.value || '';
-
-                                html += `
-                                <div class="col-md-4">
-                                    <div class="card shadow-sm mb-4">
-                                        <div class="frequency-accent ${freq}"></div>
-                                        <div class="card-body">
-                                            <h5 class="card-title">${group.groupName}</h5>
-                                            <p class="card-text"><strong>Contribution:</strong> ${(group.currency ?? "R")} ${parseFloat(group.contributionAmount).toFixed(2)}</p>
-                                            <p class="card-text"><strong>Members:</strong> Up to ${group.memberLimit}</p>
-                                            <p class="card-text"><strong>Payout Type:</strong> ${group.payoutType}</p>
-                                            <p class="card-text"><strong>Frequency:</strong> ${group.frequencyName}</p>
-                                            <p class="card-text"><strong>Duration:</strong> ${group.duration}</p>
-                                            <p class="card-text"><strong>Start Date:</strong> ${group.startDate ? new Date(group.startDate).toLocaleDateString() : 'Not Set'}</p>
-                                            <p class="card-text"><strong>Penalty:</strong> ${(group.currency ?? "R")} ${parseFloat(group.penaltyAmount).toFixed(2)} after ${group.penaltyGraceDays} days</p>
-                                            <p class="card-text"><strong>Deferrals:</strong> ${group.allowDeferrals ? 'Allowed' : 'Not Allowed'}</p>
-
-                                            <form action="/Groups/RequestToJoin" method="get">
-                                                <input type="hidden" name="GroupId" value="${group.id}" />
-                                                <input type="hidden" name="NationalId" value="${nationalId}" />
-                                                <button type="submit" class="btn btn-success w-100">Request To Join Group</button>
-                                            </form>
-                                        </div>
-                                    </div>
-                                </div>`;
-                            });
-
-                            html += `</div></div>`;
-                            container.insertAdjacentHTML('beforeend', html);
-                        }
-                    });
-                } catch (error) {
-                    console.error('Failed to load new groups:', error);
-                    document.getElementById('newGroupsContainer').innerHTML = '<p class="text-danger">Failed to load groups.</p>';
-                }
-            }
-
-            // Add event listener to tab button safely
-            const newTabBtn = document.getElementById('new-tab');
-                if (newTabBtn) {
-                    newTabBtn.addEventListener('shown.bs.tab', loadNewGroups);
-                }
-
-        </script>
+<script>
+    // Inject ViewBag.CreateError into JavaScript and set localStorage flag
+    const createError = @((ViewBag.CreateError ?? false).ToString().ToLower());
+    if (createError === true) {
+        localStorage.setItem("createError", "true");
     }
+
+    document.addEventListener('DOMContentLoaded', function () {
+        const urlParams = new URLSearchParams(window.location.search);
+        const isAdmin = document.cookie
+            .split('; ')
+            .find(row => row.startsWith('isAdmin='))
+            ?.split('=')[1] === "true";
+
+        const showCreate = urlParams.get("showCreate")?.toLowerCase() === "true";
+        const createError = localStorage.getItem("createError") === "true";
+
+        // 👇 Activate Create tab if either condition is true
+        if (showCreate || createError) {
+            activateTab('create');
+        }
+        // If not admin, default to "New" tab instead of "Joined"
+        else if (!showCreate) {
+            activateTab('new');
+        }
+
+        // Clear the flag after use
+        if (createError) {
+            localStorage.removeItem("createError");
+        }
+
+        function activateTab(tabId) {
+            document.querySelectorAll('.nav-link').forEach(link => link.classList.remove('active'));
+            document.querySelectorAll('.tab-pane').forEach(pane => pane.classList.remove('show', 'active'));
+
+            document.getElementById(`${tabId}-tab`)?.classList.add('active');
+            document.getElementById(tabId)?.classList.add('show', 'active');
+        }
+
+        // Load new groups immediately if "New" tab is active
+        if (document.getElementById('new')?.classList.contains('show')) {
+            loadNewGroups();
+        }
+
+        // Load new groups when "New" tab is clicked
+        const newTabBtn = document.getElementById('new-tab');
+        if (newTabBtn) {
+            newTabBtn.addEventListener('shown.bs.tab', loadNewGroups);
+        }
+
+        async function loadNewGroups() {
+            try {
+                const response = await fetch('/Groups/GetNewGroups');
+                if (!response.ok) throw new Error('Network response was not ok');
+                const groups = await response.json();
+
+                const container = document.getElementById('newGroupsContainer');
+                container.innerHTML = ''; // clear old content
+
+                if (groups.length === 0) {
+                    container.innerHTML = '<p class="text-muted">No new groups found.</p>';
+                    return;
+                }
+
+                const frequencies = ["Daily", "Weekly", "Monthly", "Yearly"];
+
+                frequencies.forEach(freq => {
+                    const freqGroups = groups.filter(g => g.frequencyName === freq);
+                    if (freqGroups.length > 0) {
+                        let html = `<div class="group-section mb-5">
+                                        <h4 class="mb-3">${freq} Groups</h4>
+                                        <div class="row">`;
+
+                        freqGroups.forEach(group => {
+                            const nationalId = document.getElementById('nationalId')?.value || '';
+
+                            html += `
+                            <div class="col-md-4">
+                                <div class="card shadow-sm mb-4">
+                                    <div class="frequency-accent ${freq}"></div>
+                                    <div class="card-body">
+                                        <h5 class="card-title">${group.groupName}</h5>
+                                        <p class="card-text"><strong>Contribution:</strong> ${(group.currency ?? "R")} ${parseFloat(group.contributionAmount).toFixed(2)}</p>
+                                        <p class="card-text"><strong>Members:</strong> Up to ${group.memberLimit}</p>
+                                        <p class="card-text"><strong>Payout Type:</strong> ${group.payoutType}</p>
+                                        <p class="card-text"><strong>Frequency:</strong> ${group.frequencyName}</p>
+                                        <p class="card-text"><strong>Duration:</strong> ${group.duration}</p>
+                                        <p class="card-text"><strong>Start Date:</strong> ${group.startDate ? new Date(group.startDate).toLocaleDateString() : 'Not Set'}</p>
+                                        <p class="card-text"><strong>Penalty:</strong> ${(group.currency ?? "R")} ${parseFloat(group.penaltyAmount).toFixed(2)} after ${group.penaltyGraceDays} days</p>
+                                        <p class="card-text"><strong>Deferrals:</strong> ${group.allowDeferrals ? 'Allowed' : 'Not Allowed'}</p>
+
+                                        <form action="/Groups/RequestToJoin" method="get">
+                                            <input type="hidden" name="GroupId" value="${group.id}" />
+                                            <input type="hidden" name="NationalId" value="${nationalId}" />
+                                            <button type="submit" class="btn btn-success w-100">Request To Join Group</button>
+                                        </form>
+                                    </div>
+                                </div>
+                            </div>`;
+                        });
+
+                        html += `</div></div>`;
+                        container.insertAdjacentHTML('beforeend', html);
+                    }
+                });
+            } catch (error) {
+                console.error('Failed to load new groups:', error);
+                document.getElementById('newGroupsContainer').innerHTML = '<p class="text-danger">Failed to load groups.</p>';
+            }
+        }
+    });
+</script>
+
+    
 }
 

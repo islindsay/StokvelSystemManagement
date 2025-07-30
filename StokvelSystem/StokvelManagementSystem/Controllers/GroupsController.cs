@@ -238,7 +238,13 @@ namespace StokvelManagementSystem.Controllers
                 model.Currencies = GetCurrencies();
                 model.FrequencyOptions = GetFrequencyOptions();
                 model.CanCreate = true;
+                ViewBag.CreateError = true;
                 return View("ListGroups", model);
+            }
+
+            if (ModelState.IsValid)
+            {
+             ViewBag.CreateError = false;
             }
 
             try
@@ -249,24 +255,19 @@ namespace StokvelManagementSystem.Controllers
                 {
                     conn.Open();
 
-                    // Get Member ID
-                    using (var cmd = new SqlCommand("SELECT ID FROM Members WHERE NationalID = @NationalID", conn))
+                    var memberIdClaim = User.Claims.FirstOrDefault(c => c.Type == "member_id");
+                    if (memberIdClaim == null || !int.TryParse(memberIdClaim.Value, out memberId))
                     {
-                        cmd.Parameters.AddWithValue("@NationalID", model.NationalID);
-                        var result = cmd.ExecuteScalar();
-
-                        if (result == null)
-                        {
-                            ModelState.AddModelError("NationalID", "National ID not found.");
-                            model.PayoutTypes = GetPayoutTypes();
-                            model.Currencies = GetCurrencies();
-                            model.CanCreate = true;
-                            return View("ListGroups", model);
-                        }
-
-                        memberId = Convert.ToInt32(result);
+                        ModelState.AddModelError("", "Unable to determine member identity from token.");
+                        model.PayoutTypes = GetPayoutTypes();
+                        model.Currencies = GetCurrencies();
+                        model.FrequencyOptions = GetFrequencyOptions();
+                        model.CanCreate = true;
+                        ViewBag.CreateError = true;
+                        return View("ListGroups", model);
                     }
 
+                    memberId = Convert.ToInt32(memberIdClaim.Value);
                     model.MemberId = memberId;
 
                     int groupId;
@@ -322,8 +323,9 @@ namespace StokvelManagementSystem.Controllers
                 model.PayoutTypes = GetPayoutTypes();
                 model.Currencies = GetCurrencies();
                 model.CanCreate = true;
-
+                ViewBag.CreateError = true;
                 return View("ListGroups", model);
+
             }
         }
 
