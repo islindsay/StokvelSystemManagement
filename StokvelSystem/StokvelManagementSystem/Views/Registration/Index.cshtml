@@ -10,7 +10,16 @@
 }
 
 <h2 class="text-center page-title">Member Registration</h2>
-
+<div asp-validation-summary="All" class="alert alert-danger"></div>
+@if (!ViewData.ModelState.IsValid)
+{
+    <div style="background: #ffebee; padding: 10px; margin-bottom: 20px;">
+        @foreach (var error in ViewData.ModelState.Values.SelectMany(v => v.Errors))
+        {
+            <div>@error.ErrorMessage</div>
+        }
+    </div>
+}
 <!-- Registration Form -->
 <div class="card p-4 mx-auto" style="max-width: 900px;  shadow-sm bg-light">
       <h3 class="form-section-title mb-4">Member Details</h3>

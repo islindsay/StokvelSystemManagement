@@ -61,9 +61,10 @@ namespace StokvelManagementSystem.Controllers
 
         [HttpPost]
         [ValidateAntiForgeryToken]
+    
         public IActionResult Index(Member model, string actionType)
         {
-           
+
             LoadGenderDropdown();
 
             if (!ModelState.IsValid)
@@ -175,7 +176,7 @@ namespace StokvelManagementSystem.Controllers
                 });
 
 
-                    return RedirectToAction("ListGroups", "Groups", new { showCreate = true });
+                return RedirectToAction("ListGroups", "Groups", new { showCreate = true });
 
             }
             catch (Exception ex)

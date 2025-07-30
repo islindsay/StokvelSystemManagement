@@ -408,7 +408,7 @@ namespace StokvelManagementSystem.Controllers
                             if (reader.Read())
                             {
                                 groupName = reader["GroupName"].ToString();
-                                DateTime startDate = Convert.ToDateTime(reader["StartDate"]);
+                                DateTime startDate = Convert.ToDateTime(reader["StartDate"] != DBNull.Value ? (DateTime?)Convert.ToDateTime(reader["StartDate"]) : null);
                                 int cycles = Convert.ToInt32(reader["Cycles"]);
                                 string frequency = reader["FrequencyName"].ToString().ToLower();
                                 decimal groupPenalty = 0;
