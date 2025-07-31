@@ -65,7 +65,14 @@
                         </button>
                         <div class="collapse mt-1" id="groupSettingsCollapse">
                             <div class="list-group list-group-flush">
-                                @if (User.IsInRole("Admin"))
+
+                                @{
+                                    var isAdminCookie = Context.Request.Cookies["isAdmin"];
+                                    var isAdmin = !string.IsNullOrEmpty(isAdminCookie) && isAdminCookie == "true";
+                                }
+
+
+                                @if (isAdmin)
                                 {
                                     <a href="#" class="list-group-item" id="editGroupSettingsLink" data-group-id="@Model.Group.ID">
                                         <i class="fas fa-cogs me-2"></i> Edit Group Settings
@@ -200,13 +207,14 @@
                                                         <th>Contribution</th>
                                                     }
                                                     <th>Date</th>
-                                                    @if (Model.SelectedStatus == "Pending" && Model.AdminTools)
+                                                    @if (Model.SelectedStatus == "Pending" && Model.AdminTools && isAdmin)
                                                     {
                                                         <th>Actions</th>
                                                     }
                                                 </tr>
                                             </thead>
                                 <tbody>
+
                                     @foreach (var r in requests)
                                             {
                                                 if (isJoin)
@@ -218,7 +226,7 @@
                                                         <td>@request.GroupName</td>
                                                         <td>@Model.Group.Currency @request.ContributionAmount.ToString("N2")</td>
                                                         <td>@request.RequestedDate.ToString("dd MMM yyyy")</td>
-                                                        @if (Model.SelectedStatus == "Pending" && Model.AdminTools)
+                                                        @if (Model.SelectedStatus == "Pending" && Model.AdminTools && isAdmin)
                                                         {
                                                             <td>
                                                                 <form asp-controller="Invites" method="post">
