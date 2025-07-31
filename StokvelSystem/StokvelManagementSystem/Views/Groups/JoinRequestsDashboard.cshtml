@@ -179,8 +179,8 @@
                             <i class="fas fa-user-friends"></i>
                             @Model.Group.Name - @Model.SelectedStatus Requests
                         </h2>
-                        <span class="badge bg-@(Model.IsMemberView ? "warning" : "success")">
-                            @(Model.IsMemberView ? "Member View" : "Admin View")
+                        <span class="badge bg-@(!isAdmin ? "warning" : "success")">
+                            @(!isAdmin ? "Member View" : "Admin View")
                         </span>
                     </div>
 
