@@ -826,7 +826,7 @@ namespace StokvelManagementSystem.Controllers
                 }
 
                 // Insert into LeaveRequests table
-                string insertSql = @"INSERT INTO LeaveRequests (MemberID, GroupID, RequestedAt, Status)
+                string insertSql = @"INSERT INTO LeaveRequests (MemberID, GroupID, RequestedDate, Status)
                             VALUES (@MemberID, @GroupID, GETDATE(),  'Pending')";
 
                 using (var cmd = new SqlCommand(insertSql, conn))

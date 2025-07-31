@@ -46,11 +46,11 @@ namespace StokvelManagementSystem.Controllers
 
                     // Insert the new leave request
                     using (var insertCmd = new SqlCommand(
-                        "INSERT INTO LeaveRequests (MemberID, GroupID, Status, RequestedAt) VALUES (@MemberID, @GroupID, 'Pending', @RequestedAt)", conn))
+                        "INSERT INTO LeaveRequests (MemberID, GroupID, Status, RequestedDate) VALUES (@MemberID, @GroupID, 'Pending', @RequestedDate)", conn))
                     {
                         insertCmd.Parameters.AddWithValue("@MemberID", memberId);
                         insertCmd.Parameters.AddWithValue("@GroupID", groupId);
-                        insertCmd.Parameters.AddWithValue("@RequestedAt", DateTime.UtcNow);
+                        insertCmd.Parameters.AddWithValue("@RequestedDate", DateTime.UtcNow);
                         insertCmd.ExecuteNonQuery();
                     }
                 }

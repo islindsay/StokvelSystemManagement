@@ -106,12 +106,16 @@
                                     asp-route-groupId="@Model.Group.ID">
                                         <i class="bi bi-person-circle me-2"></i>My Report
                                     </a>
+                                @if (isAdmin)
+                                    {
+                                    
                                     <a class="dropdown-item text-dark" 
                                         asp-action="GroupReport" 
                                     asp-controller="Reports" 
                                         asp-route-groupId="@Model.Group.ID">
                                             <i class="bi bi-bar-chart-line me-2"></i>Group Report
                                         </a>
+                                    }
                                     </div>
                             }
                                 else
@@ -137,8 +141,7 @@
                     <div class="collapse mt-1" id="leaveRequestsCollapse">
                         <div class="list-group list-group-flush">
                           
-                            @if (User.IsInRole("Admin"))
-                            {
+                  
                               
                                <a class="list-group-item @(Model.SelectedStatus == "Pending" && Model.RequestType == "Leave" ? "active" : "")"
 
@@ -159,7 +162,7 @@
                                    asp-route-groupId="@Model.Group.ID">
                                     <i class="fas fa-times-circle me-2"></i> Rejected
                                 </a>
-                            }
+            
                         </div>
                     </div>
                 </div>
@@ -245,7 +248,7 @@
                                                     <tr>
                                                         <td>@request.FirstName @request.LastName</td>
                                                         <td>@request.RequestedDate.ToString("dd MMM yyyy")</td>
-                                                        @if (Model.SelectedStatus == "Pending" && Model.AdminTools)
+                                                        @if (Model.SelectedStatus == "Pending" && Model.AdminTools && isAdmin)
                                                         {
                                                             <td>
                                                                 <form asp-controller="Leave" method="post">
