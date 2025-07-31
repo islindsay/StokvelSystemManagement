@@ -335,14 +335,7 @@ namespace StokvelManagementSystem.Controllers
                         }
                     }
                 }
-                  // ✅ 2. Get group name
-                var groupNameQuery = "SELECT GroupName FROM Groups WHERE ID = @GroupId";
-                using (var command = new SqlCommand(groupNameQuery, connection))
-                {
-                    command.Parameters.AddWithValue("@GroupId", groupId);
-                    var result = command.ExecuteScalar();
-                    model.GroupName = result?.ToString();  // Nullable safe assignment
-                }
+                
             }
 
             return members;
