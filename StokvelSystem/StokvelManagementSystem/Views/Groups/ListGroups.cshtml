@@ -137,153 +137,181 @@
             <i class="bi bi-plus-circle me-2"></i>Create a New Group
         </h3>
 
-        <form asp-controller="Groups" asp-action="CreateGroup" method="post" id="createGroupForm">
-            @Html.AntiForgeryToken()
-            <input type="hidden" name="MemberId" value="@Model.MemberId" />
+<form asp-controller="Groups" asp-action="CreateGroup" method="post" id="createGroupForm">
+    @Html.AntiForgeryToken()
+    <input type="hidden" name="MemberId" value="@Model.MemberId" />
 
-            @if (!ViewData.ModelState.IsValid)
-            {
-                <div class="alert alert-danger">
-                    <h5 class="mb-2">Please correct the following errors:</h5>
-                    <ul class="mb-0">
-                        @foreach (var error in ViewData.ModelState.Values.SelectMany(v => v.Errors))
-                        {
-                            <li>@error.ErrorMessage</li>
-                        }
-                    </ul>
-                </div>
-            }
+    @if (!ViewData.ModelState.IsValid)
+    {
+        <div class="alert alert-danger">
+            <h5 class="mb-2">Please correct the following errors:</h5>
+            <ul class="mb-0">
+                @foreach (var error in ViewData.ModelState.Values.SelectMany(v => v.Errors))
+                {
+                    <li>@error.ErrorMessage</li>
+                }
+            </ul>
+        </div>
+    }
 
-            <!-- Group Information -->
-            <h5 class="mt-4 fw-semibold text-secondary">Group Information</h5>
-            <div class="row g-4">
-                <div class="col-md-6">
-                    <label asp-for="GroupName" class="form-label">Group Name</label>
-                    <div class="input-group">
-                        <span class="input-group-text"><i class="bi bi-people-fill"></i></span>
-                        <input asp-for="GroupName" class="form-control" placeholder="e.g. Investment Circle" />
-                    </div>
-                    <span asp-validation-for="GroupName" class="text-danger small"></span>
-                </div>
+    <!-- Group Information -->
+    <h5 class="mt-4 fw-semibold text-secondary">Group Information</h5>
+    <div class="row g-4">
+        <div class="col-md-6">
+            <label asp-for="GroupName" class="form-label">Group Name</label>
+            <div class="input-group">
+                <span class="input-group-text"><i class="bi bi-people-fill"></i></span>
+                <input asp-for="GroupName" class="form-control" placeholder="e.g. Investment Circle" />
             </div>
+            <span asp-validation-for="GroupName" class="text-danger small"></span>
+        </div>
+    </div>
 
-            <!-- Contribution Details -->
-            <h5 class="mt-5 fw-semibold text-secondary">Contribution Details</h5>
-            <div class="row g-4">
-                <div class="col-md-4">
-                    <label asp-for="ContributionAmount" class="form-label">Contribution Amount</label>
-                    <div class="input-group">
-                        <span class="input-group-text"><i class="bi bi-cash-coin"></i></span>
-                        <input asp-for="ContributionAmount" class="form-control" />
-                    </div>
-                    <span asp-validation-for="ContributionAmount" class="text-danger small"></span>
-                </div>
-
-                <div class="col-md-4">
-                    <label asp-for="CurrencyID" class="form-label">Currency</label>
-                    <div class="input-group">
-                        <span class="input-group-text"><i class="bi bi-currency-exchange"></i></span>
-                        <select asp-for="CurrencyID" asp-items="Model.Currencies" class="form-select">
-                            <option value="">-- Select Currency --</option>
-                        </select>
-                    </div>
-                    <span asp-validation-for="CurrencyID" class="text-danger small"></span>
-                </div>
-
-                <div class="col-md-4">
-                    <label asp-for="FrequencyID" class="form-label">Payment Frequency</label>
-                    <div class="input-group">
-                        <span class="input-group-text"><i class="bi bi-clock"></i></span>
-                        <select asp-for="FrequencyID" asp-items="Model.FrequencyOptions" class="form-select">
-                            <option value="">-- Select Frequency --</option>
-                        </select>
-                    </div>
-                    <span asp-validation-for="FrequencyID" class="text-danger small"></span>
-                </div>
+    <!-- Contribution Details -->
+    <h5 class="mt-5 fw-semibold text-secondary">Contribution Details</h5>
+    <div class="row g-4">
+        <div class="col-md-4">
+            <label asp-for="ContributionAmount" class="form-label">Contribution Amount</label>
+            <div class="input-group">
+                <span class="input-group-text"><i class="bi bi-cash-coin"></i></span>
+                <input asp-for="ContributionAmount" class="form-control" id="ContributionAmount" />
             </div>
+            <span asp-validation-for="ContributionAmount" class="text-danger small"></span>
+        </div>
 
-            <!-- Group Configuration -->
-            <h5 class="mt-5 fw-semibold text-secondary">Group Configuration</h5>
-            <div class="row g-4">
-                <div class="col-md-4">
-                    <label asp-for="PayoutTypeID" class="form-label">Payout Type</label>
-                    <div class="input-group">
-                        <span class="input-group-text"><i class="bi bi-shuffle"></i></span>
-                        <select asp-for="PayoutTypeID" asp-items="Model.PayoutTypes" class="form-select">
-                            <option value="">-- Select Payout Type --</option>
-                        </select>
-                    </div>
-                    <span asp-validation-for="PayoutTypeID" class="text-danger small"></span>
-                </div>
+        <script>
+            document.addEventListener('DOMContentLoaded', function () {
+                const contributionAmountInput = document.getElementById('ContributionAmount');
+                const currencySelect = document.getElementById('CurrencyID');
 
-                <div class="col-md-4">
-                    <label asp-for="MemberLimit" class="form-label">Member Limit</label>
-                    <div class="input-group">
-                        <span class="input-group-text"><i class="bi bi-person-plus-fill"></i></span>
-                        <input asp-for="MemberLimit" class="form-control" />
-                    </div>
-                    <span asp-validation-for="MemberLimit" class="text-danger small"></span>
-                </div>
+                function setContributionAmountLimits() {
+                    const selectedCurrencyId = currencySelect.value;
+                    const selectedCurrencyText = currencySelect.options[currencySelect.selectedIndex].text;
 
-                <div class="col-md-4">
-                    <label asp-for="Duration" class="form-label">Duration (Months)</label>
-                    <div class="input-group">
-                        <span class="input-group-text"><i class="bi bi-hourglass-split"></i></span>
-                        <input asp-for="Duration" class="form-control" />
-                    </div>
-                    <span asp-validation-for="Duration" class="text-danger small"></span>
-                </div>
+                    if (selectedCurrencyText.includes("USD")) {
+                        contributionAmountInput.min = 10;
+                        contributionAmountInput.max = 100000;
+                    } else {
+                        contributionAmountInput.min = 10000;
+                        contributionAmountInput.max = 1000000;
+                    }
+
+                    if (contributionAmountInput.value && !contributionAmountInput.checkValidity()) {
+                        contributionAmountInput.reportValidity();
+                    }
+                }
+
+                currencySelect.addEventListener('change', setContributionAmountLimits);
+                setContributionAmountLimits();
+            });
+        </script>
+
+        <div class="col-md-4">
+            <label asp-for="CurrencyID" class="form-label">Currency</label>
+            <div class="input-group">
+                <span class="input-group-text"><i class="bi bi-currency-exchange"></i></span>
+                <select asp-for="CurrencyID" asp-items="Model.Currencies" class="form-select" id="CurrencyID">
+                    <option value="">-- Select Currency --</option>
+                </select>
             </div>
+            <span asp-validation-for="CurrencyID" class="text-danger small"></span>
+        </div>
 
-            <!-- Penalty Settings -->
-            <h5 class="mt-5 fw-semibold text-secondary">Penalty Settings</h5>
-            <div class="row g-4">
-                <div class="col-md-6">
-                    <label asp-for="PenaltyAmount" class="form-label">Penalty Amount</label>
-                    <div class="input-group">
-                        <span class="input-group-text"><i class="bi bi-exclamation-triangle"></i></span>
-                        <input asp-for="PenaltyAmount" class="form-control" />
-                    </div>
-                    <span asp-validation-for="PenaltyAmount" class="text-danger small"></span>
-                </div>
-
-                <div class="col-md-6">
-                    <label asp-for="PenaltyGraceDays" class="form-label">Grace Period (Days)</label>
-                    <div class="input-group">
-                        <span class="input-group-text"><i class="bi bi-clock-history"></i></span>
-                        <input asp-for="PenaltyGraceDays" class="form-control" />
-                    </div>
-                    <span asp-validation-for="PenaltyGraceDays" class="text-danger small"></span>
-                </div>
+        <div class="col-md-4">
+            <label asp-for="FrequencyID" class="form-label">Payment Frequency</label>
+            <div class="input-group">
+                <span class="input-group-text"><i class="bi bi-clock"></i></span>
+                <select asp-for="FrequencyID" asp-items="Model.FrequencyOptions" class="form-select">
+                    <option value="">-- Select Frequency --</option>
+                </select>
             </div>
+            <span asp-validation-for="FrequencyID" class="text-danger small"></span>
+        </div>
+    </div>
 
-            <!-- Other Settings -->
-            <h5 class="mt-5 fw-semibold text-secondary">Other Settings</h5>
-            <div class="row g-4 align-items-center">
-                <div class="col-md-6">
-                    <div class="form-check mt-4">
-                        <input asp-for="AllowDeferrals" class="form-check-input" />
-                        <label asp-for="AllowDeferrals" class="form-check-label ms-2">Allow Deferrals</label>
-                    </div>
-                </div>
-
-                <div class="col-md-6">
-                    <label asp-for="CreatedDate" class="form-label">Creation Date</label>
-                    <div class="input-group">
-                        <span class="input-group-text"><i class="bi bi-calendar-check"></i></span>
-                        <input type="date" class="form-control" value="@Model.CreatedDate.ToString("yyyy-MM-dd")" disabled />
-                        <input asp-for="CreatedDate" type="hidden" />
-                    </div>
-                </div>
+    <!-- Group Configuration -->
+    <h5 class="mt-5 fw-semibold text-secondary">Group Configuration</h5>
+    <div class="row g-4">
+        <div class="col-md-4">
+            <label asp-for="PayoutTypeID" class="form-label">Payout Type</label>
+            <div class="input-group">
+                <span class="input-group-text"><i class="bi bi-shuffle"></i></span>
+                <select asp-for="PayoutTypeID" asp-items="Model.PayoutTypes" class="form-select">
+                    <option value="">-- Select Payout Type --</option>
+                </select>
             </div>
+            <span asp-validation-for="PayoutTypeID" class="text-danger small"></span>
+        </div>
 
-            <!-- Submit Button -->
-            <div class="text-end mt-5">
-                <button type="submit" class="btn btn-success px-5 py-2 shadow-sm">
-                    <i class="bi bi-plus-circle me-2"></i>Create Group
-                </button>
+        <div class="col-md-4">
+            <label asp-for="MemberLimit" class="form-label">Member Limit</label>
+            <div class="input-group">
+                <span class="input-group-text"><i class="bi bi-person-plus-fill"></i></span>
+                <input asp-for="MemberLimit" class="form-control" min="2" max="100" />
             </div>
-        </form>
+            <span asp-validation-for="MemberLimit" class="text-danger small"></span>
+        </div>
+
+        <div class="col-md-4">
+            <label asp-for="Duration" class="form-label">Duration (Months)</label>
+            <div class="input-group">
+                <span class="input-group-text"><i class="bi bi-hourglass-split"></i></span>
+                <input asp-for="Duration" class="form-control" />
+            </div>
+            <span asp-validation-for="Duration" class="text-danger small"></span>
+        </div>
+    </div>
+
+    <!-- Penalty Settings -->
+    <h5 class="mt-5 fw-semibold text-secondary">Penalty Settings</h5>
+    <div class="row g-4">
+        <div class="col-md-6">
+            <label asp-for="PenaltyAmount" class="form-label">Penalty Amount</label>
+            <div class="input-group">
+                <span class="input-group-text"><i class="bi bi-exclamation-triangle"></i></span>
+                <input asp-for="PenaltyAmount" class="form-control" />
+            </div>
+            <span asp-validation-for="PenaltyAmount" class="text-danger small"></span>
+        </div>
+
+        <div class="col-md-6">
+            <label asp-for="PenaltyGraceDays" class="form-label">Grace Period (Days)</label>
+            <div class="input-group">
+                <span class="input-group-text"><i class="bi bi-clock-history"></i></span>
+                <input asp-for="PenaltyGraceDays" class="form-control" id="penaltyGraceDaysInput" />
+            </div>
+            <span asp-validation-for="PenaltyGraceDays" class="text-danger small"></span>
+        </div>
+    </div>
+
+    <!-- Other Settings -->
+    <h5 class="mt-5 fw-semibold text-secondary">Other Settings</h5>
+    <div class="row g-4 align-items-center">
+        <div class="col-md-6">
+            <div class="form-check mt-4">
+                <input asp-for="AllowDeferrals" class="form-check-input" />
+                <label asp-for="AllowDeferrals" class="form-check-label ms-2">Allow Deferrals</label>
+            </div>
+        </div>
+
+        <div class="col-md-6">
+            <label asp-for="CreatedDate" class="form-label">Creation Date</label>
+            <div class="input-group">
+                <span class="input-group-text"><i class="bi bi-calendar-check"></i></span>
+                <input type="date" class="form-control" value="@Model.CreatedDate.ToString("yyyy-MM-dd")" disabled />
+                <input asp-for="CreatedDate" type="hidden" />
+            </div>
+        </div>
+    </div>
+
+    <!-- Submit Button -->
+    <div class="text-end mt-5">
+        <button type="submit" class="btn btn-success px-5 py-2 shadow-sm">
+            <i class="bi bi-plus-circle me-2"></i>Create Group
+        </button>
+    </div>
+</form> <!-- ✅ Closing tag was missing -->
+
     </div>
 
 
@@ -322,6 +350,52 @@
         if (createError) {
             localStorage.removeItem("createError");
         }
+
+        // Logic for PenaltyGraceDays based on FrequencyID
+        const frequencySelect = document.getElementById('FrequencyID');
+        const penaltyGraceDaysInput = document.getElementById('penaltyGraceDaysInput');
+
+        function updatePenaltyGraceDays() {
+            const selectedFrequency = frequencySelect.options[frequencySelect.selectedIndex].text;
+            if (selectedFrequency === "Daily") {
+                penaltyGraceDaysInput.value = 0;
+                penaltyGraceDaysInput.readOnly = true;
+            } else {
+                penaltyGraceDaysInput.readOnly = false;
+            }
+        }        // Add validation for Duration based on FrequencyID
+        const durationInput = document.getElementById('penaltyGraceDaysInput');
+
+        function validateDuration() {
+            const selectedFrequency = frequencySelect.options[frequencySelect.selectedIndex].text;
+            const duration = parseInt(durationInput.value);
+
+            if (isNaN(duration) || duration <= 0) {
+                durationInput.setCustomValidity("Duration must be a positive number.");
+                return;
+            }
+
+            if (selectedFrequency === "Weekly" && duration > 1) {
+                durationInput.setCustomValidity("Weekly groups cannot have a period greater than 1 day.");
+                durationInput.value = 1;
+            } else if (selectedFrequency === "Monthly" && duration > 4) {
+                durationInput.setCustomValidity("Monthly groups cannot have a period greater than 4 days.");
+                durationInput.value = 4;
+            } else if (selectedFrequency === "Yearly" && duration > 15) {
+                durationInput.setCustomValidity("Yearly groups cannot have a period greater than 15 days.");
+                durationInput.value = 15;
+            } else {
+                durationInput.setCustomValidity(""); // Clear custom validity
+            }
+            durationInput.reportValidity();
+        }
+
+        frequencySelect.addEventListener('change', validateDuration);
+        durationInput.addEventListener('input', validateDuration);
+        validateDuration(); // Call on load to set initial state
+
+        frequencySelect.addEventListener('change', updatePenaltyGraceDays);
+        updatePenaltyGraceDays(); // Call on load to set initial state
 
         function activateTab(tabId) {
             document.querySelectorAll('.nav-link').forEach(link => link.classList.remove('active'));
@@ -407,4 +481,3 @@
 
     
 }
-

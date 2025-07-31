@@ -11,7 +11,7 @@ namespace StokvelManagementSystem.Models
         
         [Required]
         public int GroupId { get; set; }
-        public string GroupName { get; set; }
+        public string? GroupName { get; set; }
         
         [Required]
         [Display(Name = "Member Group")]
@@ -20,9 +20,9 @@ namespace StokvelManagementSystem.Models
         [Required]
         [Display(Name = "Member")]
         public int MemberId { get; set; }
-        public string MemberName { get; set; }
-        public string Phone { get; set; }
-        public string Email { get; set; }
+        public string? MemberName { get; set; }
+        public string? Phone { get; set; }
+        public string? Email { get; set; }
         
         [Required]
         [Display(Name = "Payment Method")]
@@ -31,7 +31,7 @@ namespace StokvelManagementSystem.Models
         [Required]
         [Display(Name = "Payout Type")]
         public int PayoutTypeId { get; set; }
-        public string PayoutTypeName { get; set; }
+        public string? PayoutTypeName { get; set; }
         
         [Required]
         [Range(0.01, double.MaxValue, ErrorMessage = "Amount must be greater than 0")]
@@ -42,19 +42,16 @@ namespace StokvelManagementSystem.Models
         [Display(Name = "Payout Date")]
         public DateTime PayoutDate { get; set; }
         
-        public string Reference { get; set; }
+        public string? Reference { get; set; }
         
-        [Display(Name = "Proof of Payment")]
-        public string ProofOfPaymentPath { get; set; }
-        public string Notes { get; set; }
-        
-        [Display(Name = "Processed By")]
-        public string CreatedBy { get; set; }
-        
-        // For dropdowns
-        public List<SelectListItem> PayoutTypes { get; set; }
-        public List<MemberOption> MemberOptions { get; set; }
-    }
 
-       
+        public string? ProofOfPaymentPath { get; set; }
+
+        [Display(Name = "Processed By")]
+        public string? CreatedBy { get; set; }
+        
+        // For dropdowns (do not validate these)
+        public List<SelectListItem> PayoutTypes { get; set; } = new();
+        public List<MemberOption> MemberOptions { get; set; } = new();
+    }
 }
