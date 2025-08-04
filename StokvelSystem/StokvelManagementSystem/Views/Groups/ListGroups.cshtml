@@ -57,7 +57,7 @@
         <h4 class="text-primary fw-bold"><i class="bi bi-people-fill me-2"></i>Joined Groups</h4>
         @if (Model.MyGroups != null && Model.MyGroups.Any())
         {
-            var frequencies = new[] { "Daily", "Weekly", "Monthly", "Yearly" };
+            var frequencies = new[] { "Daily", "Weekly", "Monthly", "Yearly", "Periodic" };
 
             foreach (var freq in frequencies)
             {

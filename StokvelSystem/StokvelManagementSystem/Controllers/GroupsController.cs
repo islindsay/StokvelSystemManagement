@@ -580,6 +580,7 @@ private List<Group> GetMyGroups(int memberId)
                     }
                 }
 
+
                 // Add pending request count for admin
                 if (isAdmin)
                 {

@@ -45,31 +45,117 @@ namespace StokvelManagementSystem.Controllers
             {
                 connection.Open();
 
-                // ✅ 1. Get members for the group
-                var memberQuery = @"
-                    SELECT mg.ID, m.ID AS MemberID, CONCAT(m.FirstName, ' ', m.LastName) AS FullName, m.Email, m.Phone
-                    FROM MemberGroups mg
-                    JOIN Members m ON mg.MemberID = m.ID
-                    WHERE mg.GroupID = @GroupId";
+            // ✅ 1. Get first unpaid member and the next one (ordered by ID)
+            var memberQuery = @"
+                SELECT mg.ID, m.ID AS MemberID, CONCAT(m.FirstName, ' ', m.LastName) AS FullName, m.Email, m.Phone
+                FROM MemberGroups mg
+                JOIN Members m ON mg.MemberID = m.ID
+                JOIN Groups g ON mg.GroupID = g.ID
+                LEFT JOIN Payouts p ON p.MemberGroupID = mg.ID
+                WHERE mg.GroupID = @GroupId
+                AND (p.PaidForCycle IS NULL OR p.PaidForCycle != g.Cycles)
+                ORDER BY mg.ID ASC";  // Sort by ID
 
-                using (var command = new SqlCommand(memberQuery, connection))
+                    using (var command = new SqlCommand(memberQuery, connection))
+                    {
+                        command.Parameters.AddWithValue("@GroupId", groupId);
+                        using (var reader = command.ExecuteReader())
+                        {
+                            int count = 0;
+                            while (reader.Read())
+                            {
+                                var member = new MemberOption
+                                {
+                                    Id = Convert.ToInt32(reader["ID"]),
+                                    MemberId = Convert.ToInt32(reader["MemberID"]),
+                                    FullName = reader["FullName"].ToString(),
+                                    Email = reader["Email"].ToString(),
+                                    Phone = reader["Phone"].ToString()
+                                };
+
+                                if (count == 0)
+                                {
+                                    model.Member = member; // First member
+                                }
+                                else if (count == 1)
+                                {
+                                    model.NextMember = member; // Second member
+                                    break; // No need to continue
+                                }
+
+                                count++;
+                            }
+                        }
+                    }
+
+
+
+                    // ✅ 3. Get group balance from Contributions via MemberGroups
+                    var balanceAndPayoutDateQuery = @"
+                    SELECT 
+                        ISNULL(SUM(c.TotalAmount), 0) AS GroupBalance,
+                        CASE 
+                            WHEN LOWER(f.FrequencyName) = 'periodic' THEN g.PeriodicDate
+                            ELSE DATEADD(DAY, 
+                                (g.Cycles + 1) * 
+                                CASE LOWER(f.FrequencyName)
+                                    WHEN 'weekly' THEN 7
+                                    WHEN 'monthly' THEN 30
+                                    WHEN 'annually' THEN 365
+                                    WHEN 'daily' THEN 1
+                                    ELSE 0
+                                END,
+                                g.StartDate
+                            )
+                        END AS NextPayoutDate
+                    FROM Groups g
+                    JOIN Frequencies f ON g.FrequencyID = f.ID
+                    LEFT JOIN MemberGroups mg ON mg.GroupID = g.ID
+                    LEFT JOIN Contributions c ON c.MemberGroupID = mg.ID
+                    WHERE g.ID = @GroupId
+                    GROUP BY g.Cycles, f.FrequencyName, g.StartDate, g.PeriodicDate";
+
+                    using (var command = new SqlCommand(balanceAndPayoutDateQuery, connection))
+                    {
+                        command.Parameters.AddWithValue("@GroupId", groupId);
+                        using (var reader = command.ExecuteReader())
+                        {
+                            if (reader.Read())
+                            {
+                                model.GroupBalance = reader["GroupBalance"] != DBNull.Value ? Convert.ToDecimal(reader["GroupBalance"]) : 0;
+                                model.NextPayoutDate = reader["NextPayoutDate"] != DBNull.Value ? Convert.ToDateTime(reader["NextPayoutDate"]) : (DateTime?)null;
+                            }
+                        }
+                    }
+
+
+                                // ✅ 4. Check if total group contributions meet expected value (per-person amount × members)
+                    var enablePayoutQuery = @"
+                    SELECT 
+                        CASE 
+                            WHEN ISNULL(SUM(c.ContributionAmount), 0) = g.ContributionAmount * COUNT(DISTINCT mg.ID) THEN 1
+                            ELSE 0
+                        END AS EnablePayout,
+                        COUNT(DISTINCT mg.ID) AS MemberCount
+                    FROM MemberGroups mg
+                    JOIN Groups g ON mg.GroupID = g.ID
+                    LEFT JOIN Contributions c ON c.MemberGroupID = mg.ID
+                    WHERE mg.GroupID = @GroupId
+                    GROUP BY g.ContributionAmount";
+
+                using (var command = new SqlCommand(enablePayoutQuery, connection))
                 {
                     command.Parameters.AddWithValue("@GroupId", groupId);
                     using (var reader = command.ExecuteReader())
                     {
-                        while (reader.Read())
+                        if (reader.Read())
                         {
-                            model.MemberOptions.Add(new MemberOption
-                            {
-                                Id = Convert.ToInt32(reader["ID"]),
-                                MemberId = Convert.ToInt32(reader["MemberID"]),
-                                FullName = reader["FullName"].ToString(),
-                                Email = reader["Email"].ToString(),
-                                Phone = reader["Phone"].ToString()
-                            });
+                            model.EnablePayout = reader.GetInt32(0) == 1; // EnablePayout
+                            model.MemberCount = reader.GetInt32(1);       // MemberCount
                         }
                     }
                 }
+
 
                 // ✅ 2. Get group name
                 var groupNameQuery = "SELECT GroupName FROM Groups WHERE ID = @GroupId";
@@ -151,7 +237,7 @@ namespace StokvelManagementSystem.Controllers
                 {
                     await connection.OpenAsync();
 
-                    // ✅ Get correct MemberGroupID from MemberGroups table
+                    // Get MemberGroupID
                     var getGroupQuery = @"SELECT ID FROM MemberGroups WHERE MemberID = @MemberID AND GroupID = @GroupID";
                     int memberGroupId;
 
@@ -170,14 +256,23 @@ namespace StokvelManagementSystem.Controllers
                         memberGroupId = Convert.ToInt32(result);
                     }
 
-                    // ✅ Proceed to insert using the correct MemberGroupID
+                    // Get current Cycle from Groups table
+                    int currentCycle = 0;
+                    var getCycleQuery = @"SELECT Cycles FROM Groups WHERE ID = @GroupID";
+                    using (var cycleCmd = new SqlCommand(getCycleQuery, connection))
+                    {
+                        cycleCmd.Parameters.AddWithValue("@GroupID", groupId);
+                        var cycleResult = await cycleCmd.ExecuteScalarAsync();
+                        currentCycle = Convert.ToInt32(cycleResult);
+                    }
+
+                    // Insert Payout with PaidForCycle
                     var insertQuery = @"INSERT INTO Payouts 
                                         (MemberGroupID, PaymentMethodID, Amount, 
-                                        TransactionDate, Reference, ProofOfPaymentPath, CreatedBy)
+                                        TransactionDate, Reference, ProofOfPaymentPath, CreatedBy, PaidForCycle)
                                         VALUES 
                                         (@MemberGroupID, @PaymentMethodID, @Amount, 
-                                        @PayoutDate, @Reference, @ProofOfPaymentPath, @CreatedBy);
-                                        SELECT SCOPE_IDENTITY();";
+                                        @PayoutDate, @Reference, @ProofOfPaymentPath, @CreatedBy, @PaidForCycle);";
 
                     using (var command = new SqlCommand(insertQuery, connection))
                     {
@@ -189,8 +284,46 @@ namespace StokvelManagementSystem.Controllers
                         command.Parameters.AddWithValue("@ProofOfPaymentPath",
                             string.IsNullOrEmpty(model.ProofOfPaymentPath) ? DBNull.Value : (object)model.ProofOfPaymentPath);
                         command.Parameters.AddWithValue("@CreatedBy", model.CreatedBy);
+                        command.Parameters.AddWithValue("@PaidForCycle", currentCycle);
 
-                        await command.ExecuteScalarAsync();
+                        await command.ExecuteNonQueryAsync();
+                    }
+
+                    // Check if all members have submitted payout for this cycle
+                    var checkMembersQuery = @"
+                        SELECT COUNT(*) 
+                        FROM MemberGroups 
+                        WHERE GroupID = @GroupID";
+
+                    var checkPayoutsQuery = @"
+                        SELECT COUNT(*) 
+                        FROM Payouts P
+                        INNER JOIN MemberGroups MG ON MG.ID = P.MemberGroupID
+                        WHERE MG.GroupID = @GroupID AND P.PaidForCycle = @Cycles";
+
+                    int totalMembers, totalPayouts;
+
+                    using (var cmd = new SqlCommand(checkMembersQuery, connection))
+                    {
+                        cmd.Parameters.AddWithValue("@GroupID", groupId);
+                        totalMembers = (int)await cmd.ExecuteScalarAsync();
+                    }
+
+                    using (var cmd = new SqlCommand(checkPayoutsQuery, connection))
+                    {
+                        cmd.Parameters.AddWithValue("@GroupID", groupId);
+                        cmd.Parameters.AddWithValue("@Cycles", currentCycle);
+                        totalPayouts = (int)await cmd.ExecuteScalarAsync();
+                    }
+
+                    if (totalMembers == totalPayouts)
+                    {
+                        var updateCycleQuery = "UPDATE Groups SET Cycles = Cycles + 1 WHERE ID = @GroupID";
+                        using (var updateCmd = new SqlCommand(updateCycleQuery, connection))
+                        {
+                            updateCmd.Parameters.AddWithValue("@GroupID", groupId);
+                            await updateCmd.ExecuteNonQueryAsync();
+                        }
                     }
                 }
 
@@ -204,6 +337,7 @@ namespace StokvelManagementSystem.Controllers
                 return View("~/Views/Transactions/PayoutsCreate.cshtml", model);
             }
         }
+
 
 
         [HttpGet]
