@@ -109,38 +109,48 @@ namespace StokvelManagementSystem.Controllers
 
 
 
-        private List<Group> GetMyGroups(int memberId)
+private List<Group> GetMyGroups(int memberId)
+{
+    var myGroups = new List<Group>();
+
+    using (var conn = new SqlConnection(_configuration.GetConnectionString("DefaultConnection")))
+    {
+        string query = @"
+            SELECT 
+                g.*, 
+                pt.PayoutType AS PayoutType, 
+                f.FrequencyName, 
+                gs.PenaltyAmount, 
+                gs.PenaltyGraceDays, 
+                gs.AllowDeferrals, 
+                c.Currency,
+                mg.RoleID
+            FROM Groups g
+            JOIN MemberGroups mg ON g.ID = mg.GroupID
+            JOIN PayoutTypes pt ON g.PayoutTypeID = pt.ID
+            JOIN Frequencies f ON g.FrequencyID = f.ID
+            LEFT JOIN GroupSettings gs ON g.ID = gs.GroupID
+            JOIN Currencies c ON g.CurrencyID = c.ID
+            WHERE mg.MemberID = @MemberID
+            ORDER BY g.ID DESC";
+
+        using (var cmd = new SqlCommand(query, conn))
         {
-            var myGroups = new List<Group>();
-
-            using (var conn = new SqlConnection(_configuration.GetConnectionString("DefaultConnection")))
+            cmd.Parameters.AddWithValue("@MemberID", memberId);
+            conn.Open();
+            using (var reader = cmd.ExecuteReader())
             {
-                string query = @"SELECT g.*, pt.PayoutType AS PayoutType, f.FrequencyName, gs.PenaltyAmount, gs.PenaltyGraceDays, gs.AllowDeferrals, c.Currency
-                                    FROM Groups g
-                                       JOIN MemberGroups mg ON g.ID = mg.GroupID
-                                       JOIN PayoutTypes pt ON g.PayoutTypeID = pt.ID
-                                       JOIN Frequencies f ON g.FrequencyID = f.ID
-                                       LEFT JOIN GroupSettings gs ON g.ID = gs.GroupID
-                                       JOIN Currencies c ON g.CurrencyID = c.ID
-                                       WHERE mg.MemberID = @MemberID";
-
-
-                using (var cmd = new SqlCommand(query, conn))
+                while (reader.Read())
                 {
-                    cmd.Parameters.AddWithValue("@MemberID", memberId);
-                    conn.Open();
-                    using (var reader = cmd.ExecuteReader())
-                    {
-                        while (reader.Read())
-                        {
-                            myGroups.Add(MapGroupFromReader(reader));
-                        }
-                    }
+                    myGroups.Add(MapGroupFromReader(reader));
                 }
             }
-
-            return myGroups;
         }
+    }
+
+    return myGroups;
+}
+
 
         private List<Group> GetMyGroupsByNationalId(string nationalId)
         {
@@ -149,16 +159,24 @@ namespace StokvelManagementSystem.Controllers
             using (var conn = new SqlConnection(_configuration.GetConnectionString("DefaultConnection")))
             {
                 string query = @"
-            SELECT g.*, pt.PayoutType AS PayoutType, f.FrequencyName, c.Currency AS Currency,
-                   gs.PenaltyAmount, gs.PenaltyGraceDays, gs.AllowDeferrals
-            FROM Groups g
-            JOIN MemberGroups mg ON g.ID = mg.GroupID
-            JOIN Members m ON mg.MemberID = m.ID
-            JOIN PayoutTypes pt ON g.PayoutTypeID = pt.ID
-            JOIN Currencies c ON g.CurrencyID = c.ID
-            JOIN Frequencies f ON g.FrequencyID = f.ID
-            LEFT JOIN GroupSettings gs ON g.ID = gs.GroupID
-            WHERE m.NationalID = @NationalID";
+                                    SELECT 
+                            g.*, 
+                            pt.PayoutType AS PayoutType, 
+                            f.FrequencyName, 
+                            c.Currency AS Currency,
+                            gs.PenaltyAmount, 
+                            gs.PenaltyGraceDays, 
+                            gs.AllowDeferrals,
+                            mg.RoleID  -- ✅ Added RoleID from MemberGroups
+                        FROM Groups g
+                        JOIN MemberGroups mg ON g.ID = mg.GroupID
+                        JOIN Members m ON mg.MemberID = m.ID
+                        JOIN PayoutTypes pt ON g.PayoutTypeID = pt.ID
+                        JOIN Currencies c ON g.CurrencyID = c.ID
+                        JOIN Frequencies f ON g.FrequencyID = f.ID
+                        LEFT JOIN GroupSettings gs ON g.ID = gs.GroupID
+                        WHERE m.NationalID = @NationalID
+                        ";
 
                 using (var cmd = new SqlCommand(query, conn))
                 {
@@ -313,6 +331,8 @@ namespace StokvelManagementSystem.Controllers
                     }
                 }
 
+                
+
                 return RedirectToAction("ListGroups", new { memberId = model.MemberId, created = true });
             }
             catch (Exception ex)
@@ -435,6 +455,9 @@ namespace StokvelManagementSystem.Controllers
         {
             var userId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)?.Value);
             var isAdmin = User.IsInRole("Admin");
+            var memberIdStr = User.Claims.FirstOrDefault(c => c.Type == "member_id")?.Value;
+
+            int memberId = int.TryParse(memberIdStr, out var id) ? id : 0;
 
             _logger.LogInformation("The status is: {status}", status);
 
@@ -537,6 +560,26 @@ namespace StokvelManagementSystem.Controllers
                     IsMemberView = !isAdmin
                 };
 
+                // Set IsMemberNotAdmin based on RoleID == 1
+                using (var cmd = new SqlCommand(
+                    @"SELECT RoleID FROM MemberGroups 
+                    WHERE MemberID = @memberId AND GroupID = @groupId", conn))
+                {
+                    cmd.Parameters.AddWithValue("@memberId", memberId);
+                    cmd.Parameters.AddWithValue("@groupId", groupId);
+                    var roleIdObj = cmd.ExecuteScalar();
+
+                    if (roleIdObj != null && int.TryParse(roleIdObj.ToString(), out int roleId))
+                    {
+                        _logger.LogInformation("MemberID: {MemberID}, GroupID: {GroupID}, RoleID: {RoleID}", memberId, groupId, roleId);
+                        model.IsMemberNotAdmin = (roleId == 2);
+                    }
+                    else
+                    {
+                        _logger.LogWarning("Could not determine RoleID for MemberID: {MemberID}, GroupID: {GroupID}", memberId, groupId);
+                    }
+                }
+
                 // Add pending request count for admin
                 if (isAdmin)
                 {
@@ -573,6 +616,9 @@ namespace StokvelManagementSystem.Controllers
         {
             var userId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)?.Value);
             var isAdmin = User.IsInRole("Admin");
+            var memberIdStr = User.Claims.FirstOrDefault(c => c.Type == "member_id")?.Value;
+
+            int memberId = int.TryParse(memberIdStr, out var id) ? id : 0;
 
             _logger.LogInformation("The leave request status is: {status}", status);
 
@@ -663,6 +709,21 @@ namespace StokvelManagementSystem.Controllers
                     IsMemberView = !isAdmin
                 };
 
+                // Set IsMemberNotAdmin based on RoleID == 1
+                using (var cmd = new SqlCommand(
+                    @"SELECT RoleID FROM MemberGroups 
+                    WHERE MemberID = @memberId AND GroupID = @groupId", conn))
+                {
+                    cmd.Parameters.AddWithValue("@memberId", memberId);
+                    cmd.Parameters.AddWithValue("@groupId", groupId);
+                    var roleIdObj = cmd.ExecuteScalar();
+
+                    if (roleIdObj != null && int.TryParse(roleIdObj.ToString(), out int roleId))
+                    {
+                        model.IsMemberNotAdmin = (roleId == 1);
+                    }
+                }
+
                 // Pending count for admin
                 if (isAdmin)
                 {
@@ -749,7 +810,8 @@ namespace StokvelManagementSystem.Controllers
                 PenaltyGraceDays = reader["PenaltyGraceDays"] != DBNull.Value ? Convert.ToInt32(reader["PenaltyGraceDays"]) : 0,
                 Currency = reader["Currency"] != DBNull.Value ? reader["Currency"].ToString() : null,
                 Duration = reader["Duration"].ToString(),
-                AllowDeferrals = reader["AllowDeferrals"] != DBNull.Value && Convert.ToBoolean(reader["AllowDeferrals"])
+                AllowDeferrals = reader["AllowDeferrals"] != DBNull.Value && Convert.ToBoolean(reader["AllowDeferrals"]),
+                RoleID = reader["RoleID"] != DBNull.Value ? Convert.ToInt32(reader["RoleID"]) : 0
             };
         }
         private List<SelectListItem> GetFrequencyOptions()

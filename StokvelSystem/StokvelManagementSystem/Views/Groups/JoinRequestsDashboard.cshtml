@@ -68,7 +68,7 @@
 
                                 @{
                                     var isAdminCookie = Context.Request.Cookies["isAdmin"];
-                                    var isAdmin = !string.IsNullOrEmpty(isAdminCookie) && isAdminCookie == "true";
+                                    var isAdmin = !Model.IsMemberNotAdmin;
                                 }
 
 
@@ -180,7 +180,7 @@
                             @Model.Group.Name - @Model.SelectedStatus Requests
                         </h2>
                         <span class="badge bg-@(!isAdmin ? "warning" : "success")">
-                            @(!isAdmin ? "Member View" : "Admin View")
+                            @(Model.IsMemberNotAdmin ? "Member View" : "Admin View")
                         </span>
                     </div>
 
@@ -210,7 +210,7 @@
                                                         <th>Contribution</th>
                                                     }
                                                     <th>Date</th>
-                                                    @if (Model.SelectedStatus == "Pending" && Model.AdminTools && isAdmin)
+                                                    @if (Model.SelectedStatus == "Pending" && Model.AdminTools && !Model.IsMemberNotAdmin)
                                                     {
                                                         <th>Actions</th>
                                                     }
@@ -229,7 +229,7 @@
                                                         <td>@request.GroupName</td>
                                                         <td>@Model.Group.Currency @request.ContributionAmount.ToString("N2")</td>
                                                         <td>@request.RequestedDate.ToString("dd MMM yyyy")</td>
-                                                        @if (Model.SelectedStatus == "Pending" && Model.AdminTools && isAdmin)
+                                                        @if (Model.SelectedStatus == "Pending" && Model.AdminTools && !Model.IsMemberNotAdmin)
                                                         {
                                                             <td>
                                                                 <form asp-controller="Invites" method="post">
@@ -248,7 +248,7 @@
                                                     <tr>
                                                         <td>@request.FirstName @request.LastName</td>
                                                         <td>@request.RequestedDate.ToString("dd MMM yyyy")</td>
-                                                        @if (Model.SelectedStatus == "Pending" && Model.AdminTools && isAdmin)
+                                                        @if (Model.SelectedStatus == "Pending" && Model.AdminTools && !Model.IsMemberNotAdmin)
                                                         {
                                                             <td>
                                                                 <form asp-controller="Leave" method="post">

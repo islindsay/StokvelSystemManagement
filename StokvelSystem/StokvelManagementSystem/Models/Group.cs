@@ -57,6 +57,11 @@ namespace StokvelManagementSystem.Models
         public List<SelectListItem> FrequencyOptions { get; set; }
         public bool ShowNewGroups { get; set; }
 
+        // Add this to support hiding the Request to Leave button
+        public int RoleID { get; set; }  // Member's role in the group
+
+        // Logic: Hide button if user is Admin and group doesn't allow deferrals
+        public bool HideRequestToLeave => RoleID == 1 && !AllowDeferrals;
 
     }
 }

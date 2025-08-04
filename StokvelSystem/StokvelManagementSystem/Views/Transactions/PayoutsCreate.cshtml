@@ -77,7 +77,7 @@
                                 <i class="bi bi-credit-card me-2"></i>Payment Information
                             </h5>
                             <div class="form-group mb-3">
-                                <label asp-for="PayoutTypeId" class="form-label fw-bold">Payout Method</label>
+                                <label asp-for="PayoutTypeId" class="form-label fw-bold">Payment Method</label>
                                 <select asp-for="PayoutTypeId" class="form-select" required
                                         asp-items="@(new SelectList(Model.PayoutTypes, "Value", "Text"))">
                                     <option value="">-- Select Type --</option>

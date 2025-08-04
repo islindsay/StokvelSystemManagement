@@ -57,6 +57,8 @@
         public int PendingRequestCount { get; set; }
         public DateTime? NextContributionDate { get; set; }
         public string RequestType { get; set; } // "Join" or "Leave"
+        public bool IsMemberNotAdmin { get; set; } // Used to hide/disable specific tools for non-admin members
+
 }
 
 }

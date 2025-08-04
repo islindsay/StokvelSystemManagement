@@ -94,15 +94,19 @@
                                     <p class="card-text"><strong>Penalty:</strong> @($"{(group.Currency ?? "R")} {(group.PenaltyAmount.ToString("0.00") ?? "0.00")} after {group.PenaltyGraceDays} days")</p>
                                     <p class="card-text"><strong>Deferrals:</strong> @(group.AllowDeferrals ? "Allowed" : "Not Allowed")</p>
 
-                                    <div class="card-actions">
-                                        <form asp-action="RequestToLeave" method="post" onsubmit="event.stopPropagation();">
-                                            <input type="hidden" name="groupId" value="@group.ID" />
-                                            <input type="hidden" name="nationalId" value="@Model.SearchNationalId" />
-                                            <button type="submit" class="btn btn-outline-danger px-4 py-2 shadow-sm" style="font-size: 0.875rem;">
-                                                <i class="bi bi-box-arrow-right me-1" style="font-size: 0.9rem;"></i>Request to Leave
-                                            </button>
-                                        </form>
-                                    </div>
+                              @if (!group.HideRequestToLeave)
+                                    {
+                                        <div class="card-actions">
+                                            <form asp-action="RequestToLeave" method="post" onsubmit="event.stopPropagation();">
+                                                <input type="hidden" name="groupId" value="@group.ID" />
+                                                <input type="hidden" name="nationalId" value="@Model.SearchNationalId" />
+                                                <button type="submit" class="btn btn-outline-danger px-4 py-2 shadow-sm" style="font-size: 0.875rem;">
+                                                    <i class="bi bi-box-arrow-right me-1" style="font-size: 0.9rem;"></i>Request to Leave
+                                                </button>
+                                            </form>
+                                        </div>
+                                    }
+
                                 </div>
                             </div>
                         </a>
