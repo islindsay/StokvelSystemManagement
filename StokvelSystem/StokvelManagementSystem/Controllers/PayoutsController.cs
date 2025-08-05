@@ -45,16 +45,30 @@ namespace StokvelManagementSystem.Controllers
             {
                 connection.Open();
 
-            // ✅ 1. Get first unpaid member and the next one (ordered by ID)
-            var memberQuery = @"
-                SELECT mg.ID, m.ID AS MemberID, CONCAT(m.FirstName, ' ', m.LastName) AS FullName, m.Email, m.Phone
-                FROM MemberGroups mg
-                JOIN Members m ON mg.MemberID = m.ID
-                JOIN Groups g ON mg.GroupID = g.ID
-                LEFT JOIN Payouts p ON p.MemberGroupID = mg.ID
-                WHERE mg.GroupID = @GroupId
-                AND (p.PaidForCycle IS NULL OR p.PaidForCycle != g.Cycles)
-                ORDER BY mg.ID ASC";  // Sort by ID
+                // ✅ 1. Get first unpaid member and the next one (ordered by ID)
+                var memberQuery = @"
+                                    SELECT DISTINCT
+                                        mg.ID AS ID,
+                                        m.ID AS MemberID,
+                                        CONCAT(m.FirstName, ' ', m.LastName) AS FullName,
+                                        m.Email,
+                                        m.Phone,
+                                        mg.ID AS MemberGroupID
+                                    FROM MemberGroups mg
+                                    JOIN Members m ON mg.MemberID = m.ID
+                                    JOIN Groups g ON mg.GroupID = g.ID
+                                    LEFT JOIN (
+                                        SELECT p1.*
+                                        FROM Payouts p1
+                                        JOIN (
+                                            SELECT MemberGroupID, MAX(PaidForCycle) AS MaxCycle
+                                            FROM Payouts
+                                            GROUP BY MemberGroupID
+                                        ) latest ON p1.MemberGroupID = latest.MemberGroupID AND p1.PaidForCycle = latest.MaxCycle
+                                    ) p ON p.MemberGroupID = mg.ID
+                                    WHERE mg.GroupID = @GroupId
+                                    AND (p.PaidForCycle IS NULL OR p.PaidForCycle != g.Cycles)
+                                ";
 
                     using (var command = new SqlCommand(memberQuery, connection))
                     {
@@ -91,29 +105,42 @@ namespace StokvelManagementSystem.Controllers
 
 
                     // ✅ 3. Get group balance from Contributions via MemberGroups
-                    var balanceAndPayoutDateQuery = @"
-                    SELECT 
-                        ISNULL(SUM(c.TotalAmount), 0) AS GroupBalance,
-                        CASE 
-                            WHEN LOWER(f.FrequencyName) = 'periodic' THEN g.PeriodicDate
-                            ELSE DATEADD(DAY, 
-                                (g.Cycles + 1) * 
-                                CASE LOWER(f.FrequencyName)
-                                    WHEN 'weekly' THEN 7
-                                    WHEN 'monthly' THEN 30
-                                    WHEN 'annually' THEN 365
-                                    WHEN 'daily' THEN 1
-                                    ELSE 0
-                                END,
-                                g.StartDate
-                            )
-                        END AS NextPayoutDate
-                    FROM Groups g
-                    JOIN Frequencies f ON g.FrequencyID = f.ID
-                    LEFT JOIN MemberGroups mg ON mg.GroupID = g.ID
-                    LEFT JOIN Contributions c ON c.MemberGroupID = mg.ID
-                    WHERE g.ID = @GroupId
-                    GROUP BY g.Cycles, f.FrequencyName, g.StartDate, g.PeriodicDate";
+                var balanceAndPayoutDateQuery = @"
+                                                SELECT 
+                                                    ISNULL(SUM(c.TotalAmount), 0) AS GroupBalance,
+
+                                                    ISNULL(SUM(c.ContributionAmount), 0) 
+                                                    - ISNULL((
+                                                        SELECT SUM(p.Amount)
+                                                        FROM Payouts p
+                                                        JOIN MemberGroups mpg ON p.MemberGroupID = mpg.ID
+                                                        WHERE mpg.GroupID = g.ID AND p.PaidForCycle = g.Cycles
+                                                    ), 0) AS TotalContributions,
+
+                                                    ISNULL(SUM(c.PenaltyAmount), 0) AS Penalties,
+
+                                                    CASE 
+                                                        WHEN LOWER(f.FrequencyName) = 'periodic' THEN g.PeriodicDate
+                                                        ELSE DATEADD(DAY, 
+                                                            (g.Cycles + 1) * 
+                                                            CASE LOWER(f.FrequencyName)
+                                                                WHEN 'weekly' THEN 7
+                                                                WHEN 'monthly' THEN 30
+                                                                WHEN 'annually' THEN 365
+                                                                WHEN 'daily' THEN 1
+                                                                ELSE 0
+                                                            END,
+                                                            g.StartDate
+                                                        )
+                                                    END AS NextPayoutDate
+
+                                                FROM Groups g
+                                                JOIN Frequencies f ON g.FrequencyID = f.ID
+                                                LEFT JOIN MemberGroups mg ON mg.GroupID = g.ID
+                                                LEFT JOIN Contributions c ON c.MemberGroupID = mg.ID AND c.PaidForCycle = g.Cycles
+                                                WHERE g.ID = @GroupId
+                                                GROUP BY g.ID, g.Cycles, f.FrequencyName, g.StartDate, g.PeriodicDate;
+                                            ";
 
                     using (var command = new SqlCommand(balanceAndPayoutDateQuery, connection))
                     {
@@ -123,25 +150,29 @@ namespace StokvelManagementSystem.Controllers
                             if (reader.Read())
                             {
                                 model.GroupBalance = reader["GroupBalance"] != DBNull.Value ? Convert.ToDecimal(reader["GroupBalance"]) : 0;
+                                model.TotalContributions = reader["TotalContributions"] != DBNull.Value ? Convert.ToDecimal(reader["TotalContributions"]) : 0;
+                                model.Penalties = reader["Penalties"] != DBNull.Value ? Convert.ToDecimal(reader["Penalties"]) : 0;
                                 model.NextPayoutDate = reader["NextPayoutDate"] != DBNull.Value ? Convert.ToDateTime(reader["NextPayoutDate"]) : (DateTime?)null;
                             }
                         }
                     }
 
 
-                                // ✅ 4. Check if total group contributions meet expected value (per-person amount × members)
-                    var enablePayoutQuery = @"
-                    SELECT 
-                        CASE 
-                            WHEN ISNULL(SUM(c.ContributionAmount), 0) = g.ContributionAmount * COUNT(DISTINCT mg.ID) THEN 1
-                            ELSE 0
-                        END AS EnablePayout,
-                        COUNT(DISTINCT mg.ID) AS MemberCount
-                    FROM MemberGroups mg
-                    JOIN Groups g ON mg.GroupID = g.ID
-                    LEFT JOIN Contributions c ON c.MemberGroupID = mg.ID
-                    WHERE mg.GroupID = @GroupId
-                    GROUP BY g.ContributionAmount";
+                // ✅ 4. Check if total group contributions meet expected value (per-person amount × members)
+                var enablePayoutQuery = @"
+                                SELECT 
+                                    CASE 
+                                        WHEN ISNULL(SUM(c.ContributionAmount), 0) = g.ContributionAmount * COUNT(DISTINCT mg.ID) THEN 1
+                                        ELSE 0
+                                    END AS EnablePayout,
+                                    COUNT(DISTINCT mg.ID) AS MemberCount,
+                                    g.ContributionAmount * COUNT(DISTINCT mg.ID) AS ExpectedPayment
+                                FROM MemberGroups mg
+                                JOIN Groups g ON mg.GroupID = g.ID
+                                LEFT JOIN Contributions c ON c.MemberGroupID = mg.ID
+                                WHERE mg.GroupID = @GroupId
+                                GROUP BY g.ContributionAmount;
+                                ";
 
                 using (var command = new SqlCommand(enablePayoutQuery, connection))
                 {
@@ -152,6 +183,7 @@ namespace StokvelManagementSystem.Controllers
                         {
                             model.EnablePayout = reader.GetInt32(0) == 1; // EnablePayout
                             model.MemberCount = reader.GetInt32(1);       // MemberCount
+                            model.ExpectedPayment = reader["ExpectedPayment"] != DBNull.Value ? Convert.ToDecimal(reader["ExpectedPayment"]) : 0;
                         }
                     }
                 }

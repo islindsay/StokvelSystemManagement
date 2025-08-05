@@ -221,13 +221,20 @@ namespace StokvelManagementSystem.Controllers
                     // Insert into DB
                     using (var connection = new SqlConnection(_configuration.GetConnectionString("DefaultConnection")))
                     {
-                        var query = @"INSERT INTO Contributions 
-                                    (MemberGroupID, PaymentMethodID, PenaltyAmount, ContributionAmount, 
-                                    TotalAmount, TransactionDate, Reference, ProofOfPaymentPath, CreatedBy)
-                                    VALUES 
-                                    (@MemberGroupID, @PaymentMethodID, @PenaltyAmount, @ContributionAmount, 
-                                    @TotalAmount, @TransactionDate, @Reference, @ProofOfPaymentPath, @CreatedBy);
-                                    SELECT SCOPE_IDENTITY();";
+                       var query = @"
+                        INSERT INTO Contributions 
+                            (MemberGroupID, PaymentMethodID, PenaltyAmount, ContributionAmount, 
+                            TotalAmount, TransactionDate, Reference, ProofOfPaymentPath, CreatedBy, PaidForCycle)
+                        SELECT 
+                            @MemberGroupID, @PaymentMethodID, @PenaltyAmount, @ContributionAmount, 
+                            @TotalAmount, @TransactionDate, @Reference, @ProofOfPaymentPath, @CreatedBy,
+                            g.Cycles  -- This sets PaidForCycle from Groups table
+                        FROM MemberGroups mg
+                        JOIN Groups g ON mg.GroupID = g.ID
+                        WHERE mg.ID = @MemberGroupID;
+
+                        SELECT SCOPE_IDENTITY();";
+
 
                         using (var command = new SqlCommand(query, connection))
                         {

@@ -6,7 +6,7 @@
 <div class="container mt-4">
     <div class="card shadow-sm">
         <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center py-3">
-            <h4 class="mb-0">@ViewData["Title"] <span style="font-size: 0.875rem;">(Balance @Model.GroupBalance.ToString("C")) Payable from @Model.NextPayoutDate?.ToString("dd MMMM yyyy")</span></h4>
+            <h4 class="mb-0">@ViewData["Title"] <span style="font-size: 0.875rem;">(Balance @Model.TotalContributions.ToString("C") / @Model.ExpectedPayment.ToString("C")) Payable from @Model.NextPayoutDate?.ToString("dd MMMM yyyy")</span></h4>
             <div class="text-end">
                 <span class="badge bg-light text-dark fs-6">
                     <i class="bi bi-calendar me-2"></i>@DateTime.Now.ToString("dd MMMM yyyy")
@@ -90,7 +90,7 @@
                             <div class="form-group mb-3">
                                 <label asp-for="Amount" class="form-label fw-bold">Amount</label>
                                 <div class="input-group">
-                                    <input asp-for="Amount" class="form-control" type="number" step="0.01" min="5" value="@(Model.GroupBalance / Model.MemberCount)" readonly required>
+                                    <input asp-for="Amount" class="form-control" type="number" step="0.01" min="5" value="@(Model.ExpectedPayment)" readonly required>
                                 </div>
                                 <span asp-validation-for="Amount" class="text-danger"></span>
                             </div>
@@ -123,7 +123,7 @@
                     <a asp-action="PayoutIndex" asp-route-groupId="@Model.GroupId" class="btn btn-outline-secondary px-4">
                         <i class="bi bi-x-circle me-2"></i>Cancel
                     </a>
-                    <button type="submit" class="btn btn-primary px-4" @((Model.EnablePayout == false || DateTime.Now.Date < Model.NextPayoutDate?.Date) ? "disabled" : "")>
+                    <button type="submit" class="btn btn-primary px-4" @((Model.EnablePayout == false || DateTime.Now.Date < Model.NextPayoutDate?.Date) ? "" : "disabled")>
                         <i class="bi bi-check-circle me-2"></i>Submit Payout
                     </button>
                 </div>

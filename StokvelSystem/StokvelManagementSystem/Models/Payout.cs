@@ -54,6 +54,9 @@ namespace StokvelManagementSystem.Models
         public List<SelectListItem> PayoutTypes { get; set; } = new();
         public List<MemberOption> MemberOptions { get; set; } = new();
         public decimal GroupBalance { get; set; }
+        public decimal TotalContributions { get; set; }
+        public decimal Penalties { get; set; }
+        public decimal ExpectedPayment { get; set; }
         public int MemberCount { get; set; }
         public bool EnablePayout { get; set; }
         public DateTime? NextPayoutDate { get; set; }
