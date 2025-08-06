@@ -24,8 +24,7 @@
                             </div>
                 <div class="mb-4 p-3 border rounded bg-light">
                     <h5 class="mb-3 text-primary">
-                        <i class="bi bi-receipt me-2"></i>Proof of Payment
-                    </h5>
+                </h5>
                     <div class="form-group">
                         <label asp-for="ProofOfPaymentPath" class="form-label fw-bold">Upload Receipt</label>
                         <div class="custom-file">
@@ -41,34 +40,54 @@
                     <div class="col-md-6">
                         <div class="p-3 border rounded bg-light h-100">
                             <h5 class="mb-3 text-primary">
-                                <i class="bi bi-person-circle me-2"></i>Member Details <span style="font-size: 0.875rem; text-right" class="text-muted"> (Next Up - @Model.NextMember?.FullName)</span>
+                                <i class="bi bi-person-circle me-2"></i>Member Details @if (Model.FrequencyID != 5)
+                                {<span style="font-size: 0.875rem; text-right" class="text-muted"> (Next Up - @Model.NextMember?.FullName)</span>}
                             </h5>
+
+        @if (Model.FrequencyID != 5)
+                    {
                      <div class="form-group mb-3">
+
                     <label class="form-label fw-bold">Member</label>
-                    <input type="text"
+                        <input type="text"
                         class="form-control"
                         value="@Model.Member?.FullName"
                         readonly />
 
                     <input type="hidden" name="MemberId" value="@Model.Member?.MemberId" />
                     <input type="hidden" name="MemberGroupId" value="@Model.Member?.Id" />
-                </div>
+                    
+                  
+                    </div>
 
-                <div class="form-group mb-3">
-                    <label class="form-label fw-bold">Email</label>
-                    <input type="text"
-                        class="form-control"
-                        value="@Model.Member?.Email"
-                        readonly />
-                </div>
+                    <div class="form-group mb-3">
+                        <label class="form-label fw-bold">Email</label>
+                        <input type="text"
+                            class="form-control"
+                            value="@Model.Member?.Email"
+                            readonly />
+                    </div>
 
-                <div class="form-group mb-3">
-                    <label class="form-label fw-bold">Phone</label>
-                    <input type="text"
-                        class="form-control"
-                        value="@Model.Member?.Phone"
-                        readonly />
-                </div>
+                    <div class="form-group mb-3">
+                        <label class="form-label fw-bold">Phone</label>
+                        <input type="text"
+                            class="form-control"
+                            value="@Model.Member?.Phone"
+                            readonly />
+                    </div>
+                }
+                @if (Model.FrequencyID == 5)
+                    {
+                    <div class="form-group mb-3">
+
+                            <label class="form-label fw-bold">Member</label>
+                                <input type="text"
+                                class="form-control"
+                                value="Everyone"
+                                readonly />              
+                  
+                    </div>
+                    }
 
                         </div>
                     </div>
