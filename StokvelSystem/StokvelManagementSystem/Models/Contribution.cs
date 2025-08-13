@@ -69,6 +69,17 @@ namespace StokvelManagementSystem.Models
         // UI dropdown helpers
         public List<PaymentMethod> PaymentMethods { get; set; } = new List<PaymentMethod>();
         public List<MemberOption> MemberOptions { get; set; } = new List<MemberOption>();
+
+        public decimal GroupBalance { get; set; }
+        public decimal TotalContributions { get; set; }
+        public decimal Penalties { get; set; }
+        public DateTime? NextPayoutDate { get; set; }
+        public decimal ExpectedPayment { get; set; }
+        public bool EnablePayout { get; set; }
+        public int MemberCount { get; set; }
+        public int FrequencyID { get; set; }
+        public int PayoutTypeID { get; set; }
+
     }
 
     public class PaymentMethod

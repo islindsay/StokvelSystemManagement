@@ -30,7 +30,7 @@ body {
     background: linear-gradient(135deg, var(--secondary-color), var(--primary-color));
     color: white;
     padding: 2.5rem 2rem;
-    text-align: center;
+    text-align: center; 
 }
 
 .report-header h1 {
@@ -212,4 +212,18 @@ body {
         margin: 0.5rem 0;
         justify-content: center;
     }
+}
+
+@media print {
+        /* Optional: enforce A4 layout */
+        @page {
+            size: A4;
+            margin: 20mm;
+        }
+
+        .export-options,
+        .btn-export {
+            display: none !important;
+        }
+    
 }

@@ -416,7 +416,7 @@ namespace StokvelManagementSystem.Controllers
                             {
                                 groupName = reader["GroupName"].ToString();
                                 DateTime startDate = Convert.ToDateTime(reader["StartDate"] != DBNull.Value ? (DateTime?)Convert.ToDateTime(reader["StartDate"]) : null);
-                                int cycles = Convert.ToInt32(reader["Cycles"]);
+                                int cycles = reader["Cycles"] != DBNull.Value ? Convert.ToInt32(reader["Cycles"]) : 0; // or some default
                                 string frequency = reader["FrequencyName"].ToString().ToLower();
                                 decimal groupPenalty = 0;
 
@@ -451,9 +451,94 @@ namespace StokvelManagementSystem.Controllers
                     // Save values to model
                     model.GroupName = groupName;
                     model.DueDate = dueDate;
+                    
+                            // Step 2: Run your balance and payout date query
+                    string balanceAndPayoutDateQuery = @"
+                        SELECT 
+                            ISNULL(SUM(c.TotalAmount), 0) AS GroupBalance,
+                            ISNULL(SUM(c.ContributionAmount), 0) 
+                            - ISNULL((
+                                SELECT SUM(p.Amount)
+                                FROM Payouts p
+                                JOIN MemberGroups mpg ON p.MemberGroupID = mpg.ID
+                                WHERE mpg.GroupID = g.ID AND p.PaidForCycle = g.Cycles
+                            ), 0) AS TotalContributions,
+                            ISNULL(SUM(c.PenaltyAmount), 0) AS Penalties,
+                            CASE 
+                                WHEN g.PayoutTypeID = 2 THEN g.PeriodicDate
+                                ELSE DATEADD(DAY, 
+                                    (g.Cycles + 1) * 
+                                    CASE LOWER(f.FrequencyName)
+                                        WHEN 'weekly' THEN 7
+                                        WHEN 'monthly' THEN 30
+                                        WHEN 'annually' THEN 365
+                                        WHEN 'daily' THEN 1
+                                        ELSE 0
+                                    END,
+                                    g.StartDate
+                                )
+                            END AS NextPayoutDate
+                        FROM Groups g
+                        JOIN Frequencies f ON g.FrequencyID = f.ID
+                        LEFT JOIN MemberGroups mg ON mg.GroupID = g.ID
+                        LEFT JOIN Contributions c ON c.MemberGroupID = mg.ID AND c.PaidForCycle = g.Cycles
+                        WHERE g.ID = @GroupId
+                        GROUP BY g.ID, g.Cycles, f.FrequencyName, g.StartDate, g.PeriodicDate, g.PayoutTypeID;
+                    ";
 
-                    // STEP 2: Load member options
-                    string memberQuery = @"
+                    using (var command = new SqlCommand(balanceAndPayoutDateQuery, connection))
+                    {
+                        command.Parameters.AddWithValue("@GroupId", groupId);
+                        using (var reader = command.ExecuteReader())
+                        {
+                            if (reader.Read())
+                            {
+                                model.GroupBalance = reader["GroupBalance"] != DBNull.Value ? Convert.ToDecimal(reader["GroupBalance"]) : 0;
+                                model.TotalContributions = reader["TotalContributions"] != DBNull.Value ? Convert.ToDecimal(reader["TotalContributions"]) : 0;
+                                model.Penalties = reader["Penalties"] != DBNull.Value ? Convert.ToDecimal(reader["Penalties"]) : 0;
+                                model.NextPayoutDate = reader["NextPayoutDate"] != DBNull.Value ? Convert.ToDateTime(reader["NextPayoutDate"]) : (DateTime?)null;
+                            }
+                        }
+                    }
+
+                    // Step 3: Run enable payout query
+                    string enablePayoutQuery = @"
+                        SELECT 
+                            CASE 
+                                WHEN ISNULL(SUM(c.ContributionAmount), 0) = g.ContributionAmount * COUNT(DISTINCT mg.ID) THEN 1
+                                ELSE 0
+                            END AS EnablePayout,
+                            COUNT(DISTINCT mg.ID) AS MemberCount,
+                            g.ContributionAmount * COUNT(DISTINCT mg.ID) AS ExpectedPayment,
+                            g.FrequencyID,
+                            g.PayoutTypeID
+                        FROM MemberGroups mg
+                        JOIN Groups g ON mg.GroupID = g.ID
+                        LEFT JOIN Contributions c ON c.MemberGroupID = mg.ID
+                        WHERE mg.GroupID = @GroupId
+                        GROUP BY g.ContributionAmount, g.FrequencyID, g.PayoutTypeID;
+                    ";
+
+                    using (var command = new SqlCommand(enablePayoutQuery, connection))
+                    {
+                        command.Parameters.AddWithValue("@GroupId", groupId);
+                        using (var reader = command.ExecuteReader())
+                        {
+                            if (reader.Read())
+                            {
+                                model.EnablePayout = reader["EnablePayout"] != DBNull.Value ? Convert.ToInt32(reader["EnablePayout"]) == 1 : false;
+                                model.MemberCount = reader["MemberCount"] != DBNull.Value ? Convert.ToInt32(reader["MemberCount"]) : 0;
+                                model.ExpectedPayment = reader["ExpectedPayment"] != DBNull.Value ? Convert.ToDecimal(reader["ExpectedPayment"]) : 0;
+                                model.FrequencyID = reader["FrequencyID"] != DBNull.Value ? Convert.ToInt32(reader["FrequencyID"]) : 0;
+                                model.PayoutTypeID = reader["PayoutTypeID"] != DBNull.Value ? Convert.ToInt32(reader["PayoutTypeID"]) : 0;
+                            }
+                        }
+                    }
+
+
+
+                    // STEP 5: Load member options
+                string memberQuery = @"
                         SELECT mg.ID, CONCAT(m.FirstName, ' ', m.LastName) AS FullName, m.Email, m.Phone
                         FROM MemberGroups mg
                         JOIN Members m ON mg.MemberID = m.ID

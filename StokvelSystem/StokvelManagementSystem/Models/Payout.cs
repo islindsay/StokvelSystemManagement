@@ -61,8 +61,9 @@ namespace StokvelManagementSystem.Models
         public bool EnablePayout { get; set; }
         public DateTime? NextPayoutDate { get; set; }
         public MemberOption? Member { get; set; }
-        public MemberOption? NextMember { get; set; }  
+        public MemberOption? NextMember { get; set; }
         public int FrequencyID { get; set; }
+        public int PayoutTypeID { get; set; }
      
 
 

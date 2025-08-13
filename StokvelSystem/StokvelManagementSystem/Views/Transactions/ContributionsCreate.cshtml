@@ -6,7 +6,7 @@
 <div class="container mt-4">
     <div class="card shadow-sm">
         <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center py-3">
-            <h4 class="mb-0">@ViewData["Title"]</h4>
+             <h4 class="mb-0">@ViewData["Title"] <span style="font-size: 0.875rem;">(Balance @Model.TotalContributions.ToString("C") / @Model.ExpectedPayment.ToString("C")) Payable from @Model.NextPayoutDate?.ToString("dd MMMM yyyy")</span></h4>
             <div class="text-end">
                 <span class="badge bg-light text-dark fs-6">
                     <i class="bi bi-calendar me-2"></i>@DateTime.Now.ToString("dd MMMM yyyy")
