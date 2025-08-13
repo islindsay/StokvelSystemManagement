@@ -46,5 +46,8 @@ namespace StokvelManagementSystem.Models
         public int MissedPayments { get; set; }
         public decimal Penalties { get; set; }
         public string Status { get; set; }
+           
+        
     }
+
 }

@@ -19,6 +19,25 @@
                 <span><i class="fas fa-info-circle me-1"></i> <strong>Status:</strong> <span class="status-@Model.CurrentStatus.ToLower()">@Model.CurrentStatus</span></span>
                 <span><i class="fas fa-calendar-alt me-1"></i> <strong>Generated On:</strong> @DateTime.Now.ToString("yyyy-MM-dd")</span>
             </div>
+            <!-- Date Filter -->
+            <form method="get" asp-action="GroupReport" class="date-filter-form mt-3 d-flex align-items-center gap-3">
+           
+                <div class="input-group input-group-sm" style="max-width: 220px;">
+                    <span class="input-group-text"><i class="fas fa-calendar-alt"></i></span>
+                    <input type="date" id="dateFrom" name="dateFrom" class="form-control"
+                        value=" " />
+                </div>
+                
+                <div class="input-group input-group-sm" style="max-width: 220px;">
+                    <span class="input-group-text"><i class="fas fa-calendar-alt"></i></span>
+                    <input type="date" id="dateTo" name="dateTo" class="form-control"
+                        value=" " />
+                </div>
+
+                <button type="submit" class="btn btn-primary btn-sm">
+                    <i class="fas fa-filter me-1"></i> Filter
+                </button>
+            </form>
         </header>
 
         <section class="summary-cards">

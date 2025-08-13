@@ -22,7 +22,27 @@
                 <span><i class="fas fa-user-friends me-1"></i><strong>Total Members:</strong> @Model.TotalMembers</span>
                 <span><i class="fas fa-clock me-1"></i><strong>Frequency:</strong> @Model.ContributionFrequency</span>
                 <span><i class="fas fa-hand-holding-usd me-1"></i><strong>Amount per Member:</strong> @Model.ContributionAmount.ToString("N2") @Model.Currency</span>
+                
             </div>
+            <!-- Date Filter -->
+            <form method="get" asp-action="GroupReport" class="date-filter-form mt-3 d-flex align-items-center gap-3">
+           
+                <div class="input-group input-group-sm" style="max-width: 220px;">
+                    <span class="input-group-text"><i class="fas fa-calendar-alt"></i></span>
+                    <input type="date" id="dateFrom" name="dateFrom" class="form-control"
+                        value=" " />
+                </div>
+                
+                <div class="input-group input-group-sm" style="max-width: 220px;">
+                    <span class="input-group-text"><i class="fas fa-calendar-alt"></i></span>
+                    <input type="date" id="dateTo" name="dateTo" class="form-control"
+                        value=" " />
+                </div>
+                
+                <button type="submit" class="btn btn-primary btn-sm">
+                    <i class="fas fa-filter me-1"></i> Filter
+                </button>
+            </form>
         </header>
 
         <!-- Summary Cards -->

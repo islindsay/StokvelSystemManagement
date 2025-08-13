@@ -401,7 +401,7 @@ private List<Group> GetMyGroups(int memberId)
                     cmd.Parameters.AddWithValue("@MemberID", memberId);
 
                     cmd.Parameters.AddWithValue("@GroupID", groupId);
-                    cmd.Parameters.AddWithValue("@Status", "Pending"); // <-- Set the status here
+                    cmd.Parameters.AddWithValue("@Status", "Pending"); 
                     cmd.ExecuteNonQuery();
 
                 }
@@ -515,10 +515,11 @@ private List<Group> GetMyGroups(int memberId)
                 // Get Requests
                 var requests = new List<JoinRequestView>();
                 string query = @"SELECT jr.ID, jr.MemberID, jr.RequestedDate,jr.Status,
-                     m.FirstName, m.LastName, m.NationalID,
+                     m.FirstName, m.LastName, m.NationalID, ge.Gender, m.Email,
                      g.GroupName AS GroupName, g.ContributionAmount, c.Currency, f.FrequencyName
                FROM JoinRequests jr
                JOIN Members m ON jr.MemberID = m.ID
+               JOIN Gender ge ON m.GenderID = ge.ID
                JOIN Groups g ON jr.GroupID = g.ID
                JOIN Currencies c ON g.CurrencyID = c.ID
                JOIN Frequencies f ON g.FrequencyID = f.ID
@@ -538,6 +539,8 @@ private List<Group> GetMyGroups(int memberId)
                             {
                                 RequestId = reader.GetInt32(reader.GetOrdinal("ID")),
                                 MemberId = reader.GetInt32(reader.GetOrdinal("MemberID")),
+                                Gender = reader.GetString(reader.GetOrdinal("Gender")),
+                                Email = reader.GetString(reader.GetOrdinal("Email")),
                                 RequestedDate = reader.GetDateTime(reader.GetOrdinal("RequestedDate")),
                                 Status = reader.GetString(reader.GetOrdinal("Status")),
                                 GroupName = reader.GetString(reader.GetOrdinal("GroupName")),
