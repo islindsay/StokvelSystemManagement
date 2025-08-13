@@ -4,7 +4,7 @@
 
 
     <div class="mb-3">
-        <label asp-for="Name" class="form-label"></label>
+        <label asp-for="Name" class="form-label">Group Name</label>
         <input asp-for="Name" class="form-control" />
         <span asp-validation-for="Name" class="text-danger"></span>
     </div>
@@ -16,30 +16,17 @@
     </div>
 
     <div class="mb-3">
-        <label asp-for="FrequencyName" class="form-label"></label>
+        <label asp-for="FrequencyName" class="form-label">Frequency</label>
         <input asp-for="FrequencyName" class="form-control" />
     </div>
+   
 
     <div class="mb-3">
-        <label asp-for="CurrentMembers" class="form-label"></label>
-        <input asp-for="CurrentMembers" class="form-control" type="number" />
-    </div>
-
-    <div class="mb-3">
-        <label asp-for="MaxMembers" class="form-label"></label>
+        <label asp-for="MaxMembers" class="form-label">MemberLimit</label>
         <input asp-for="MaxMembers" class="form-control" type="number" />
     </div>
 
-    <div class="mb-3">
-        <label asp-for="StartDate" class="form-label"></label>
-        <input asp-for="StartDate" class="form-control" type="date" />
-    </div>
-
-    <div class="form-check mb-3">
-        <input asp-for="IsActive" class="form-check-input" type="checkbox" />
-        <label asp-for="IsActive" class="form-check-label"></label>
-    </div>
-
+  
     <button type="submit" class="btn btn-success">Save Changes</button>
 </form>
 
