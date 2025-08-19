@@ -2,6 +2,8 @@
 
 <form id="updateGroupForm" asp-action="UpdateGroup" asp-controller="Groups" method="post" class="card p-3">
 
+<input type="hidden" asp-for="ID" />
+
 
     <div class="mb-3">
         <label asp-for="Name" class="form-label"></label>
@@ -17,12 +19,19 @@
 
     <div class="mb-3">
         <label asp-for="FrequencyName" class="form-label"></label>
-        <input asp-for="FrequencyName" class="form-control" />
+        <select asp-for="FrequencyName" class="form-control">
+            <option value="Daily">Daily</option>
+            <option value="Monthly">Monthly</option>
+            <option value="Annually">Annually</option>
+            <option value="Weekly">Weekly</option>
+        </select>
+        <span asp-validation-for="FrequencyName" class="text-danger"></span>
     </div>
+
 
     <div class="mb-3">
         <label asp-for="CurrentMembers" class="form-label"></label>
-        <input asp-for="CurrentMembers" class="form-control" type="number" />
+        <input asp-for="CurrentMembers" class="form-control" type="number"  readonly/>
     </div>
 
     <div class="mb-3">

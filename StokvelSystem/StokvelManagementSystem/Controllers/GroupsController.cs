@@ -289,6 +289,18 @@ private List<Group> GetMyGroups(int memberId)
                     model.MemberId = memberId;
 
                     int groupId;
+
+                    string checkGroupQuery = "SELECT COUNT(*) FROM Groups WHERE GroupName = @GroupName";
+                    using (var checkCmd = new SqlCommand(checkGroupQuery, conn))
+                    {
+                        checkCmd.Parameters.AddWithValue("@GroupName", model.GroupName);
+                        int exists = (int)checkCmd.ExecuteScalar();
+                        if (exists > 0)
+                        {
+                            ModelState.AddModelError("GroupName", "A group with this name already exists.");
+                            return View(model); // or return BadRequest(ModelState) if API
+                        }
+                    }
                     var insertGroupQuery = @"
                         INSERT INTO Groups (
                             GroupName, PayoutTypeID, Duration, ContributionAmount, MemberLimit, Status,
@@ -731,7 +743,7 @@ private List<Group> GetMyGroups(int memberId)
 
                     if (roleIdObj != null && int.TryParse(roleIdObj.ToString(), out int roleId))
                     {
-                        model.IsMemberNotAdmin = (roleId == 1);
+                        model.IsMemberNotAdmin = (roleId == 2);
                     }
                 }
 

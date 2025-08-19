@@ -98,27 +98,82 @@ namespace StokvelManagementSystem.Controllers
                     {
                         try
                         {
-                            // Step 1: Insert into Members
-                            string memberQuery = @"
-                                INSERT INTO Members (FirstName, MiddleName, LastName, DOB, NationalID, Phone, Email, GenderID, Address, RegistrationDate, Status)
-                                VALUES (@FirstName, @MiddleName, @LastName, @DOB, @NationalID, @Phone, @Email, @GenderID, @Address, @RegistrationDate, @Status);
-                                SELECT CAST(scope_identity() AS int)";
+                          // Step 0: Check if member already exists
+               // Check NationalID
+                string checkNationalId = "SELECT COUNT(*) FROM Members WHERE NationalID = @NationalID";
+                using (SqlCommand cmd = new SqlCommand(checkNationalId, connection, transaction))
+                {
+                    cmd.Parameters.AddWithValue("@NationalID", model.NationalID);
+                    if ((int)cmd.ExecuteScalar() > 0)
+                        ModelState.AddModelError("NationalID", "National ID already exists.");
+                }
 
-                            using (SqlCommand memberCommand = new SqlCommand(memberQuery, connection, transaction))
+                // Check Email
+                string checkEmail = "SELECT COUNT(*) FROM Members WHERE Email = @Email";
+                using (SqlCommand cmd = new SqlCommand(checkEmail, connection, transaction))
+                {
+                    cmd.Parameters.AddWithValue("@Email", model.Email);
+                    if ((int)cmd.ExecuteScalar() > 0)
+                        ModelState.AddModelError("Email", "Email already exists.");
+                }
+
+                // Check Phone
+                if (!string.IsNullOrEmpty(model.Phone))
+                {
+                    string checkPhone = "SELECT COUNT(*) FROM Members WHERE Phone = @Phone";
+                    using (SqlCommand cmd = new SqlCommand(checkPhone, connection, transaction))
+                    {
+                        cmd.Parameters.AddWithValue("@Phone", model.Phone);
+                        if ((int)cmd.ExecuteScalar() > 0)
+                            ModelState.AddModelError("Phone", "Phone already exists.");
+                    }
+                }
+                
+                  // Check Username
+                if (!string.IsNullOrEmpty(model.Username))
+                {
+                    string checkUsername = "SELECT COUNT(*) FROM Logins WHERE Username = @Username";
+                    using (SqlCommand cmd = new SqlCommand(checkUsername, connection, transaction))
+                    {
+                        cmd.Parameters.AddWithValue("@Username", model.Username);
+                        if ((int)cmd.ExecuteScalar() > 0)
+                            ModelState.AddModelError("Username", "Username already exists.");
+                    }
+                }
+
+                // If any errors, return immediately
+                            if (!ModelState.IsValid)
                             {
-                                memberCommand.Parameters.AddWithValue("@FirstName", model.FirstName);
-                                memberCommand.Parameters.AddWithValue("@MiddleName", (object)model.MiddleName ?? DBNull.Value);
-                                memberCommand.Parameters.AddWithValue("@LastName", model.LastName);
-                                memberCommand.Parameters.AddWithValue("@DOB", model.DOB);
-                                memberCommand.Parameters.AddWithValue("@NationalID", model.NationalID);
-                                memberCommand.Parameters.AddWithValue("@Phone", (object)model.Phone ?? DBNull.Value);
-                                memberCommand.Parameters.AddWithValue("@Email", model.Email);
-                                memberCommand.Parameters.AddWithValue("@GenderID", model.GenderID);
-                                memberCommand.Parameters.AddWithValue("@Address", (object)model.Address ?? DBNull.Value);
-                                memberCommand.Parameters.AddWithValue("@RegistrationDate", DateTime.Now);
-                                memberCommand.Parameters.AddWithValue("@Status", 1);
-                                newMemberId = (int)memberCommand.ExecuteScalar();
+                                // MVC: return View(model);
+                                // API: return BadRequest(ModelState);
+                                return View(model);
                             }
+
+
+
+                        // Step 1: Insert into Members
+                        string memberQuery = @"
+                            INSERT INTO Members (FirstName, MiddleName, LastName, DOB, NationalID, Phone, Email, GenderID, Address, RegistrationDate, Status)
+                            VALUES (@FirstName, @MiddleName, @LastName, @DOB, @NationalID, @Phone, @Email, @GenderID, @Address, @RegistrationDate, @Status);
+                            SELECT CAST(scope_identity() AS int)";
+
+                        using (SqlCommand memberCommand = new SqlCommand(memberQuery, connection, transaction))
+                        {
+                            memberCommand.Parameters.AddWithValue("@FirstName", model.FirstName);
+                            memberCommand.Parameters.AddWithValue("@MiddleName", (object)model.MiddleName ?? DBNull.Value);
+                            memberCommand.Parameters.AddWithValue("@LastName", model.LastName);
+                            memberCommand.Parameters.AddWithValue("@DOB", model.DOB);
+                            memberCommand.Parameters.AddWithValue("@NationalID", model.NationalID);
+                            memberCommand.Parameters.AddWithValue("@Phone", (object)model.Phone ?? DBNull.Value);
+                            memberCommand.Parameters.AddWithValue("@Email", model.Email);
+                            memberCommand.Parameters.AddWithValue("@GenderID", model.GenderID);
+                            memberCommand.Parameters.AddWithValue("@Address", (object)model.Address ?? DBNull.Value);
+                            memberCommand.Parameters.AddWithValue("@RegistrationDate", DateTime.Now);
+                            memberCommand.Parameters.AddWithValue("@Status", 1);
+
+                            newMemberId = (int)memberCommand.ExecuteScalar();
+                        }
+
 
                             // Step 2: Create login credentials
                             var saltBytes = new byte[16];

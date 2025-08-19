@@ -166,4 +166,19 @@
 
 @section Scripts {
     <partial name="_ValidationScriptsPartial" />
+
+    <script>
+        $(function () {
+            // Add custom rule "passwordMatch"
+            $.validator.addMethod("passwordMatch", function (value, element) {
+                var password = $("#Password").val();
+                return value === password;
+            }, "Passwords do not match.");
+
+            // Attach the rule to ConfirmPassword field
+            $("#ConfirmPassword").rules("add", {
+                passwordMatch: true
+            });
+        });
+    </script>
 }
