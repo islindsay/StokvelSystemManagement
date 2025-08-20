@@ -57,7 +57,7 @@
         <h4 class="text-primary fw-bold"><i class="bi bi-people-fill me-2"></i>Joined Groups</h4>
         @if (Model.MyGroups != null && Model.MyGroups.Any())
         {
-            var frequencies = new[] { "Daily", "Weekly", "Monthly", "Yearly", "Periodic" };
+            var frequencies = new[] { "Daily", "Monthly", "Annually","Weekly", "Periodic" };
 
             foreach (var freq in frequencies)
             {
@@ -434,7 +434,7 @@
                     return;
                 }
 
-                const frequencies = ["Daily", "Weekly", "Monthly", "Yearly", "Periodic"];
+                const frequencies = ["Daily","Monthly", "Annually","Weekly", "Periodic"];
 
                 frequencies.forEach(freq => {
                     const freqGroups = groups.filter(g => g.frequencyName === freq);
