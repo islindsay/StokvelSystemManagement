@@ -475,7 +475,7 @@ public IActionResult GetGroupDetails(int memberId)
                                     // ✅ pre-fill contribution amount
                                     if (memberLimit > 0)
                                     {
-                                        decimal rawAmount = groupContributionAmount / memberLimit;
+                                        decimal rawAmount = groupContributionAmount ;
 
                                         // Round up to the nearest 0.10
                                         model.ContributionAmount = Math.Ceiling(rawAmount * 10) / 10;
