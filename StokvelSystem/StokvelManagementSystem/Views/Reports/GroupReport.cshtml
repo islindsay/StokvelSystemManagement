@@ -11,6 +11,7 @@
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link rel="stylesheet" href="~/css/Report.css" />
+    
 </head>
 <body>
     <div class="report-container">
@@ -21,25 +22,28 @@
                 <span><i class="fas fa-calendar-day me-1"></i><strong>Started On:</strong> @Model.GroupStartDate?.ToString("yyyy-MM-dd")</span>
                 <span><i class="fas fa-user-friends me-1"></i><strong>Total Members:</strong> @Model.TotalMembers</span>
                 <span><i class="fas fa-clock me-1"></i><strong>Frequency:</strong> @Model.ContributionFrequency</span>
-                <span><i class="fas fa-hand-holding-usd me-1"></i><strong>Amount per Member:</strong> @Model.ContributionAmount.ToString("N2") @Model.Currency</span>
+                <span><i class="fas fa-hand-holding-usd me-1"></i><strong>Amount per Member:</strong> @Model.ContributionPerMember.ToString("N2") @Model.Currency</span>
                 
             </div>
             <!-- Date Filter -->
             <form method="get" asp-action="GroupReport" class="date-filter-form mt-3 d-flex align-items-center gap-3">
            
-                <div class="input-group input-group-sm" style="max-width: 220px;">
+                <input type="hidden" name="groupId" value="@Model.GroupId" />
+
+                <div class="input-group input-group-sm no-print" style="max-width: 220px;">
                     <span class="input-group-text"><i class="fas fa-calendar-alt"></i></span>
                     <input type="date" id="dateFrom" name="dateFrom" class="form-control"
-                        value=" " />
+                        value="@Context.Request.Query["dateFrom"]" /> 
+                        
                 </div>
-                
-                <div class="input-group input-group-sm" style="max-width: 220px;">
+                <span class="no-print""> to </span>
+                <div class="input-group input-group-sm no-print" style="max-width: 220px;">
                     <span class="input-group-text"><i class="fas fa-calendar-alt"></i></span>
                     <input type="date" id="dateTo" name="dateTo" class="form-control"
-                        value=" " />
+                        value="@Context.Request.Query["dateTo"]" />
                 </div>
                 
-                <button type="submit" class="btn btn-primary btn-sm">
+                <button type="submit" class="btn btn-primary btn-sm no-print">
                     <i class="fas fa-filter me-1"></i> Filter
                 </button>
             </form>
@@ -112,12 +116,30 @@
             <button class="btn-export" onclick="window.print()">
                 <i class="fas fa-print"></i> Print Report
             </button>
-            <button class="btn-export" id="downloadPdf">
+            @* <button class="btn-export" id="downloadPdf">
                 <i class="fas fa-file-pdf"></i> Download PDF
-            </button>
+            </button> *@
         </div>
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        const dateFrom = document.getElementById('dateFrom');
+        const dateTo = document.getElementById('dateTo');
+
+        dateFrom.addEventListener('change', () => {
+            if (dateTo.value && dateFrom.value > dateTo.value) {
+                dateTo.value = dateFrom.value; // adjust dateTo automatically
+            }
+        });
+
+        dateTo.addEventListener('change', () => {
+            if (dateFrom.value && dateTo.value < dateFrom.value) {
+                dateFrom.value = dateTo.value; // adjust dateFrom automatically
+            }
+        });
+    </script>
+
+    
 </body>
 </html>

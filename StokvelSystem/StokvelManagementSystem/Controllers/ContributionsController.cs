@@ -41,20 +41,26 @@ namespace StokvelManagementSystem.Controllers
             return View("~/Views/Transactions/ContributionsCreate.cshtml", model);
         }
 
-        [HttpGet]
-        public IActionResult GetGroupDetails(int memberId)
-        {
-            var groupDetails = new GroupDetailsResponse();
-            
-            using (var connection = new SqlConnection(_configuration.GetConnectionString("DefaultConnection")))
+[HttpGet]
+public IActionResult GetGroupDetails(int memberId)
+{
+    var groupDetails = new GroupDetailsResponse();
+    
+    _logger.LogInformation($"The endpoint has been hit {memberId}");
+
+    using (var connection = new SqlConnection(_configuration.GetConnectionString("DefaultConnection")))
             {
-                var query = @"SELECT g.GroupName as GroupName, g.ContributionAmount as GroupContributionAmount, 
-                            DATEADD(DAY, gs.PenaltyGraceDays, DATEADD(MONTH, DATEDIFF(MONTH, 0, GETDATE()), 0)) as DueDate
-                            FROM Members m
-                            JOIN Groups g ON m.GroupID = g.ID
-                            JOIN GroupSettings gs ON g.ID = gs.GroupID
-                            WHERE m.ID = @MemberId";
-                
+                var query = @"
+            SELECT 
+                g.GroupName AS GroupName, 
+                g.ContributionAmount AS GroupContributionAmount, 
+                g.MemberLimit,
+                DATEADD(DAY, gs.PenaltyGraceDays, DATEADD(MONTH, DATEDIFF(MONTH, 0, GETDATE()), 0)) AS DueDate
+            FROM Members m
+            JOIN Groups g ON m.GroupID = g.ID
+            JOIN GroupSettings gs ON g.ID = gs.GroupID
+            WHERE m.ID = @MemberId";
+
                 using (var command = new SqlCommand(query, connection))
                 {
                     command.Parameters.AddWithValue("@MemberId", memberId);
@@ -66,13 +72,27 @@ namespace StokvelManagementSystem.Controllers
                             groupDetails.GroupName = reader["GroupName"].ToString();
                             groupDetails.DueDate = Convert.ToDateTime(reader["DueDate"]);
                             groupDetails.GroupContributionAmount = Convert.ToDecimal(reader["GroupContributionAmount"]);
+
+                            var memberLimit = Convert.ToInt32(reader["MemberLimit"]);
+
+                            // Compute ContributionAmount
+                            if (memberLimit > 0)
+                            {
+                                groupDetails.ContributionAmount =
+                                    groupDetails.GroupContributionAmount / memberLimit;
+                                _logger.LogInformation($"the contribution Amount is {groupDetails.ContributionAmount}");
+                            }
+                            else
+                            {
+                                _logger.LogInformation($"Member limit is 0 or less");
+                            }
                         }
                     }
                 }
             }
-            
-            return Json(groupDetails);
-        }
+    
+    return Json(groupDetails);
+}
 
         [HttpGet]
         public IActionResult GetPenaltySettings(string groupName)
@@ -105,7 +125,6 @@ namespace StokvelManagementSystem.Controllers
             // [ValidateAntiForgeryToken]
             public IActionResult ContributionsCreate(Contribution model, int groupId)
             {
-                _logger.LogInformation($"The endpoint has been hit {groupId}");
 
                 var memberIdClaim = User.Claims.FirstOrDefault(c => c.Type == "member_id");
                 if (memberIdClaim != null && int.TryParse(memberIdClaim.Value, out var memberId))
@@ -397,12 +416,20 @@ namespace StokvelManagementSystem.Controllers
                 {
                     connection.Open();
 
-                    // STEP 1: Get Group Info with Frequency details
+                    // STEP 1: Get Group Info with Frequency details + contribution info
                     string groupQuery = @"
-                        SELECT g.GroupName AS GroupName, g.StartDate, g.Cycles, g.Penalty, f.FrequencyName
+                        SELECT 
+                            g.GroupName AS GroupName, 
+                            g.StartDate, 
+                            g.Cycles, 
+                            g.Penalty, 
+                            g.ContributionAmount AS GroupContributionAmount,
+                            g.MemberLimit,
+                            f.FrequencyName
                         FROM Groups g
                         JOIN Frequencies f ON g.FrequencyID = f.ID
                         WHERE g.ID = @GroupId";
+
 
                     string groupName = "";
                     DateTime dueDate = DateTime.Now;
@@ -412,38 +439,51 @@ namespace StokvelManagementSystem.Controllers
                         command.Parameters.AddWithValue("@GroupId", groupId);
                         using (var reader = command.ExecuteReader())
                         {
-                            if (reader.Read())
-                            {
-                                groupName = reader["GroupName"].ToString();
-                                DateTime startDate = Convert.ToDateTime(reader["StartDate"] != DBNull.Value ? (DateTime?)Convert.ToDateTime(reader["StartDate"]) : null);
-                                int cycles = reader["Cycles"] != DBNull.Value ? Convert.ToInt32(reader["Cycles"]) : 0; // or some default
-                                string frequency = reader["FrequencyName"].ToString().ToLower();
-                                decimal groupPenalty = 0;
-
-                                if (reader["Penalty"] != DBNull.Value)
-                                    groupPenalty = Convert.ToDecimal(reader["Penalty"]);
-
-                                _logger.LogInformation("Frequency: {Frequency}", frequency);
-
-                                // Frequency to days
-                                int frequencyDays = frequency switch
+                          if (reader.Read())
                                 {
-                                    "weekly" => 7,
-                                    "monthly" => 30,
-                                    "daily" => 1,
-                                    "annually" => 365,
-                                    _ => 0
-                                };
+                                    groupName = reader["GroupName"].ToString();
+                                    DateTime startDate = reader["StartDate"] != DBNull.Value
+                                        ? Convert.ToDateTime(reader["StartDate"])
+                                        : DateTime.Now;
 
-                                int totalDaysToAdd = (cycles * frequencyDays) + frequencyDays;
-                                dueDate = startDate.AddDays(totalDaysToAdd);
+                                    int cycles = reader["Cycles"] != DBNull.Value ? Convert.ToInt32(reader["Cycles"]) : 0;
+                                    string frequency = reader["FrequencyName"].ToString().ToLower();
+                                    decimal groupPenalty = reader["Penalty"] != DBNull.Value ? Convert.ToDecimal(reader["Penalty"]) : 0;
 
-                                // ✅ Apply penalty if due date passed
-                                if (DateTime.Now > dueDate)
-                                {
-                                    model.PenaltyAmount = groupPenalty;
+                                    // ✅ new: contribution + memberLimit
+                                    decimal groupContributionAmount = reader["GroupContributionAmount"] != DBNull.Value ? Convert.ToDecimal(reader["GroupContributionAmount"]) : 0;
+                                    int memberLimit = reader["MemberLimit"] != DBNull.Value ? Convert.ToInt32(reader["MemberLimit"]) : 0;
+
+                                    // frequency → days logic (same as before)
+                                    int frequencyDays = frequency switch
+                                    {
+                                        "weekly" => 7,
+                                        "monthly" => 30,
+                                        "daily" => 1,
+                                        "annually" => 365,
+                                        _ => 0
+                                    };
+
+                                    int totalDaysToAdd = (cycles * frequencyDays) + frequencyDays;
+                                    dueDate = startDate.AddDays(totalDaysToAdd);
+
+                                    if (DateTime.Now > dueDate)
+                                    {
+                                        model.PenaltyAmount = groupPenalty;
+                                    }
+
+                                    // ✅ pre-fill contribution amount
+                                    if (memberLimit > 0)
+                                    {
+                                        decimal rawAmount = groupContributionAmount / memberLimit;
+
+                                        // Round up to the nearest 0.10
+                                        model.ContributionAmount = Math.Ceiling(rawAmount * 10) / 10;
+                                        model.TotalAmount = model.ContributionAmount + model.PenaltyAmount;
+
+                                        _logger.LogInformation($"[CreateContributionForm] Pre-filled ContributionAmount = {model.ContributionAmount}");
+                                    }
                                 }
-                            }
 
                         }
                     }

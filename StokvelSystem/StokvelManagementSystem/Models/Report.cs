@@ -3,6 +3,8 @@ namespace StokvelManagementSystem.Models
 
     public class Report
     {
+        public int GroupId { get; set; } 
+        public int MemberId { get; set; } 
         public string FirstName { get; set; }
         public string LastName { get; set; }
         public string Currency { get; set; }
@@ -24,6 +26,7 @@ namespace StokvelManagementSystem.Models
         public decimal ContributionAmount { get; set; }
         public decimal GroupTotalContributions { get; set; }
         public decimal TotalGroupPenalties { get; set; }
+        public decimal ContributionPerMember { get; set; }
         public decimal TotalPenaltiesAmount { get; set; }
 
         public int TotalCycles { get; set; }

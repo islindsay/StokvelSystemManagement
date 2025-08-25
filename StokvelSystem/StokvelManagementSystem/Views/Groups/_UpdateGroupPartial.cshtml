@@ -7,19 +7,19 @@
 
     <div class="mb-3">
         <label asp-for="Name" class="form-label"></label>
-        <input asp-for="Name" class="form-control" />
+        <input asp-for="Name" class="form-control" readonly="@Model.IsActive" />
         <span asp-validation-for="Name" class="text-danger"></span>
     </div>
 
     <div class="mb-3">
         <label asp-for="Currency" class="form-label"></label>
-        <input asp-for="Currency" class="form-control" />
+        <input asp-for="Currency" class="form-control" readonly="@Model.IsActive" />
         <span asp-validation-for="Currency" class="text-danger"></span>
     </div>
 
     <div class="mb-3">
         <label asp-for="FrequencyName" class="form-label"></label>
-        <select asp-for="FrequencyName" class="form-control">
+        <select asp-for="FrequencyName" class="form-control @(Model.IsActive ? "is-readonly" : "")">
             <option value="Daily">Daily</option>
             <option value="Monthly">Monthly</option>
             <option value="Annually">Annually</option>
@@ -36,12 +36,12 @@
 
     <div class="mb-3">
         <label asp-for="MaxMembers" class="form-label"></label>
-        <input asp-for="MaxMembers" class="form-control" type="number" />
+        <input asp-for="MaxMembers" class="form-control" type="number" readonly="@Model.IsActive" min="@Model.CurrentMembers" max="50"/>
     </div>
 
     <div class="mb-3">
         <label asp-for="StartDate" class="form-label"></label>
-        <input asp-for="StartDate" class="form-control" type="date" />
+        <input asp-for="StartDate" class="form-control is-readonly" type="date"  readonly/>
     </div>
 
     <div class="form-check mb-3">
@@ -55,3 +55,12 @@
 <div id="success-alert" class="alert alert-success mt-3 d-none" role="alert">
     Group updated successfully!
 </div>
+
+<style>
+    /* This style will visually and functionally disable the select dropdown */
+    .is-readonly {
+        pointer-events: none; /* Prevents all mouse events (like clicking the dropdown) */
+        cursor: default;     /* Changes the cursor to indicate it's not clickable */
+        opacity: 0.7;        /* A slight dimming to visually suggest it's read-only */
+    }
+</style>

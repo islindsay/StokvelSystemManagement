@@ -298,8 +298,14 @@ private List<Group> GetMyGroups(int memberId)
                         if (exists > 0)
                         {
                             ModelState.AddModelError("GroupName", "A group with this name already exists.");
-                            return View(model); // or return BadRequest(ModelState) if API
+                            model.PayoutTypes = GetPayoutTypes();
+                            model.Currencies = GetCurrencies();
+                            model.FrequencyOptions = GetFrequencyOptions();
+                            model.CanCreate = true;
+                            ViewBag.CreateError = true;
+                            return View("ListGroups", model);
                         }
+
                     }
                     var insertGroupQuery = @"
                         INSERT INTO Groups (

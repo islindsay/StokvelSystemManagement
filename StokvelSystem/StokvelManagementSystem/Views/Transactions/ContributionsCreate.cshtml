@@ -109,7 +109,7 @@
                                 <label asp-for="ContributionAmount" class="form-label fw-bold">Contribution Amount</label>
                                 <div class="input-group">
                                     <span class="input-group-text">$</span>
-                                    <input asp-for="ContributionAmount" class="form-control" type="number" step="0.01" min="0" required id="ContributionAmount">
+                                    <input asp-for="ContributionAmount" class="form-control" type="number" step="0.01" min="0" required id="ContributionAmount" readonly>
                                 </div>
                                 <span asp-validation-for="ContributionAmount" class="text-danger"></span>
                             </div>
@@ -197,6 +197,7 @@
                         $('#DueDate').val(formattedDate);
                         
                         $('#SupposedContribution').val(data.groupContributionAmount.toFixed(2));
+                        
                         
                         // Calculate penalty based on due date
                         calculatePenalty(dueDate);

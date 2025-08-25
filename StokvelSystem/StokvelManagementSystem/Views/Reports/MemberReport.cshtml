@@ -15,26 +15,29 @@
         <header class="report-header">
             <h1><i class="fas fa-file-invoice-dollar me-2"></i>@($"{Model.FirstName} {Model.LastName}'s Contribution Report")</h1>
             <div class="report-meta">
-                <span><i class="fas fa-users me-1"></i> <strong>Group:</strong> @Model.GroupName</span>
-                <span><i class="fas fa-info-circle me-1"></i> <strong>Status:</strong> <span class="status-@Model.CurrentStatus.ToLower()">@Model.CurrentStatus</span></span>
+                <span><i class="fas fa-users me-1"></i> <strong>Group:</strong> @Model.GroupName</span> 
+                <span><i class="fas fa-info-circle me-1"></i> <strong>Status:</strong> <span class="status-@Model.CurrentStatus.ToLower()">@(Model.CurrentStatus == "1" ? "Active" : "Inactive")</span></span>
                 <span><i class="fas fa-calendar-alt me-1"></i> <strong>Generated On:</strong> @DateTime.Now.ToString("yyyy-MM-dd")</span>
             </div>
             <!-- Date Filter -->
-            <form method="get" asp-action="GroupReport" class="date-filter-form mt-3 d-flex align-items-center gap-3">
+            <form method="get" asp-action="MemberReport" class="date-filter-form mt-3 d-flex align-items-center gap-3">
            
-                <div class="input-group input-group-sm" style="max-width: 220px;">
+                <input type="hidden" name="groupId" value="@Model.GroupId" />
+                <input type="hidden" name="memberId" value="@Model.MemberId" />
+
+                <div class="input-group input-group-sm no-print" style="max-width: 220px;">
                     <span class="input-group-text"><i class="fas fa-calendar-alt"></i></span>
                     <input type="date" id="dateFrom" name="dateFrom" class="form-control"
-                        value=" " />
+                        value="@Context.Request.Query["dateFrom"]" />
                 </div>
-                
-                <div class="input-group input-group-sm" style="max-width: 220px;">
+                <span class="no-print""> to </span>
+                <div class="input-group input-group-sm no-print" style="max-width: 220px;">
                     <span class="input-group-text"><i class="fas fa-calendar-alt"></i></span>
                     <input type="date" id="dateTo" name="dateTo" class="form-control"
-                        value=" " />
+                        value="@Context.Request.Query["dateTo"]" />
                 </div>
 
-                <button type="submit" class="btn btn-primary btn-sm">
+                <button type="submit" class="btn btn-primary btn-sm no-print">
                     <i class="fas fa-filter me-1"></i> Filter
                 </button>
             </form>
@@ -56,7 +59,7 @@
                 <div class="card-content">
                     <p><strong>Member Name:</strong> @Model.FirstName @Model.LastName</p>
                     <p><strong>Group:</strong> @Model.GroupName</p>
-                    <p><strong>Account Status:</strong> <span class="status-@Model.CurrentStatus.ToLower()">@Model.CurrentStatus</span></p>
+                    <p><strong>Account Status:</strong> <span class="status-@Model.CurrentStatus.ToLower()">@(Model.CurrentStatus == "1" ? "Active" : "Inactive")</span></p>
                 </div>
             </div>
         </section>
@@ -106,13 +109,29 @@
             <button class="btn-export" onclick="window.print()">
                 <i class="fas fa-print"></i> Print Report
             </button>
-            <button class="btn-export" id="downloadPdf">
+            @* <button class="btn-export" id="downloadPdf">
                 <i class="fas fa-file-pdf"></i> Download PDF
-            </button>
+            </button> *@
         </div>
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+        <script>
+        const dateFrom = document.getElementById('dateFrom');
+        const dateTo = document.getElementById('dateTo');
+
+        dateFrom.addEventListener('change', () => {
+            if (dateTo.value && dateFrom.value > dateTo.value) {
+                dateTo.value = dateFrom.value; // adjust dateTo automatically
+            }
+        });
+
+        dateTo.addEventListener('change', () => {
+            if (dateFrom.value && dateTo.value < dateFrom.value) {
+                dateFrom.value = dateTo.value; // adjust dateFrom automatically
+            }
+        });
+    </script>
     
 </body>
 </html>
