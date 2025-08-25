@@ -142,7 +142,8 @@
                     <a asp-action="PayoutIndex" asp-route-groupId="@Model.GroupId" class="btn btn-outline-secondary px-4">
                         <i class="bi bi-x-circle me-2"></i>Cancel
                     </a>
-                    <button type="submit" class="btn btn-primary px-4" @((Model.EnablePayout == false || DateTime.Now.Date < Model.NextPayoutDate?.Date) ? "" : "disabled")>
+                    @* <button type="submit" class="btn btn-primary px-4" @((Model.EnablePayout == true || DateTime.Now.Date > Model.NextPayoutDate?.Date) ? "" : "disabled")></button> *@
+                    <button type="submit" class="btn btn-primary px-4" @(Model.EnablePayout == true ? "" : "disabled")>
                         <i class="bi bi-check-circle me-2"></i>Submit Payout
                     </button>
                 </div>

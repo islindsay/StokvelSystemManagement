@@ -1,9 +1,7 @@
 @model GroupInfoDto
 
 <form id="updateGroupForm" asp-action="UpdateGroup" asp-controller="Groups" method="post" class="card p-3">
-
-<input type="hidden" asp-for="ID" />
-
+    <input type="hidden" asp-for="ID" />
 
     <div class="mb-3">
         <label asp-for="Name" class="form-label"></label>
@@ -28,20 +26,19 @@
         <span asp-validation-for="FrequencyName" class="text-danger"></span>
     </div>
 
-
     <div class="mb-3">
         <label asp-for="CurrentMembers" class="form-label"></label>
-        <input asp-for="CurrentMembers" class="form-control" type="number"  readonly/>
+        <input asp-for="CurrentMembers" class="form-control" type="number" readonly />
     </div>
 
     <div class="mb-3">
         <label asp-for="MaxMembers" class="form-label"></label>
-        <input asp-for="MaxMembers" class="form-control" type="number" readonly="@Model.IsActive" min="@Model.CurrentMembers" max="50"/>
+        <input asp-for="MaxMembers" class="form-control" type="number" readonly="@Model.IsActive" min="@Model.CurrentMembers" max="50" />
     </div>
 
     <div class="mb-3">
         <label asp-for="StartDate" class="form-label"></label>
-        <input asp-for="StartDate" class="form-control is-readonly" type="date"  readonly/>
+        <input asp-for="StartDate" class="form-control is-readonly" type="date" readonly />
     </div>
 
     <div class="form-check mb-3">
@@ -56,11 +53,53 @@
     Group updated successfully!
 </div>
 
+<div id="error-alert" class="alert alert-danger mt-3 d-none" role="alert">
+    Something went wrong. Please try again.
+</div>
+
 <style>
-    /* This style will visually and functionally disable the select dropdown */
     .is-readonly {
-        pointer-events: none; /* Prevents all mouse events (like clicking the dropdown) */
-        cursor: default;     /* Changes the cursor to indicate it's not clickable */
-        opacity: 0.7;        /* A slight dimming to visually suggest it's read-only */
+        pointer-events: none;
+        cursor: default;
+        opacity: 0.7;
     }
 </style>
+
+<script>
+document.addEventListener("DOMContentLoaded", function () {
+    const form = document.getElementById("updateGroupForm");
+    const successAlert = document.getElementById("success-alert");
+    const errorAlert = document.getElementById("error-alert");
+
+    form.addEventListener("submit", function (event) {
+        event.preventDefault(); // ✅ prevent redirect
+
+        // Clear old alerts
+        successAlert.classList.add("d-none");
+        errorAlert.classList.add("d-none");
+
+        const formData = new FormData(form);
+        const actionUrl = form.getAttribute("action"); // Razor generates full route
+
+        fetch(actionUrl, {
+            method: "POST",
+            body: formData
+        })
+        .then(response => {
+            if (response.ok) {
+                successAlert.classList.remove("d-none");
+
+                setTimeout(() => {
+                    successAlert.classList.add("d-none");
+                }, 4000);
+            } else {
+                errorAlert.classList.remove("d-none");
+            }
+        })
+        .catch(err => {
+            console.error(err);
+            errorAlert.classList.remove("d-none");
+        });
+    });
+});
+</script>
