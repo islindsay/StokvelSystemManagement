@@ -1,5 +1,4 @@
-﻿
-@model DashboardModel
+﻿@model DashboardModel
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -7,9 +6,8 @@
     <title>@Model.Group.Name - Stokvel Management System</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet" />
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" 
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" /> <!-- Fixed missing closing bracket -->
     <link rel="stylesheet" href="~/css/Sidebar.css" />
-   
 </head>
 <body>
     <div class="container-fluid">
@@ -27,10 +25,9 @@
                     <div class="progress-bar progress-bar-striped bg-success" style="width: 0%;" id="MemberLimit"></div>
                 </div>
 
-
                 <!-- Join Requests -->
                 <div class="mb-2">
-                    <button class="btn btn-primary btn-toggle" type="button" data-bs-toggle="collapse" data-bs-target="#joinRequestsCollapse">
+                    <button class="btn btn-primary btn-toggle" type="button" data-bs-toggle="collapse" data-bs-target="#joinRequestsCollapse" aria-expanded="false" aria-controls="joinRequestsCollapse">
                         Join Requests 
                         <i class="fas fa-chevron-down collapse-toggle"></i>
                     </button>
@@ -59,44 +56,42 @@
                 </div>
 
                 <!-- Group Settings -->
-                    <div class="mb-2">
-                        <button class="btn btn-primary btn-toggle" type="button" data-bs-toggle="collapse" data-bs-target="#groupSettingsCollapse">
-                            Group Settings
-                            <i class="fas fa-chevron-down collapse-toggle" ></i>
-                        </button>
-                        <div class="collapse mt-1" id="groupSettingsCollapse">
-                            <div class="list-group list-group-flush">
+                <div class="mb-2">
+                    <button class="btn btn-primary btn-toggle" type="button" data-bs-toggle="collapse" data-bs-target="#groupSettingsCollapse" aria-expanded="false" aria-controls="groupSettingsCollapse">
+                        Group Settings
+                        <i class="fas fa-chevron-down collapse-toggle"></i>
+                    </button>
+                    <div class="collapse mt-1" id="groupSettingsCollapse">
+                        <div class="list-group list-group-flush">
+                            @{
+                                var isAdminCookie = Context.Request.Cookies["isAdmin"];
+                                var isAdmin = !Model.IsMemberNotAdmin;
+                            }
 
-                                @{
-                                    var isAdminCookie = Context.Request.Cookies["isAdmin"];
-                                    var isAdmin = !Model.IsMemberNotAdmin;
-                                }
-
-
-                                @if (isAdmin)
-                                {
-                                    <a href="#" class="list-group-item" id="editGroupSettingsLink" data-group-id="@Model.Group.ID">
-                                        <i class="fas fa-cogs me-2"></i> Edit Group Settings
-                                    </a>
-                                }
-                                <a class="list-group-item"
-                                asp-action="ContributionsIndex" 
-                                asp-controller="Contributions" 
-                                asp-route-groupId="@Model.Group.ID">
-                                    <i class="fas fa-hand-holding-usd me-2"></i> View Contributions
+                            @if (isAdmin)
+                            {
+                                <a href="#" class="list-group-item" id="editGroupSettingsLink" data-group-id="@Model.Group.ID">
+                                    <i class="fas fa-cogs me-2"></i> Edit Group Settings
                                 </a>
-                            
-                                <a class="list-group-item"
-                                asp-action="PayoutIndex"
-                                asp-controller="Payouts" 
-                                asp-route-groupId="@Model.Group.ID">
-                                    <i class="fas fa-money-check-alt me-2"></i> View Payouts
-                                </a>
-                            
-                               @if (User.IsInRole("Admin"))
-                                {
-                                    <a href="#" class="list-group-item position-relative" onclick="toggleReportPopup(event)">
-                                        <i class="fas fa-chart-line me-2"></i> Report
+                            }
+                            <a class="list-group-item"
+                            asp-action="ContributionsIndex" 
+                            asp-controller="Contributions" 
+                            asp-route-groupId="@Model.Group.ID">
+                                <i class="fas fa-hand-holding-usd me-2"></i> View Contributions
+                            </a>
+                        
+                            <a class="list-group-item"
+                            asp-action="PayoutIndex"
+                            asp-controller="Payouts" 
+                            asp-route-groupId="@Model.Group.ID">
+                                <i class="fas fa-money-check-alt me-2"></i> View Payouts
+                            </a>
+                        
+                           @if (User.IsInRole("Admin"))
+                            {
+                                <a href="#" class="list-group-item position-relative" id="reportToggleBtn">
+                                    <i class="fas fa-chart-line me-2"></i> Report
                                 </a>
 
                                 <!-- Pop-up panel -->
@@ -117,64 +112,68 @@
                                             <i class="bi bi-bar-chart-line me-2"></i>Group Report
                                         </a>
                                     }
-                                    </div>
+                                </div>
                             }
-                                else
-                                {
-                                    <a class="list-group-item" 
-                                    asp-action="MemberReport" 
-                                    asp-controller="Reports"
-                                    asp-route-groupId="@Model.Group.ID">
-                                        <i class="fas fa-user-chart me-2"></i> My Report
-                                    </a>
-                                }
-    
+                            else
+                            {
+                                <a class="list-group-item" 
+                                asp-action="MemberReport" 
+                                asp-controller="Reports"
+                                asp-route-groupId="@Model.Group.ID">
+                                    <i class="fas fa-user-chart me-2"></i> My Report
+                                </a>
+                            }
                         </div>
-                        </div>
+                    </div>
                 </div>
 
                 <!-- Leave Requests -->
                 <div class="mb-2">
-                    <button class="btn btn-primary btn-toggle" type="button" data-bs-toggle="collapse" data-bs-target="#leaveRequestsCollapse">
+                    <button class="btn btn-primary btn-toggle" type="button" data-bs-toggle="collapse" data-bs-target="#leaveRequestsCollapse" aria-expanded="false" aria-controls="leaveRequestsCollapse">
                         Leave Requests
                         <i class="fas fa-chevron-down collapse-toggle"></i>
                     </button>
                     <div class="collapse mt-1" id="leaveRequestsCollapse">
                         <div class="list-group list-group-flush">
-                          
-                  
-                              
-                               <a class="list-group-item @(Model.SelectedStatus == "Pending" && Model.RequestType == "Leave" ? "active" : "")"
-
-                                   asp-action="LeaveRequests"
-                                   asp-route-status="Pending"
-                                   asp-route-groupId="@Model.Group.ID">
-                                    <i class="fas fa-clock me-2"></i> Pending
-                                </a>
-                                 <a class="list-group-item @(Model.SelectedStatus == "Accepted" && Model.RequestType == "Leave" ? "active" : "")"
-                                    asp-action="LeaveRequests"
-                                    asp-route-status="Accepted"
-                                    asp-route-groupId="@Model.Group.ID">
-                                        <i class="fas fa-check-circle me-2"></i> Accepted
-                                </a>
-                                <a class="list-group-item @(Model.SelectedStatus == "Rejected" && Model.RequestType == "Leave" ? "active" : "")"
-                                   asp-action="LeaveRequests"
-                                   asp-route-status="Rejected"
-                                   asp-route-groupId="@Model.Group.ID">
-                                    <i class="fas fa-times-circle me-2"></i> Rejected
-                                </a>
-            
+                            <a class="list-group-item @(Model.SelectedStatus == "Pending" && Model.RequestType == "Leave" ? "active" : "")"
+                               asp-action="LeaveRequests"
+                               asp-route-status="Pending"
+                               asp-route-groupId="@Model.Group.ID">
+                                <i class="fas fa-clock me-2"></i> Pending
+                            </a>
+                             <a class="list-group-item @(Model.SelectedStatus == "Accepted" && Model.RequestType == "Leave" ? "active" : "")"
+                                asp-action="LeaveRequests"
+                                asp-route-status="Accepted"
+                                asp-route-groupId="@Model.Group.ID">
+                                    <i class="fas fa-check-circle me-2"></i> Accepted
+                            </a>
+                            <a class="list-group-item @(Model.SelectedStatus == "Rejected" && Model.RequestType == "Leave" ? "active" : "")"
+                               asp-action="LeaveRequests"
+                               asp-route-status="Rejected"
+                               asp-route-groupId="@Model.Group.ID">
+                                <i class="fas fa-times-circle me-2"></i> Rejected
+                            </a>
                         </div>
                     </div>
                 </div>
+                
+              @if (isAdmin)
+                {
+                    <button type="button" 
+                            class="list-group-item list-group-item-action text-danger fw-semibold d-flex align-items-center" 
+                            id="closeGroupBtn" 
+                            data-group-id="@Model.Group.ID">
+                        <i class="fas fa-lock me-2"></i>
+                        Close Group
+                    </button>
+                }
             </div>
-
+          
             <!-- Main Content Area -->
+            <div class="col-8 main-content">
+                <div id="partial-content-container" class="mb-3"></div>
 
-        <div class="col-8 main-content">
-            <div id="partial-content-container" class="mb-3"></div>
-
-            <div id="main-request-content">
+                <div id="main-request-content">
                     <div class="d-flex justify-content-between align-items-center mb-3">
                         <h2>
                             <i class="fas fa-user-friends"></i>
@@ -191,330 +190,248 @@
                             ? Model.Requests?.Cast<object>().ToList()
                             : Model.LeaveRequests?.Cast<object>().ToList();
                     }
+                    
                     @if (requests == null || !requests.Any())
-                        {
-                            <div class="alert alert-info">
-                                No @Model.SelectedStatus.ToLower() requests found.
-                            </div>
-                        }
+                    {
+                        <div class="alert alert-info">
+                            No @Model.SelectedStatus.ToLower() requests found.
+                        </div>
+                    }
                     else
                     {
                         <div class="table-responsive">
                             <table class="table table-striped">
-                                        <thead>
-                                                <tr>
-                                                    <th>Member</th>
-                                                    @if (isJoin)
-                                                    {
-                                                        <th>National ID</th>
-                                                        <th>Gender</th>
-                                                        <th>Email</th>
-                                                       
-                                                    }
-                                                    <th>Date</th>
-                                                    @if (Model.SelectedStatus == "Pending" && Model.AdminTools && !Model.IsMemberNotAdmin)
-                                                    {
-                                                        <th>Actions</th>
-                                                    }
-                                                </tr>
-                                            </thead>
+                                <thead>
+                                    <tr>
+                                        <th>Member</th>
+                                        @if (isJoin)
+                                        {
+                                            <th>National ID</th>
+                                            <th>Gender</th>
+                                            <th>Email</th>
+                                        }
+                                        <th>Date</th>
+                                        @if (Model.SelectedStatus == "Pending" && Model.AdminTools && !Model.IsMemberNotAdmin)
+                                        {
+                                            <th>Actions</th>
+                                        }
+                                    </tr>
+                                </thead>
                                 <tbody>
-
                                     @foreach (var r in requests)
-                                            {
-                                                if (isJoin)
+                                    {
+                                        if (isJoin)
+                                        {
+                                            var request = (JoinRequestView)r;
+                                            <tr>
+                                                <td>@request.FirstName @request.LastName</td>
+                                                <td>@request.NationalID</td>
+                                                <td>@request.Gender</td>
+                                                <td>@request.Email</td>
+                                                <td>@request.RequestedDate.ToString("dd MMM yyyy")</td>
+                                                @if (Model.SelectedStatus == "Pending" && Model.AdminTools && !Model.IsMemberNotAdmin)
                                                 {
-                                                    var request = (JoinRequestView)r;
-                                                    <tr>
-                                                        <td>@request.FirstName @request.LastName</td>
-                                                        <td>@request.NationalID</td>
-                                                        <td>@request.Gender</td>
-                                                        <td>@request.Email</td>
-                                                        <td>@request.RequestedDate.ToString("dd MMM yyyy")</td>
-                                                        @if (Model.SelectedStatus == "Pending" && Model.AdminTools && !Model.IsMemberNotAdmin)
-                                                        {
-                                                            <td>
-                                                                <form asp-controller="Invites" method="post">
-                                                                    <input type="hidden" name="requestId" value="@request.RequestId" />
-                                                                    <button type="button" class="btn btn-sm btn-success" onclick="approveRequest(@request.RequestId, this)">Approve</button>
-                                                                    <button type="button" class="btn btn-sm btn-warning ms-1" onclick="rejectRequest(@request.RequestId, this)">Reject</button>
-                                                                    <button type="button" class="btn btn-sm btn-danger ms-1" onclick="deleteRequest(@request.RequestId, this)">Delete</button>
-                                                                </form>
-                                                            </td>
-                                                        }
-                                                    </tr>
+                                                    <td>
+                                                        <form asp-controller="Invites" method="post">
+                                                            <input type="hidden" name="requestId" value="@request.RequestId" />
+                                                            <button type="button" class="btn btn-sm btn-success" onclick="approveRequest(@request.RequestId, this)">Approve</button>
+                                                            <button type="button" class="btn btn-sm btn-warning ms-1" onclick="rejectRequest(@request.RequestId, this)">Reject</button>
+                                                            <button type="button" class="btn btn-sm btn-danger ms-1" onclick="deleteRequest(@request.RequestId, this)">Delete</button>
+                                                        </form>
+                                                    </td>
                                                 }
-                                                else
+                                            </tr>
+                                        }
+                                        else
+                                        {
+                                            var request = (LeaveRequestView)r;
+                                            <tr>
+                                                <td>@request.FirstName @request.LastName</td>
+                                                <td>@request.RequestedDate.ToString("dd MMM yyyy")</td>
+                                                @if (Model.SelectedStatus == "Pending" && Model.AdminTools && !Model.IsMemberNotAdmin)
                                                 {
-                                                    var request = (LeaveRequestView)r;
-                                                    <tr>
-                                                        <td>@request.FirstName @request.LastName</td>
-                                                        <td>@request.RequestedDate.ToString("dd MMM yyyy")</td>
-                                                        @if (Model.SelectedStatus == "Pending" && Model.AdminTools && !Model.IsMemberNotAdmin)
-                                                        {
-                                                            <td>
-                                                                <form asp-controller="Leave" method="post">
-                                                                    <input type="hidden" name="requestId" value="@request.RequestId" />
-                                                                    <button type="button" class="btn btn-sm btn-success" onclick="approveLeaveRequest(@request.RequestId, this)">Approve</button>
-                                                                    <button type="button" class="btn btn-sm btn-warning ms-1" onclick="rejectLeaveRequest(@request.RequestId, this)">Reject</button>
-                                                                    <button type="button" class="btn btn-sm btn-danger ms-1" onclick="deleteLeaveRequest(@request.RequestId, this)">Delete</button>
-                                                                </form>
-                                                            </td>
-                                                        }
-                                                    </tr>
+                                                    <td>
+                                                        <form asp-controller="Leave" method="post">
+                                                            <input type="hidden" name="requestId" value="@request.RequestId" />
+                                                            <button type="button" class="btn btn-sm btn-success" onclick="approveLeaveRequest(@request.RequestId, this)">Approve</button>
+                                                            <button type="button" class="btn btn-sm btn-warning ms-1" onclick="rejectLeaveRequest(@request.RequestId, this)">Reject</button>
+                                                            <button type="button" class="btn btn-sm btn-danger ms-1" onclick="deleteLeaveRequest(@request.RequestId, this)">Delete</button>
+                                                        </form>
+                                                    </td>
                                                 }
-                                            }
+                                            </tr>
+                                        }
+                                    }
                                 </tbody>
                             </table>
                         </div>
                     }
-
+                </div>
             </div>
         </div>
     </div>
-    </div>
 
-   
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script>
-
-
-        document.addEventListener("DOMContentLoaded", function () {
-            const groupId = @Model.Group.ID; // Replace with actual group ID, or pass it dynamically
+        document.addEventListener("DOMContentLoaded", () => {
+            const groupId = @Model.Group.ID; // Pass group ID dynamically
             loadGroupStats(groupId);
-            groupSettings();
+            setupGroupSettings();
+            setupActiveCollapses();
+            setupPopupToggle();
+            initializeCollapseIcons();
         });
 
-            document.querySelectorAll('.list-group-item').forEach(item => {
-                item.addEventListener('click', function (e) {
-                    e.stopPropagation(); // Prevent dropdown from closing
+        // Initialize collapse icons
+        function initializeCollapseIcons() {
+            // Set up all collapse toggles
+            document.querySelectorAll('[data-bs-toggle="collapse"]').forEach(button => {
+                const target = button.getAttribute('data-bs-target');
+                const collapseElement = document.querySelector(target);
+                
+                // Check if collapse is shown by default
+                if (collapseElement.classList.contains('show')) {
+                    button.querySelector('.collapse-toggle').classList.add('fa-chevron-up');
+                    button.querySelector('.collapse-toggle').classList.remove('fa-chevron-down');
+                }
+                
+                // Add event listener for collapse show/hide
+                collapseElement.addEventListener('show.bs.collapse', function () {
+                    button.querySelector('.collapse-toggle').classList.add('fa-chevron-up');
+                    button.querySelector('.collapse-toggle').classList.remove('fa-chevron-down');
+                });
+                
+                collapseElement.addEventListener('hide.bs.collapse', function () {
+                    button.querySelector('.collapse-toggle').classList.remove('fa-chevron-up');
+                    button.querySelector('.collapse-toggle').classList.add('fa-chevron-down');
                 });
             });
+        }
 
-          
-            document.addEventListener('DOMContentLoaded', () => {
-                const activeItem = document.querySelector('.list-group-item.active');
-                if (activeItem) {
-                    const collapseId = activeItem.closest('.collapse').id;
-                    const toggleBtn = document.querySelector(`[data-bs-target="#${collapseId}"]`);
-                    new bootstrap.Collapse(document.getElementById(collapseId), { toggle: true });
+        // -------------------- Load Group Stats --------------------
+        function loadGroupStats(groupId) {
+            fetch(`/Invites/GroupStats/${groupId}`)
+                .then(res => res.ok ? res.json() : Promise.reject("Failed to load stats"))
+                .then(data => {
+                    const stats = document.getElementById('group-stats');
+                    const progressBar = document.getElementById('MemberLimit');
+                    if (stats && progressBar && data.memberCount !== undefined && data.memberLimit !== undefined) {
+                        const percent = Math.round((data.memberCount / data.memberLimit) * 100);
+                        stats.textContent = `Member Count ${data.memberCount}/${data.memberLimit}`;
+                        progressBar.style.width = percent + "%";
+                        progressBar.textContent = percent + "%";
+                    }
+                })
+                .catch(err => {
+                    console.error(err);
+                    const stats = document.getElementById('group-stats');
+                    if (stats) stats.textContent = "Error loading stats";
+                });
+        }
+
+        // -------------------- Setup collapses for active item --------------------
+        function setupActiveCollapses() {
+            const activeItem = document.querySelector('.list-group-item.active');
+            if (!activeItem) return;
+
+            const collapseDiv = activeItem.closest('.collapse');
+            if (collapseDiv) {
+                // Show the collapse that contains the active item
+                const bsCollapse = new bootstrap.Collapse(collapseDiv, { show: true });
+                
+                // Update the toggle button state
+                const toggleBtn = document.querySelector(`[data-bs-target="#${collapseDiv.id}"]`);
+                if (toggleBtn) {
                     toggleBtn.setAttribute('aria-expanded', 'true');
+                    toggleBtn.querySelector('.collapse-toggle').classList.add('fa-chevron-up');
+                    toggleBtn.querySelector('.collapse-toggle').classList.remove('fa-chevron-down');
+                }
+            }
+        }
+
+        // -------------------- Group Settings Partial --------------------
+        function setupGroupSettings() {
+            const editLink = document.getElementById("editGroupSettingsLink");
+            const container = document.getElementById("partial-content-container");
+            const mainContent = document.getElementById("main-request-content");
+
+            if (editLink && container && mainContent) {
+                editLink.addEventListener("click", (e) => {
+                    e.preventDefault();
+                    const groupId = editLink.getAttribute("data-group-id");
+                    mainContent.style.display = "none";
+
+                    fetch(`/Groups/UpdateGroupPartial?groupId=${groupId}`)
+                        .then(res => res.ok ? res.text() : Promise.reject("Failed to load partial"))
+                        .then(html => {
+                            container.innerHTML = html;
+                            container.style.display = 'block';
+                        })
+                        .catch(err => container.innerHTML = `<div class="alert alert-danger">Error: ${err}</div>`);
+                });
+            }
+        }
+
+        // -------------------- Admin Report Popup --------------------
+        function setupPopupToggle() {
+            const reportBtn = document.getElementById('reportToggleBtn');
+            const popup = document.getElementById('reportPopup');
+            
+            if (!reportBtn || !popup) return;
+
+            reportBtn.addEventListener('click', (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                
+                // Toggle popup visibility
+                if (popup.style.display === 'block') {
+                    popup.style.display = 'none';
+                } else {
+                    popup.style.display = 'block';
                 }
             });
 
-            function approveRequest(requestId, button) {
-                fetch(`/Invites/AcceptJoinRequest/${requestId}`, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    }
-                })
-                .then(response => {
-                    if (response.ok) {
-                        alert("Request approved successfully.");
-                        // Remove the row containing the clicked button
-                        const row = button.closest('tr');
-                        if (row) row.remove();
-                    } else {
-                        alert("Failed to approve request.");
-                    }
-                })
-                .catch(error => {
-                    alert("Error: " + error.message);
-                });
-            }
-
-            function approveLeaveRequest(requestId, button) {
-                fetch(`/Leave/ApproveLeaveRequest?requestId=${requestId}`, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    }
-                })
-                .then(response => {
-                    if (response.ok) {
-                        alert("Request approved successfully.");
-                        const row = button.closest('tr');
-                        if (row) row.remove(); // remove row from table
-                    } else {
-                        response.text().then(text => alert("Failed: " + text));
-                    }
-                })
-                .catch(error => {
-                    alert("Error: " + error.message);
-                });
-            }
-
-
-            function deleteRequest(requestId, button) {
-                fetch(`/Invites/DeleteJoinRequest/${requestId}`, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    }
-                })
-                .then(response => {
-                    if (response.ok) {
-                        alert("Request deleted successfully.");
-                        // Remove the row containing the clicked button
-                        const row = button.closest('tr');
-                        if (row) row.remove();
-                    } else {
-                        alert("Failed to approve request.");
-                    }
-                })
-                .catch(error => {
-                    alert("Error: " + error.message);
-                });
-            }
-
-            function deleteLeaveRequest(requestId, button) {
-                if (!confirm("Are you sure you want to delete this pending request?")) return;
-
-                fetch(`/Leave/DeleteLeaveRequest?requestId=${requestId}`, {
-                    method: 'DELETE',
-                    headers: {
-                        'Content-Type': 'application/json'
-                    }
-                })
-                .then(response => {
-                    if (response.ok) {
-                        alert("Request deleted successfully.");
-                        const row = button.closest('tr');
-                        if (row) row.remove();
-                    } else {
-                        response.text().then(text => alert("Failed: " + text));
-                    }
-                })
-                .catch(error => {
-                    alert("Error: " + error.message);
-                });
-            }
-
-
-            function rejectRequest(requestId, button) {
-                fetch(`/Invites/RejectJoinRequest/${requestId}`, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    }
-                })
-                .then(response => {
-                    if (response.ok) {
-                        alert("Request Denied.");
-                      
-                        const row = button.closest('tr');
-                        if (row) row.remove();
-                    } else {
-                        alert("Failed to approve request.");
-                    }
-                })
-                .catch(error => {
-                    alert("Error: " + error.message);
-                });
-            }
-
-            function rejectLeaveRequest(requestId, button) {
-                fetch(`/Leave/RejectLeaveRequest?requestId=${requestId}`, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json'
-                    }
-                })
-                .then(response => {
-                    if (response.ok) {
-                        alert("Request rejected successfully.");
-                        const row = button.closest('tr');
-                        if (row) row.remove();
-                    } else {
-                        response.text().then(text => alert("Failed: " + text));
-                    }
-                })
-                .catch(error => {
-                    alert("Error: " + error.message);
-                });
-            }
-
-            
-            function loadGroupStats(groupId) {
-                fetch(`/Invites/GroupStats/${groupId}`)
-                    .then(response => {
-                        if (!response.ok) {
-                            throw new Error("Network response was not ok");
-                        }
-                        return response.json();
-                    })
-                    .then(data => {
-                        const statsElement = document.getElementById('group-stats');
-                        const progressBar = document.getElementById('MemberLimit');
-
-                        if (data.memberCount !== undefined && data.memberLimit !== undefined) {
-                            const count = data.memberCount;
-                            const limit = data.memberLimit;
-                            const percent = Math.round((count / limit) * 100);
-
-                            // Update the h9 text
-                            if (statsElement) {
-                                statsElement.textContent = `Member Count ${count}/${limit}`;
-                            }
-
-                            // Update the progress bar fill and text
-                            if (progressBar) {
-                                progressBar.style.width = percent + "%";
-                                progressBar.textContent = percent + "%";
-                            }
-                        }
-                    })
-                    .catch(error => {
-                        console.error("Failed to load group stats:", error);
-                        const statsElement = document.getElementById('group-stats');
-                        if (statsElement) statsElement.textContent = "Error loading stats";
-                    });
-            }
-
-             //This is for theAdmin report pop up
-             function toggleReportPopup(e) {
-                e.preventDefault();
-                const popup = document.getElementById('reportPopup');
-                const rect = e.target.getBoundingClientRect();
-                popup.style.top = `${rect.bottom + window.scrollY}px`;
-                popup.style.left = `${rect.left}px`;
-                popup.style.display = popup.style.display === 'none' ? 'block' : 'none';
-                document.addEventListener('click', function handler(evt) {
-                    if (!popup.contains(evt.target) && evt.target !== e.target) {
-                        popup.style.display = 'none';
-                        document.removeEventListener('click', handler);
-                    }
-                });
-    }
-
-            function groupSettings() {
-                const editLink = document.getElementById("editGroupSettingsLink");
-                const container = document.getElementById("partial-content-container");
-                const mainContent = document.getElementById("main-request-content");
-
-                if (editLink && container && mainContent) {
-                    editLink.addEventListener("click", function (e) {
-                        e.preventDefault();
-
-                        const groupId = editLink.getAttribute("data-group-id");
-
-                        mainContent.style.display = "none";
-
-                        fetch(`/Groups/UpdateGroupPartial?groupId=${groupId}`)
-                            .then(response => {
-                                if (!response.ok) throw new Error("Failed to load partial.");
-                                return response.text();
-                            })
-                            .then(html => {
-                                container.innerHTML = html;
-                            })
-                            .catch(error => {
-                                container.innerHTML = `<div class="alert alert-danger">Error: ${error.message}</div>`;
-                            });
-                    });
+            // Close popup when clicking outside
+            document.addEventListener('click', (e) => {
+                if (!popup.contains(e.target) && e.target !== reportBtn) {
+                    popup.style.display = 'none';
                 }
-            }
+            });
+
+            // Stop propagation for popup items
+            popup.querySelectorAll('.dropdown-item').forEach(item => {
+                item.addEventListener('click', (e) => e.stopPropagation());
+            });
+        }
+
+        // -------------------- Request Actions (Approve / Reject / Delete) --------------------
+        function handleRequestAction(url, requestId, button, method = 'POST', confirmMsg = null) {
+            if (confirmMsg && !confirm(confirmMsg)) return;
+
+            fetch(`${url}${requestId}`, {
+                method: method,
+                headers: { 'Content-Type': 'application/json' }
+            })
+            .then(res => {
+                if (res.ok) {
+                    const row = button.closest('tr');
+                    if (row) row.remove();
+                    alert("Action completed successfully.");
+                } else {
+                    res.text().then(text => alert("Failed: " + text));
+                }
+            })
+            .catch(err => alert("Error: " + err.message));
+        }
+
+        // Global functions for buttons
+        function approveRequest(requestId, btn) { handleRequestAction(`/Invites/AcceptJoinRequest/`, requestId, btn); }
+        function rejectRequest(requestId, btn) { handleRequestAction(`/Invites/RejectJoinRequest/`, requestId, btn); }
+        function deleteRequest(requestId, btn) { handleRequestAction(`/Invites/DeleteJoinRequest/`, requestId, btn, 'POST', "Delete this request?"); }
+
+        function approveLeaveRequest(requestId, btn) { handleRequestAction(`/Leave/ApproveLeaveRequest?requestId=`, requestId, btn); }
+        function rejectLeaveRequest(requestId, btn) { handleRequestAction(`/Leave/RejectLeaveRequest?requestId=`, requestId, btn); }
+        function deleteLeaveRequest(requestId, btn) { handleRequestAction(`/Leave/DeleteLeaveRequest?requestId=`, requestId, btn, 'DELETE', "Delete this leave request?"); }
     </script>
 </body>
 </html>
