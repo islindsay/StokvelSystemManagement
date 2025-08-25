@@ -62,14 +62,15 @@
             <div class="col-md-4">
                 <div class="input-group">
                     <span class="input-group-text"><i class="fas fa-id-card"></i></span>
-                    <input asp-for="NationalID" class="form-control" placeholder="e.g. 85071200G23" />
+                    <input asp-for="NationalID" class="form-control" placeholder="e.g. 85071200G23" maxlength="11" pattern="\d{11}" title="National ID must be 11 characters long"/>
                 </div>
                 <span asp-validation-for="NationalID" class="text-danger"></span>
             </div>
             <div class="col-md-4">
                 <div class="input-group">
                     <span class="input-group-text"><i class="fas fa-phone"></i></span>
-                    <input asp-for="Phone" class="form-control" placeholder="e.g. 0772123456" />
+                    <input asp-for="Phone" class="form-control" placeholder="e.g. 0771234567" maxlength="10" pattern="\d{10}" title="Phone number must be 10 digits" />
+
                 </div>
                 <span asp-validation-for="Phone" class="text-danger"></span>
             </div>
@@ -169,15 +170,34 @@
 
     <script>
         $(function () {
-            // Add custom rule "passwordMatch"
+            // ---- Password Match Rule ----
             $.validator.addMethod("passwordMatch", function (value, element) {
                 var password = $("#Password").val();
                 return value === password;
             }, "Passwords do not match.");
 
-            // Attach the rule to ConfirmPassword field
             $("#ConfirmPassword").rules("add", {
                 passwordMatch: true
+            });
+
+            // ---- Phone Number Rule (10 digits only) ----
+            $.validator.addMethod("tenDigits", function (value, element) {
+                return this.optional(element) || /^\d{10}$/.test(value);
+            }, "Phone number must be exactly 10 digits.");
+
+            $("#Phone").rules("add", {
+                required: true,
+                tenDigits: true
+            });
+
+            // ---- National ID Rule (11 characters only) ----
+            $.validator.addMethod("elevenChars", function (value, element) {
+                return this.optional(element) || value.length === 11;
+            }, "National ID must be exactly 11 characters.");
+
+            $("#NationalID").rules("add", {
+                required: true,
+                elevenChars: true
             });
         });
     </script>

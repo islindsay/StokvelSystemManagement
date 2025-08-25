@@ -102,6 +102,7 @@ namespace StokvelManagementSystem.Models
         public string GroupName { get; set; }
         public DateTime DueDate { get; set; }
         public decimal GroupContributionAmount { get; set; }
+        public decimal ContributionAmount { get; set; } // newly added
     }
 
     public class PenaltySettingsResponse
