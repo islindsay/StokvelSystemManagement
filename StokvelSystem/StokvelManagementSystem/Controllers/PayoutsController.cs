@@ -272,14 +272,16 @@ namespace StokvelManagementSystem.Controllers
                     return View("~/Views/Transactions/PayoutsCreate.cshtml", model);
                 }
 
-                using (var connection = new SqlConnection(_configuration.GetConnectionString("DefaultConnection")))
+               using (var connection = new SqlConnection(_configuration.GetConnectionString("DefaultConnection")))
                 {
                     await connection.OpenAsync();
 
                     int currentCycle = 0;
-                    int frequencyId = 0;
-                    var getCycleAndFreqQuery = @"SELECT Cycles, FrequencyID FROM Groups WHERE ID = @GroupID";
-                    using (var cmd = new SqlCommand(getCycleAndFreqQuery, connection))
+                    int payoutTypeId = 0;
+
+                    // Pull Cycles + PayoutTypeID instead of FrequencyID
+                    var getCycleAndPayoutTypeQuery = @"SELECT Cycles, PayoutTypeID FROM Groups WHERE ID = @GroupID";
+                    using (var cmd = new SqlCommand(getCycleAndPayoutTypeQuery, connection))
                     {
                         cmd.Parameters.AddWithValue("@GroupID", groupId);
                         using (var reader = await cmd.ExecuteReaderAsync())
@@ -287,23 +289,23 @@ namespace StokvelManagementSystem.Controllers
                             if (await reader.ReadAsync())
                             {
                                 currentCycle = !reader.IsDBNull(0) ? reader.GetInt32(0) : 0;
-                                frequencyId = !reader.IsDBNull(1) ? reader.GetInt32(1) : 0;
+                                payoutTypeId = !reader.IsDBNull(1) ? reader.GetInt32(1) : 0;
 
                                 // Optional: Log nulls if defaults were used
                                 if (reader.IsDBNull(0))
                                     _logger.LogWarning("CurrentCycle was NULL in DB. Defaulting to 0.");
                                 if (reader.IsDBNull(1))
-                                    _logger.LogWarning("FrequencyId was NULL in DB. Defaulting to 0.");
+                                    _logger.LogWarning("PayoutTypeId was NULL in DB. Defaulting to 0.");
                             }
                             else
                             {
-                                _logger.LogWarning("No cycle/frequency row returned for GroupID {GroupID}", groupId);
+                                _logger.LogWarning("No cycle/payoutType row returned for GroupID {GroupID}", groupId);
                             }
                         }
                     }
 
-
-                    if (frequencyId == 5)
+                    // Swap your condition to use PayoutTypeID instead of FrequencyID
+                    if (payoutTypeId == 2)
                     {
                         // Get all MemberGroupIDs
                         var memberGroupQuery = @"SELECT ID FROM MemberGroups WHERE GroupID = @GroupID";
