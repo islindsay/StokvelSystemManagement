@@ -8,6 +8,8 @@ namespace StokvelManagementSystem.Models
     {
         public int ID { get; set; }
 
+        public string? CurrencySymbol { get; set; }  // e.g. "USD", "ZAR", "£"
+
         [Required]
         [Display(Name = "Member")]
         public int MemberGroupID { get; set; }

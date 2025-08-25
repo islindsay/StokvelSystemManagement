@@ -398,7 +398,7 @@ namespace StokvelManagementSystem.Controllers
 
             var sql = @"SELECT 
                             ISNULL(Cycles, 0) AS TotalCycles,
-                           CEILING((CAST(ContributionAmount AS decimal(18,4)) / NULLIF(MemberLimit,0)) * 10) / 10.0 AS ContributionPerMember
+                            CAST(ContributionAmount AS decimal(18,2)) AS ContributionPerMember
                         FROM Groups
                         WHERE ID = @GroupId";
 
