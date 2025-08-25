@@ -46,6 +46,7 @@ namespace StokvelManagementSystem.Models
 
 
         public string? ProofOfPaymentPath { get; set; }
+        
 
         [Display(Name = "Processed By")]
         public string? CreatedBy { get; set; }
