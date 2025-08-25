@@ -45,14 +45,14 @@
                     <table class="table table-hover">
                         <thead class="table-light">
                             <tr>
-                                <th>Group</th>
-                                <th>Member</th>
-                                <th class="text-end">Amount</th>
-                                <th>Date</th>
-                                <th>Reference</th>
-                                <th>Proof</th>
-                                <th>CreatedBy</th>
-                                <th>Actions</th>
+                                <th><i class="bi bi-people me-1">Group</th>
+                                <th><i class="bi bi-person me-1">Member</th>
+                                <th class="text-end">Payout</th>
+                                <th><i class="bi bi-calendar me-1">Date</th>
+                                <th><i class="bi bi-tag me-1">Reference</th>
+                                <th><i class="bi bi-receipt me-1">Proof</th>
+                                <th><i class="bi bi-person-plus me-1">CreatedBy</th>
+                               
                             </tr>
                         </thead>
                         <tbody>
@@ -83,16 +83,7 @@
                                 </td>
 
                                     <td>@item.CreatedBy</td>
-                                    <td>
-                                        <div class="btn-group btn-group-sm">
-                                            <a href="#" class="btn btn-outline-warning">
-                                                <i class="bi bi-pencil"></i>
-                                            </a>
-                                            <button class="btn btn-outline-danger delete-btn" data-id="@item.Id">
-                                                <i class="bi bi-trash"></i>
-                                            </button>
-                                        </div>
-                                    </td>
+                                    
                                 </tr>
                             }
                         </tbody>
