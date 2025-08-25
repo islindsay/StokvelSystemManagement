@@ -161,20 +161,24 @@ namespace StokvelManagementSystem.Controllers
 
                 // ✅ 4. Check if total group contributions meet expected value (per-person amount × members)
                 var enablePayoutQuery = @"
-                    SELECT 
-                        CASE 
-                            WHEN ISNULL(SUM(c.ContributionAmount), 0) = g.ContributionAmount * COUNT(DISTINCT mg.ID) THEN 1
-                            ELSE 0
-                        END AS EnablePayout,
-                        COUNT(DISTINCT mg.ID) AS MemberCount,
-                        g.ContributionAmount * COUNT(DISTINCT mg.ID) AS ExpectedPayment,
-                        g.FrequencyID,
-                        g.PayoutTypeID
-                    FROM MemberGroups mg
-                    JOIN Groups g ON mg.GroupID = g.ID
-                    LEFT JOIN Contributions c ON c.MemberGroupID = mg.ID
-                    WHERE mg.GroupID = @GroupId
-                    GROUP BY g.ContributionAmount, g.FrequencyID, g.PayoutTypeID;
+                                    SELECT 
+                                        CASE 
+                                            WHEN ISNULL(SUM(c.ContributionAmount), 0) = g.ContributionAmount * COUNT(DISTINCT mg.ID) THEN 1
+                                            ELSE 0
+                                        END AS EnablePayout,
+                                        COUNT(DISTINCT mg.ID) AS MemberCount,
+                                        g.ContributionAmount * COUNT(DISTINCT mg.ID) AS ExpectedPayment,
+                                        ISNULL(SUM(c.ContributionAmount), 0) AS CurrentAmount,
+                                        g.FrequencyID,
+                                        g.PayoutTypeID,
+                                        g.Cycles AS CurrentCycle
+                                    FROM MemberGroups mg
+                                    JOIN Groups g ON mg.GroupID = g.ID
+                                    LEFT JOIN Contributions c 
+                                        ON c.MemberGroupID = mg.ID 
+                                    AND c.PaidForCycle = g.Cycles   -- ✅ match only contributions for the current cycle
+                                    WHERE mg.GroupID = @GroupId
+                                    GROUP BY g.ContributionAmount, g.FrequencyID, g.PayoutTypeID, g.Cycles;
                 ";
 
 
