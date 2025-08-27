@@ -181,8 +181,6 @@ namespace StokvelManagementSystem.Controllers
                                     GROUP BY g.ContributionAmount, g.FrequencyID, g.PayoutTypeID, g.Cycles;
                 ";
 
-
-
                 using (var command = new SqlCommand(enablePayoutQuery, connection))
                 {
                     command.Parameters.AddWithValue("@GroupId", groupId);

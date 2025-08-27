@@ -25,17 +25,24 @@
                 <input type="hidden" name="groupId" value="@Model.GroupId" />
                 <input type="hidden" name="memberId" value="@Model.MemberId" />
 
-                <div class="input-group input-group-sm no-print" style="max-width: 220px;">
-                    <span class="input-group-text"><i class="fas fa-calendar-alt"></i></span>
-                    <input type="date" id="dateFrom" name="dateFrom" class="form-control"
-                        value="@Context.Request.Query["dateFrom"]" />
-                </div>
-                <span class="no-print"> to </span>
-                <div class="input-group input-group-sm no-print" style="max-width: 220px;">
-                    <span class="input-group-text"><i class="fas fa-calendar-alt"></i></span>
-                    <input type="date" id="dateTo" name="dateTo" class="form-control"
-                        value="@Context.Request.Query["dateTo"]" />
-                </div>
+
+            <div class="input-group input-group-sm no-print" style="max-width: 220px;">
+                <span class="input-group-text"><i class="fas fa-calendar-alt"></i></span>
+                <input type="date" id="dateFrom" name="dateFrom" class="form-control"
+                    value="@Context.Request.Query["dateFrom"]"
+                    min="2012-01-01"
+                    max="@DateTime.Now.ToString("yyyy-MM-dd")" />
+            </div>
+
+            <span class="no-print"> to </span>
+
+            <div class="input-group input-group-sm no-print" style="max-width: 220px;">
+                <span class="input-group-text"><i class="fas fa-calendar-alt"></i></span>
+                <input type="date" id="dateTo" name="dateTo" class="form-control"
+                    value="@Context.Request.Query["dateTo"]"
+                    min="2012-01-01"
+                    max="@DateTime.Now.ToString("yyyy-MM-dd")" />
+            </div>
 
                 <button type="submit" class="btn btn-primary btn-sm no-print">
                     <i class="fas fa-filter me-1"></i> Filter
