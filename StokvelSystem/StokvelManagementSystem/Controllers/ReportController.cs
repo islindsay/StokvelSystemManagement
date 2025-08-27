@@ -51,7 +51,7 @@ namespace StokvelManagementSystem.Controllers
             {
                 FirstName = GetMemberFirstName(memberId),
                 LastName = GetMemberLastName(memberId),
-                CurrentStatus = GetMemberStatus(memberId),
+                CurrentStatus = GetGroupStatus(groupId),
                 GroupName = GetMemberGroupName(memberId),
                 Contributions = GetMemberContributions(memberId, dateFrom, dateTo),
                 Date = DateTime.Now,
@@ -87,16 +87,17 @@ namespace StokvelManagementSystem.Controllers
 
 
 
-        private string GetMemberStatus(string memberId)
+        private string GetGroupStatus(int groupId)
         {
             using (var conn = new SqlConnection(_connectionString))
             {
-                var cmd = new SqlCommand("SELECT Status FROM Members WHERE ID = @MemberId", conn);
-                cmd.Parameters.AddWithValue("@MemberId", memberId);
+                var cmd = new SqlCommand("SELECT Status FROM Groups WHERE ID = @groupId", conn);
+                cmd.Parameters.AddWithValue("@groupId", groupId); // ✅ fixed: parameter name matches SQL
                 conn.Open();
                 return cmd.ExecuteScalar()?.ToString() ?? "Unknown";
             }
         }
+
 
         private string GetMemberGroupName(string memberId)
         {
