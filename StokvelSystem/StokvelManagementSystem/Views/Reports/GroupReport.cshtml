@@ -47,6 +47,7 @@
                     min="2012-01-01"
                     max="@DateTime.Now.ToString("yyyy-MM-dd")" />
             </div>
+
            
                 <button type="submit" class="btn btn-primary btn-sm no-print">
                     <i class="fas fa-filter me-1"></i> Filter
@@ -88,7 +89,6 @@
                             <th>Total Paid</th>
                             <th>Missed Payments</th>
                             <th>Penalties</th>
-                            <th>Status</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -102,12 +102,6 @@
                                 <td class="text-success">@member.TotalPaid.ToString("N2")</td>
                                 <td class="text-danger">@member.MissedPayments</td>
                                 <td>@member.Penalties.ToString("N2")</td>
-                                <td>
-                                    <span class="status-@member.Status.ToLower()">
-                                        <i class="@(member.Status == "Active" ? "fas fa-check-circle text-success" : "fas fa-times-circle text-danger") me-1"></i>
-                                        @member.Status
-                                    </span>
-                                </td>
                             </tr>
                         }
                         }
