@@ -51,7 +51,7 @@ namespace StokvelManagementSystem.Controllers
             {
                 FirstName = GetMemberFirstName(memberId),
                 LastName = GetMemberLastName(memberId),
-                CurrentStatus = GetGroupStatus(groupId),
+                CurrentStatus = GetMemberStatus(memberId),
                 GroupName = GetMemberGroupName(memberId),
                 Contributions = GetMemberContributions(memberId, dateFrom, dateTo),
                 Date = DateTime.Now,
@@ -87,17 +87,16 @@ namespace StokvelManagementSystem.Controllers
 
 
 
-        private string GetGroupStatus(int groupId)
+        private string GetMemberStatus(string memberId)
         {
             using (var conn = new SqlConnection(_connectionString))
             {
-                var cmd = new SqlCommand("SELECT Status FROM Groups WHERE ID = @groupId", conn);
-                cmd.Parameters.AddWithValue("@groupId", groupId); // ✅ fixed: parameter name matches SQL
+                var cmd = new SqlCommand("SELECT Status FROM Members WHERE ID = @MemberId", conn);
+                cmd.Parameters.AddWithValue("@MemberId", memberId);
                 conn.Open();
                 return cmd.ExecuteScalar()?.ToString() ?? "Unknown";
             }
         }
-
 
         private string GetMemberGroupName(string memberId)
         {
@@ -131,7 +130,7 @@ namespace StokvelManagementSystem.Controllers
                     FROM Contributions c
                     JOIN PaymentMethods pm ON c.PaymentMethodID = pm.ID
                     WHERE c.MemberGroupID IN (
-                        SELECT ID FROM MemberGroups WHERE MemberID = @MemberId
+                        SELECT GroupID FROM MemberGroups WHERE MemberID = @MemberId
                     )
                 ";
 
