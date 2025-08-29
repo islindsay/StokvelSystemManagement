@@ -1,0 +1,80 @@
+/* receipt.css */
+
+/* General Styles */
+body {
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    background: #f0f2f5;
+    margin: 0;
+    padding: 20px;
+}
+
+/* Receipt Container */
+.receipt-container {
+    max-width: 650px;
+    margin: 0 auto;
+    background: #fff;
+    padding: 30px;
+    border-radius: 10px;
+    box-shadow: 0 6px 18px rgba(0,0,0,0.12);
+}
+
+/* Header */
+.header {
+    text-align: center;
+    border-bottom: 2px solid #007bff;
+    padding-bottom: 15px;
+    margin-bottom: 25px;
+}
+.header h1 {
+    margin: 0;
+    color: #007bff;
+    font-size: 28px;
+    font-weight: 700;
+}
+.header p {
+    margin: 5px 0 0 0;
+    font-size: 14px;
+    color: #555;
+}
+
+/* Sections */
+.section {
+    margin-bottom: 25px;
+}
+.section h2 {
+    font-size: 18px;
+    color: #007bff;
+    border-bottom: 1px solid #e0e0e0;
+    padding-bottom: 5px;
+    margin-bottom: 12px;
+    font-weight: 600;
+}
+
+/* Tables */
+table {
+    width: 100%;
+    border-collapse: collapse;
+}
+th, td {
+    text-align: left;
+    padding: 12px;
+    border-bottom: 1px solid #eaeaea;
+}
+th {
+    background-color: #f0f8ff;
+    color: #007bff;
+    font-weight: 600;
+}
+.total-row td {
+    font-weight: bold;
+    font-size: 16px;
+    color: #007bff;
+}
+
+/* Footer */
+.footer {
+    text-align: center;
+    margin-top: 30px;
+    font-size: 13px;
+    color: #888;
+}
