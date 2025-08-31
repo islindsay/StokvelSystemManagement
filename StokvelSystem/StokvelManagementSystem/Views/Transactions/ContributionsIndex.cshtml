@@ -22,8 +22,6 @@
                 <i class="bi bi-plus-circle me-1"></i>New Contribution
             </a>
         }
-
-       
     </div>
 
     <!-- Success Message -->
@@ -51,15 +49,16 @@
                     <table class="table table-hover mb-0">
                         <thead class="table-light">
                             <tr>
-                                <th><i class="bi bi-people me-1"></i>Group</th>
+                              <th><i class="bi bi-people me-1"></i>Group</th>
                                 <th><i class="bi bi-person me-1"></i>Member</th>
                                 <th class="text-end"><i ></i>Contribution</th>
                                 <th class="text-end"><i class="bi bi-exclamation-triangle me-1"></i>Penalty</th>
                                 <th class="text-end"><i class="bi bi-calculator me-1"></i>Total</th>
                                 <th><i class="bi bi-calendar me-1"></i>Date</th>
-                                <th><i class="bi bi-tag me-1"></i>Reference</th>
-                                <th><i class="bi bi-receipt me-1"></i>Proof</th>
+                                <th><i class="bi bi-tag me-1"></i>Reference ID</th>
+                                @* <th><i class="bi bi-receipt me-1"></i>Proof</th> *@
                                 <th><i class="bi bi-person-plus me-1"></i>Recorded By</th>
+                                <th><i class="bi bi-settings-gear me-1"></i>Action</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -69,26 +68,23 @@
                                     <td>@(item.GroupName ?? "N/A")</td>
                                     <td>@(item.FirstName ?? "N/A")</td>
                                     <td class="text-end">@item.ContributionAmount.ToString("C")</td>
-                                    <td class="text-end @(item.PenaltyAmount > 0 ? "text-danger" : "")">
-                                        @item.PenaltyAmount.ToString("C")
-                                    </td>
+                                    <td class="text-end @(item.PenaltyAmount > 0 ? "text-danger" : "")">@item.PenaltyAmount.ToString("C")</td>
                                     <td class="text-end fw-bold">@item.TotalAmount.ToString("C")</td>
                                     <td>@item.TransactionDate.ToString("dd MMM yyyy")</td>
-                                    <td>@item.Reference</td>
-                                    <td>
-                                        @if (!string.IsNullOrEmpty(item.ProofOfPaymentPath))
-                                        {
-                                            <a href="@item.ProofOfPaymentPath" target="_blank" 
-                                               class="btn btn-sm btn-outline-primary" title="View Proof">
-                                                <i class="bi bi-eye"></i>
-                                            </a>
-                                        }
-                                        else
-                                        {
-                                            <span class="badge bg-secondary">None</span>
-                                        }
-                                    </td>
+                                    <td>@item.ID</td>
                                     <td>@item.CreatedBy</td>
+                                    <td>
+                                        <button type="button" class="btn btn-sm btn-outline-primary view-details-btn"
+                                            data-group="@item.GroupName"
+                                            data-member="@item.FirstName"
+                                            data-contribution="@item.ContributionAmount.ToString("C")"
+                                            data-penalty="@item.PenaltyAmount.ToString("C")"
+                                            data-total="@item.TotalAmount.ToString("C")"
+                                            data-date="@item.TransactionDate.ToString("dd MMM yyyy")"
+                                            data-createdby="@item.CreatedBy">
+                                            <i class="bi bi-eye"></i> View
+                                        </button>
+                                    </td>
                                 </tr>
                             }
                         </tbody>
@@ -98,9 +94,49 @@
         </div>
     </div>
 </div>
+
+<!-- Modal -->
+<div class="modal fade" id="contributionModal" tabindex="-1" aria-labelledby="contributionModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="contributionModalLabel">Contribution Details</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <p><strong>Group Name:</strong> <span id="modalGroupName"></span></p>
+        <p><strong>Member Name:</strong> <span id="modalMemberName"></span></p>
+        <p><strong>Contribution:</strong> <span id="modalContribution"></span></p>
+        <p><strong>Penalty:</strong> <span id="modalPenalty"></span></p>
+        <p><strong>Total:</strong> <span id="modalTotal"></span></p>
+        <p><strong>Transaction Date:</strong> <span id="modalDate"></span></p>
+        <p><strong>Recorded By:</strong> <span id="modalCreatedBy"></span></p>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+      </div>
+    </div>
+  </div>
+</div>
+
 @section Scripts {
     @await Html.PartialAsync("_ValidationScriptsPartial")
     <script>
+        document.querySelectorAll(".view-details-btn").forEach(button => {
+            button.addEventListener("click", function () {
+                document.getElementById("modalGroupName").textContent = this.dataset.group;
+                document.getElementById("modalMemberName").textContent = this.dataset.member;
+                document.getElementById("modalContribution").textContent = this.dataset.contribution;
+                document.getElementById("modalPenalty").textContent = this.dataset.penalty;
+                document.getElementById("modalTotal").textContent = this.dataset.total;
+                document.getElementById("modalDate").textContent = this.dataset.date;
+                document.getElementById("modalCreatedBy").textContent = this.dataset.createdby;
+
+                var modal = new bootstrap.Modal(document.getElementById('contributionModal'));
+                modal.show();
+            });
+        });
+
         $(document).ready(function () {
             // Calculate total dynamically
             function calculateTotal() {

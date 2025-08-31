@@ -17,9 +17,9 @@ namespace StokvelManagementSystem.Models
         public int MemberID { get; set; }
 
         [Display(Name = "Phone Number")]
-        public string Phone { get; set; }  // Correctly string for phone format
+        public string? Phone { get; set; }  // Correctly string for phone format
 
-        public string Email { get; set; }
+        public string? Email { get; set; }
 
         [Display(Name = "Contribution Amount")]
         [Range(0.01, double.MaxValue)]
@@ -36,11 +36,6 @@ namespace StokvelManagementSystem.Models
         [Display(Name = "Payment Method")]
         public int PaymentMethodID { get; set; }
 
-        [Required]
-        [Display(Name = "Reference")]
-        [StringLength(50)]
-        public string Reference { get; set; }
-
         // ❌ Removed [Required] — you're setting this in controller
         [Display(Name = "Proof of Payment")]
         public string? ProofOfPaymentPath { get; set; }
@@ -51,7 +46,7 @@ namespace StokvelManagementSystem.Models
         public DateTime TransactionDate { get; set; } = DateTime.Now;
 
         [Display(Name = "Group Name")]
-        public string GroupName { get; set; }
+        public string? GroupName { get; set; }
 
         // ❌ Removed [Required] — not filled from form
         public string? FirstName { get; set; }  // Use nullable if not binding it at all
@@ -81,7 +76,8 @@ namespace StokvelManagementSystem.Models
         public int MemberCount { get; set; }
         public int FrequencyID { get; set; }
         public int PayoutTypeID { get; set; }
-
+        public string AccountNumber { get; set; }
+        public string? FullName { get; set; }
     }
 
     public class PaymentMethod

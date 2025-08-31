@@ -126,6 +126,7 @@ public IActionResult GetGroupDetails(int memberId)
             public IActionResult ContributionsCreate(Contribution model, int groupId)
             {
 
+                _logger.LogInformation($"Creating contribution for group ID: {groupId}");   
                 var memberIdClaim = User.Claims.FirstOrDefault(c => c.Type == "member_id");
                 if (memberIdClaim != null && int.TryParse(memberIdClaim.Value, out var memberId))
                 {
@@ -170,13 +171,13 @@ public IActionResult GetGroupDetails(int memberId)
                     }
                 }
 
-                model.MemberOptions = members
-                .Select(m => new MemberOption
-                {
-                    Id = int.Parse(m.Value),
-                    FullName = m.Text
-                })
-                .ToList();
+                // model.MemberOptions = members
+                // .Select(m => new MemberOption
+                // {
+                //     Id = int.Parse(m.Value),
+                //     FullName = m.Text
+                // })
+                // .ToList();
 
                 model.PaymentMethods = GetPaymentMethodsFromDatabase();
 
@@ -186,34 +187,34 @@ public IActionResult GetGroupDetails(int memberId)
                     model.TotalAmount = model.ContributionAmount + model.PenaltyAmount;
 
                     // Handle file upload
-                    if (Request.Form.Files.Count > 0)
-                    {
-                        var file = Request.Form.Files["ProofOfPayment"];
-                        if (file != null && file.Length > 0)
-                        {
-                            var uploadsFolder = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", "uploads");
-                            if (!Directory.Exists(uploadsFolder))
-                                Directory.CreateDirectory(uploadsFolder);
+                    // if (Request.Form.Files.Count > 0)
+                    // {
+                    //     var file = Request.Form.Files["ProofOfPayment"];
+                    //     if (file != null && file.Length > 0)
+                    //     {
+                    //         var uploadsFolder = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", "uploads");
+                    //         if (!Directory.Exists(uploadsFolder))
+                    //             Directory.CreateDirectory(uploadsFolder);
 
-                            var uniqueFileName = $"{Guid.NewGuid()}_{file.FileName}";
-                            var filePath = Path.Combine(uploadsFolder, uniqueFileName);
+                    //         var uniqueFileName = $"{Guid.NewGuid()}_{file.FileName}";
+                    //         var filePath = Path.Combine(uploadsFolder, uniqueFileName);
 
-                            using (var stream = new FileStream(filePath, FileMode.Create))
-                            {
-                                file.CopyTo(stream);
-                            }
+                    //         using (var stream = new FileStream(filePath, FileMode.Create))
+                    //         {
+                    //             file.CopyTo(stream);
+                    //         }
 
-                            model.ProofOfPaymentPath = $"/uploads/{uniqueFileName}";
-                            _logger.LogInformation($"ProofOfPaymentPath: {model.ProofOfPaymentPath}");
-                            ModelState.Remove("ProofOfPaymentPath"); // ✅ Clear error manually since we set it ourselves
-                        }
-                        else{
-                            _logger.LogInformation($"File does not exist");
-                        }
-                    }
-                    else{
-                            _logger.LogInformation($"No uploaded files");
-                        }
+                    //         model.ProofOfPaymentPath = $"/uploads/{uniqueFileName}";
+                    //         _logger.LogInformation($"ProofOfPaymentPath: {model.ProofOfPaymentPath}");
+                    //         ModelState.Remove("ProofOfPaymentPath"); // ✅ Clear error manually since we set it ourselves
+                    //     }
+                    //     else{
+                    //         _logger.LogInformation($"File does not exist");
+                    //     }
+                    // }
+                    // else{
+                    //         _logger.LogInformation($"No uploaded files");
+                    //     }
 
                     model.GroupId = groupId;
 
@@ -236,24 +237,22 @@ public IActionResult GetGroupDetails(int memberId)
                             _logger.LogInformation("Model not valid");
                             return View("~/Views/Transactions/ContributionsCreate.cshtml", model);
                         }
-
+                    
                     // Insert into DB
+                    _logger.LogInformation($"Attempting to insert into DB. with groupId: {groupId} and membergroup id: {model.MemberGroupID}");
                     using (var connection = new SqlConnection(_configuration.GetConnectionString("DefaultConnection")))
                     {
-                       var query = @"
-                        INSERT INTO Contributions 
-                            (MemberGroupID, PaymentMethodID, PenaltyAmount, ContributionAmount, 
-                            TotalAmount, TransactionDate, Reference, ProofOfPaymentPath, CreatedBy, PaidForCycle)
-                        SELECT 
-                            @MemberGroupID, @PaymentMethodID, @PenaltyAmount, @ContributionAmount, 
-                            @TotalAmount, @TransactionDate, @Reference, @ProofOfPaymentPath, @CreatedBy,
-                            g.Cycles  -- This sets PaidForCycle from Groups table
-                        FROM MemberGroups mg
-                        JOIN Groups g ON mg.GroupID = g.ID
-                        WHERE mg.ID = @MemberGroupID;
-
-                        SELECT SCOPE_IDENTITY();";
-
+                        var query = @"
+                            INSERT INTO Contributions 
+                                (MemberGroupID, PaymentMethodID, PenaltyAmount, ContributionAmount, 
+                                TotalAmount, TransactionDate, AccountNumber, CreatedBy, PaidForCycle)
+                            SELECT 
+                                @MemberGroupID, @PaymentMethodID, @PenaltyAmount, @ContributionAmount, 
+                                @TotalAmount, @TransactionDate, @AccountNumber, @CreatedBy,
+                                g.Cycles  -- This sets PaidForCycle from Groups table
+                            FROM MemberGroups mg
+                            JOIN Groups g ON mg.GroupID = g.ID
+                            WHERE mg.ID = @MemberGroupID;";
 
                         using (var command = new SqlCommand(query, connection))
                         {
@@ -263,16 +262,19 @@ public IActionResult GetGroupDetails(int memberId)
                             command.Parameters.AddWithValue("@ContributionAmount", model.ContributionAmount);
                             command.Parameters.AddWithValue("@TotalAmount", model.TotalAmount);
                             command.Parameters.AddWithValue("@TransactionDate", model.TransactionDate);
-                            command.Parameters.AddWithValue("@Reference", model.Reference ?? (object)DBNull.Value);
-                            command.Parameters.AddWithValue("@ProofOfPaymentPath", 
-                                string.IsNullOrEmpty(model.ProofOfPaymentPath) ? 
-                                DBNull.Value : (object)model.ProofOfPaymentPath);
+                            command.Parameters.AddWithValue("@AccountNumber", model.AccountNumber ?? (object)DBNull.Value);
                             command.Parameters.AddWithValue("@CreatedBy", model.CreatedBy);
 
                             connection.Open();
-                            command.ExecuteScalar(); // Save and get inserted ID (not used here)
+                            int rowsAffected = command.ExecuteNonQuery();
+
+                            if (rowsAffected == 0)
+                            {
+                                throw new Exception("Insert failed: No rows affected. Check MemberGroupID or related data.");
+                            }
                         }
                     }
+
 
                     model.GroupId = groupId;
                     _logger.LogInformation($"Group Id being passdown: {model.GroupId} vs {groupId}");
@@ -307,7 +309,6 @@ public IActionResult GetGroupDetails(int memberId)
                     c.ContributionAmount, 
                     c.TotalAmount, 
                     c.TransactionDate, 
-                    c.Reference, 
                     c.ProofOfPaymentPath,
 
                     g.GroupName AS GroupName,
@@ -350,8 +351,8 @@ public IActionResult GetGroupDetails(int memberId)
                                     ContributionAmount = Convert.ToDecimal(reader["ContributionAmount"]),
                                     TotalAmount = Convert.ToDecimal(reader["TotalAmount"]),
                                     TransactionDate = Convert.ToDateTime(reader["TransactionDate"]),
-                                    Reference = reader["Reference"].ToString(),
-                                    ProofOfPaymentPath = reader["ProofOfPaymentPath"]?.ToString(),
+                                    // Reference = reader["Reference"].ToString(),
+                                    // ProofOfPaymentPath = reader["ProofOfPaymentPath"]?.ToString(),
                                     CreatedBy = reader["CreatedBy"]?.ToString(),
                                     GroupName = reader["GroupName"].ToString(),
                                     FirstName = reader["MemberName"].ToString(),
@@ -404,6 +405,7 @@ public IActionResult GetGroupDetails(int memberId)
                     TransactionDate = DateTime.Now,
                     PaymentMethodID = 1,
                     PenaltyAmount = 0,
+                    GroupId = groupId,
                     ContributionAmount = 0,
                     TotalAmount = 0,
                     MemberOptions = new List<MemberOption>()
@@ -577,30 +579,41 @@ public IActionResult GetGroupDetails(int memberId)
 
 
 
-                    // STEP 5: Load member options
-                string memberQuery = @"
+                // STEP 5: Load member options
+                var memberIdClaim = User.Claims.FirstOrDefault(c => c.Type == "member_id");
+                int memberId = memberIdClaim != null ? Convert.ToInt32(memberIdClaim.Value) : 0;
+
+                    string memberQuery = @"
                         SELECT mg.ID, CONCAT(m.FirstName, ' ', m.LastName) AS FullName, m.Email, m.Phone
                         FROM MemberGroups mg
                         JOIN Members m ON mg.MemberID = m.ID
-                        WHERE mg.GroupID = @GroupId";
+                        WHERE mg.GroupID = @GroupId AND m.ID = @MemberId";
 
-                    using (var command = new SqlCommand(memberQuery, connection))
+                   using (var command = new SqlCommand(memberQuery, connection))
                     {
                         command.Parameters.AddWithValue("@GroupId", groupId);
+                        command.Parameters.AddWithValue("@MemberId", memberId);
+
                         using (var reader = command.ExecuteReader())
                         {
-                            while (reader.Read())
-                            {
-                                model.MemberOptions.Add(new MemberOption
+                           if (reader.Read())
                                 {
-                                    Id = Convert.ToInt32(reader["ID"]),
-                                    FullName = reader["FullName"].ToString(),
-                                    Email = reader["Email"].ToString(),
-                                    Phone = reader["Phone"].ToString()
-                                });
-                            }
+                                    model.MemberGroupID = Convert.ToInt32(reader["ID"]);
+                                    model.FullName = reader["FullName"].ToString();
+                                    model.Email = reader["Email"].ToString();
+                                    model.Phone = reader["Phone"].ToString();
+
+                                    _logger.LogInformation("Found MemberGroupID: {MemberGroupID}", model.MemberGroupID);
+                                }
+                                else
+                                {
+                                    _logger.LogWarning("No MemberGroup found for MemberId {MemberId} in GroupId {GroupId}", memberId, groupId);
+                                    throw new Exception("No valid MemberGroup found — cannot create contribution.");
+                                }
+
                         }
                     }
+
                 }
 
                 return View("~/Views/Transactions/ContributionsCreate.cshtml", model);
