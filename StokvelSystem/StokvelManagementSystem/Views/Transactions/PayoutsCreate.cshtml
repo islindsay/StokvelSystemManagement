@@ -1,150 +1,80 @@
 ﻿@model StokvelManagementSystem.Models.Payout
 @{
-    ViewData["Title"] = "Create New Payout";
+    ViewData["Title"] = "MY PAYOUT";
 }
 
-<div class="container mt-4">
-    <div class="card shadow-sm">
+<div class="container mt-5">
+    <div class="card shadow-sm border-0">
         <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center py-3">
-            <h4 class="mb-0">@ViewData["Title"] <span style="font-size: 0.875rem;">(Balance @Model.TotalContributions.ToString("C") / @Model.ExpectedPayment.ToString("C")) Payable from @Model.NextPayoutDate?.ToString("dd MMMM yyyy")</span></h4>
-            <div class="text-end">
-                <span class="badge bg-light text-dark fs-6">
-                    <i class="bi bi-calendar me-2"></i>@DateTime.Now.ToString("dd MMMM yyyy")
-                </span>
-            </div>
+            <h4 class="mb-0">@ViewData["Title"]</h4>
+            <span class="badge bg-light text-dark fs-6">
+                <i class="bi bi-calendar me-2"></i>@DateTime.Now.ToString("dd MMMM yyyy")
+            </span>
         </div>
 
         <div class="card-body">
-            <form asp-action="PayoutsCreate" asp-route-groupId="@Model.GroupId" method="post" enctype="multipart/form-data" class="needs-validation" novalidate>
+            <form asp-action="PayoutsCreate" asp-route-groupId="@Model.GroupId" method="post" class="needs-validation" novalidate>
                 <div asp-validation-summary="ModelOnly" class="alert alert-danger mb-4"></div>
 
-              <div class="form-group mb-3">
-                                <label class="form-label fw-bold">Group Name</label>
-                                <input type="text" class="form-control" value="@Model.GroupName" readonly>
-                            </div>
+                <!-- Member Info -->
                 <div class="mb-4 p-3 border rounded bg-light">
-                    <h5 class="mb-3 text-primary">
-                </h5>
-                    <div class="form-group">
-                        <label asp-for="ProofOfPaymentPath" class="form-label fw-bold">Upload Receipt</label>
-                        <div class="custom-file">
-                            <input type="file" class="form-control" name="proofFile" accept=".pdf,.jpg,.png" multiple>
-                            <div class="invalid-feedback">Please upload a valid file (PDF, JPG, PNG).</div>
+                    <h5 class="mb-3 text-primary"><i class="bi bi-person-circle me-2"></i>Member Details</h5>
+                    <div class="mb-2"><strong>Name:</strong> @Model.MemberName</div>
+                    <div class="mb-2"><strong>Email:</strong> @Model.Email</div>
+                    <div><strong>Phone:</strong> @Model.Phone</div>
+                    <input type="hidden" name="MemberId" value="@Model.MemberId" />
+                    <input type="hidden" name="MemberGroupId" value="@Model.GroupId" />
+                </div>
+
+                <!-- Group Info & Payout Summary -->
+                <div class="mb-4 p-3 border rounded bg-light">
+                    <h5 class="mb-3 text-primary"><i class="bi bi-people-fill me-2"></i>Group & Payout</h5>
+                    <div class="form-group mb-3">
+                        <label class="form-label fw-bold">Group Name</label>
+                        <input type="text" class="form-control" value="@Model.GroupName" readonly />
+                    </div>
+
+                    <div class="form-group mb-3">
+                        <label class="form-label fw-bold">Account Number</label>
+                        <input type="text" class="form-control" id="AccountNumber" name="AccountNumber" />
+                    </div>
+                    <div class="form-group mb-3">
+                        <label class="form-label fw-bold">Payout Date</label>
+                        <input asp-for="PayoutDate" type="date" class="form-control" required />
+                        <span asp-validation-for="PayoutDate" class="text-danger"></span>
+                    </div>
+                    <div class="form-group mb-3">
+                        <label class="form-label fw-bold">Amount Eligible</label>
+                        <div class="input-group">
                            
+                            <input asp-for="Amount" class="form-control fw-bold text-success" type="number" readonly />
                         </div>
+                    </div>
+                    <div class="form-group mb-3">
+                        <label asp-for="PayoutTypeId" class="form-label fw-bold">Payment Method</label>
+                        <select asp-for="PayoutTypeId" class="form-select" required
+                                asp-items="@(new SelectList(Model.PayoutTypes, "Value", "Text"))">
+                            <option value="">-- Select Type --</option>
+                        </select>
+                        <span asp-validation-for="PayoutTypeId" class="text-danger"></span>
                     </div>
                 </div>
 
-            
-                <div class="row mb-4">
-                    <div class="col-md-6">
-                        <div class="p-3 border rounded bg-light h-100">
-                            <h5 class="mb-3 text-primary">
-                                <i class="bi bi-person-circle me-2"></i>Member Details @if (Model.PayoutTypeID != 2)
-                                {<span style="font-size: 0.875rem; text-right" class="text-muted"> (Next Up - @Model.NextMember?.FullName)</span>}
-                            </h5>
-
-        @if (Model.PayoutTypeID != 2)
-                    {
-                     <div class="form-group mb-3">
-
-                    <label class="form-label fw-bold">Member</label>
-                        <input type="text"
-                        class="form-control"
-                        value="@Model.Member?.FullName"
-                        readonly />
-
-                    <input type="hidden" name="MemberId" value="@Model.Member?.MemberId" />
-                    <input type="hidden" name="MemberGroupId" value="@Model.Member?.Id" />
-                    
-                  
-                    </div>
-
-                    <div class="form-group mb-3">
-                        <label class="form-label fw-bold">Email</label>
-                        <input type="text"
-                            class="form-control"
-                            value="@Model.Member?.Email"
-                            readonly />
-                    </div>
-
-                    <div class="form-group mb-3">
-                        <label class="form-label fw-bold">Phone</label>
-                        <input type="text"
-                            class="form-control"
-                            value="@Model.Member?.Phone"
-                            readonly />
-                    </div>
-                }
-                @if (Model.PayoutTypeID == 2)
-                    {
-                    <div class="form-group mb-3">
-
-                            <label class="form-label fw-bold">Member</label>
-                                <input type="text"
-                                class="form-control"
-                                value="Everyone"
-                                readonly />              
-                  
-                    </div>
-                    }
-
-                        </div>
-                    </div>
-
-                    <div class="col-md-6">
-                        <div class="p-3 border rounded bg-light h-100">
-                            <h5 class="mb-3 text-primary">
-                                <i class="bi bi-credit-card me-2"></i>Payment Information
-                            </h5>
-                            <div class="form-group mb-3">
-                                <label asp-for="PayoutTypeId" class="form-label fw-bold">Payment Method</label>
-                                <select asp-for="PayoutTypeId" class="form-select" required
-                                        asp-items="@(new SelectList(Model.PayoutTypes, "Value", "Text"))">
-                                    <option value="">-- Select Type --</option>
-                                </select>
-                                <span asp-validation-for="PayoutTypeId" class="text-danger"></span>
-                            </div>
-                            
-                            <div class="form-group mb-3">
-                                <label asp-for="Amount" class="form-label fw-bold">Amount</label>
-                                <div class="input-group">
-                                    <input asp-for="Amount" class="form-control" type="number" step="0.01" min="5" value="@(Model.ExpectedPayment)" readonly required>
-                                </div>
-                                <span asp-validation-for="Amount" class="text-danger"></span>
-                            </div>
-                            
-                            <div class="form-group mb-3">
-                                <label asp-for="PayoutDate" class="form-label fw-bold">Payout Date</label>
-                                <input asp-for="PayoutDate" type="date" class="form-control" required>
-                                <span asp-validation-for="PayoutDate" class="text-danger"></span>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-               
-
-             
+                
+                <!-- Additional Info -->
                 <div class="mb-4 p-3 border rounded bg-light">
-                    <h5 class="mb-3 text-primary">
-                        <i class="bi bi-pencil-square me-2"></i>Additional Information
-                    </h5>
-                    <div class="form-group">
-                        <label asp-for="Reference" class="form-label fw-bold">Reference</label>
-                        <input asp-for="Reference" class="form-control" placeholder="e.g., July Payout">
-                        <span asp-validation-for="Reference" class="text-danger"></span>
-                    </div>
+                    <h5 class="mb-3 text-primary"><i class="bi bi-pencil-square me-2"></i>Reference</h5>
+                    <input asp-for="Reference" class="form-control" placeholder="e.g., July Payout">
+                    <span asp-validation-for="Reference" class="text-danger"></span>
                 </div>
 
-                <!-- Buttons -->
-                <div class="d-flex justify-content-end gap-2 mt-4">
+                <!-- Submit -->
+                <div class="d-flex justify-content-end gap-2 mt-3">
                     <a asp-action="PayoutIndex" asp-route-groupId="@Model.GroupId" class="btn btn-outline-secondary px-4">
                         <i class="bi bi-x-circle me-2"></i>Cancel
                     </a>
-                    @* <button type="submit" class="btn btn-primary px-4" @((Model.EnablePayout == true || DateTime.Now.Date > Model.NextPayoutDate?.Date) ? "" : "disabled")></button> *@
-                    <button type="submit" class="btn btn-primary px-4" @(Model.EnablePayout == true ? "" : "disabled")>
-                        <i class="bi bi-check-circle me-2"></i>Submit Payout
+                    <button type="submit" class="btn btn-success px-4" @(Model.EnablePayout ? "" : "disabled")>
+                        <i class="bi bi-check-circle me-2"></i>Withdraw
                     </button>
                 </div>
             </form>
@@ -156,52 +86,28 @@
     <link rel="stylesheet" href="~/css/transactions.css" />
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.8.0/font/bootstrap-icons.css">
     <style>
-        .card {
-            border-radius: 10px;
-        }
-        .form-control:read-only {
-            background-color: #f8f9fa;
-        }
-        .input-group-text {
-            background-color: #e9ecef;
-        }
-        .bg-light {
-            background-color: #f8f9fa!important;
-        }
+        .card { border-radius: 10px; }
+        .form-control:read-only { background-color: #f8f9fa; }
+        .input-group-text { background-color: #e9ecef; }
+        .bg-light { background-color: #f8f9fa!important; }
     </style>
 }
 
 @section Scripts {
     @await Html.PartialAsync("_ValidationScriptsPartial")
     <script>
-        $(document).ready(function () {
-            // Auto-fill member contact info when member is selected
-            const memberSelect = document.getElementById('MemberDropdown');
-            const phoneInput = document.getElementById('Phone');
-            const emailInput = document.getElementById('Email');
-
-            if (memberSelect && phoneInput && emailInput) {
-                memberSelect.addEventListener('change', function () {
-                    const selectedOption = this.options[this.selectedIndex];
-                    phoneInput.value = selectedOption.getAttribute('data-phone') || '';
-                    emailInput.value = selectedOption.getAttribute('data-email') || '';
-                });
-            }
-
-            // Form validation
-            (function () {
-                'use strict';
-                const forms = document.querySelectorAll('.needs-validation');
-                Array.from(forms).forEach(form => {
-                    form.addEventListener('submit', event => {
-                        if (!form.checkValidity()) {
-                            event.preventDefault();
-                            event.stopPropagation();
-                        }
-                        form.classList.add('was-validated');
-                    }, false);
-                });
-            })();
-        });
+        (function () {
+            'use strict';
+            const forms = document.querySelectorAll('.needs-validation');
+            Array.from(forms).forEach(form => {
+                form.addEventListener('submit', event => {
+                    if (!form.checkValidity()) {
+                        event.preventDefault();
+                        event.stopPropagation();
+                    }
+                    form.classList.add('was-validated');
+                }, false);
+            });
+        })();
     </script>
 }
