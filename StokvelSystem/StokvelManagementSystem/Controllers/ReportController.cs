@@ -131,7 +131,7 @@ namespace StokvelManagementSystem.Controllers
                     FROM Contributions c
                     JOIN PaymentMethods pm ON c.PaymentMethodID = pm.ID
                     WHERE c.MemberGroupID IN (
-                        SELECT ID FROM MemberGroups WHERE MemberID = @MemberId
+                          SELECT GroupID FROM MemberGroups WHERE MemberID = @MemberId
                     )
                 ";
 
