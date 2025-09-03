@@ -54,6 +54,7 @@
         public List<LeaveRequestView> LeaveRequests { get; set; }
         public string SelectedStatus { get; set; }
         public bool IsMemberView { get; set; }
+        public  bool Closed { get; set; }
         public bool AdminTools => !IsMemberView;
 
         public int PendingRequestCount { get; set; }

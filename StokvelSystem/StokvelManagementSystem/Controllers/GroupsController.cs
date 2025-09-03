@@ -109,13 +109,13 @@ namespace StokvelManagementSystem.Controllers
 
 
 
-private List<Group> GetMyGroups(int memberId)
-{
-    var myGroups = new List<Group>();
+        private List<Group> GetMyGroups(int memberId)
+        {
+            var myGroups = new List<Group>();
 
-    using (var conn = new SqlConnection(_configuration.GetConnectionString("DefaultConnection")))
-    {
-        string query = @"
+            using (var conn = new SqlConnection(_configuration.GetConnectionString("DefaultConnection")))
+            {
+                string query = @"
             SELECT 
                 g.*, 
                 pt.PayoutType AS PayoutType, 
@@ -134,22 +134,22 @@ private List<Group> GetMyGroups(int memberId)
             WHERE mg.MemberID = @MemberID
             ORDER BY g.ID DESC";
 
-        using (var cmd = new SqlCommand(query, conn))
-        {
-            cmd.Parameters.AddWithValue("@MemberID", memberId);
-            conn.Open();
-            using (var reader = cmd.ExecuteReader())
-            {
-                while (reader.Read())
+                using (var cmd = new SqlCommand(query, conn))
                 {
-                    myGroups.Add(MapGroupFromReader(reader));
+                    cmd.Parameters.AddWithValue("@MemberID", memberId);
+                    conn.Open();
+                    using (var reader = cmd.ExecuteReader())
+                    {
+                        while (reader.Read())
+                        {
+                            myGroups.Add(MapGroupFromReader(reader));
+                        }
+                    }
                 }
             }
-        }
-    }
 
-    return myGroups;
-}
+            return myGroups;
+        }
 
 
         private List<Group> GetMyGroupsByNationalId(string nationalId)
@@ -262,7 +262,7 @@ private List<Group> GetMyGroups(int memberId)
 
             if (ModelState.IsValid)
             {
-             ViewBag.CreateError = false;
+                ViewBag.CreateError = false;
             }
 
             try
@@ -359,7 +359,7 @@ private List<Group> GetMyGroups(int memberId)
                     }
                 }
 
-                
+
 
                 return RedirectToAction("ListGroups", new { memberId = model.MemberId, created = true });
             }
@@ -419,7 +419,7 @@ private List<Group> GetMyGroups(int memberId)
                     cmd.Parameters.AddWithValue("@MemberID", memberId);
 
                     cmd.Parameters.AddWithValue("@GroupID", groupId);
-                    cmd.Parameters.AddWithValue("@Status", "Pending"); 
+                    cmd.Parameters.AddWithValue("@Status", "Pending");
                     cmd.ExecuteNonQuery();
 
                 }
@@ -991,7 +991,8 @@ private List<Group> GetMyGroups(int memberId)
             if (!ModelState.IsValid)
             {
                 return PartialView("_UpdateGroupPartial", model); // redisplay with errors
-            } try
+            }
+            try
             {
                 using (var conn = new SqlConnection(_configuration.GetConnectionString("DefaultConnection")))
                 {
@@ -1026,7 +1027,46 @@ private List<Group> GetMyGroups(int memberId)
                 return StatusCode(500, $"Error updating group: {ex.Message}");
             }
         }
+        
+       [HttpGet]
+        [Route("Groups/GroupStatus/{groupId}")]
+        public IActionResult GroupStatus(int groupId)
+        {
+            try
+            {
+                using (var conn = new SqlConnection(_configuration.GetConnectionString("DefaultConnection")))
+                {
+                    conn.Open();
 
+                    var dashboard = new DashboardModel();
+
+                    using (var cmd = new SqlCommand(@"SELECT Closed FROM Groups WHERE ID = @groupId", conn))
+                    {
+                        cmd.Parameters.AddWithValue("@groupId", groupId);
+
+                        using (var reader = cmd.ExecuteReader())
+                        {
+                            if (reader.Read())
+                            {
+                                dashboard.Closed = !reader.IsDBNull(0) && reader.GetBoolean(0);
+                                _logger.LogInformation("Dashboard.Closed value for GroupID {GroupID}: {Closed}", groupId, dashboard.Closed);
+                            }
+                            else
+                            {
+                                return NotFound(new { message = "Group not found." });
+                            }
+                        }
+                    }
+
+                    return Json(new { closed = dashboard.Closed });
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error fetching group status for GroupID {GroupID}", groupId);
+                return StatusCode(500, new { message = "Internal server error." });
+            }
+        }
 
 
     }

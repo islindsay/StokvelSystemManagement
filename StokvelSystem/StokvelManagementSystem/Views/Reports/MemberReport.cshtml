@@ -44,6 +44,18 @@
                     max="@DateTime.Now.ToString("yyyy-MM-dd")" />
             </div>
 
+            <span class="no-print"> Status </span>
+            <div class="input-group input-group-sm no-print" style="max-width: 220px;">
+                <span class="input-group-text"><i class="fas fa-filter"></i></span>
+                <select id="statusFilter" name="statusFilter" class="form-select">
+                <option value="" selected="@(string.IsNullOrEmpty(Context.Request.Query["statusFilter"]))">All</option>
+                <option value="Success" selected="@(Context.Request.Query["statusFilter"] == "Success")">Success</option>
+                <option value="Pending" selected="@(Context.Request.Query["statusFilter"] == "Pending")">Pending</option>
+                <option value="Fail" selected="@(Context.Request.Query["statusFilter"] == "Fail")">Failed</option>
+                </select>
+            </div>
+
+
                 <button type="submit" class="btn btn-primary btn-sm no-print">
                     <i class="fas fa-filter me-1"></i> Filter
                 </button>
@@ -82,7 +94,7 @@
                              <th><i class="fas fa-coins me-1"></i> Payment Method</th>
                             <th><i class="fas fa-coins me-1"></i> Currency</th>
                             <th><i class="fas fa-receipt me-1 no-print"></i> Proof</th>
-                            @* <th><i class="fas fa-check-circle me-1"></i> Status</th> *@
+                            <th><i class="fas fa-check-circle me-1"></i> Status</th>
                             @* <th><i class="fas fa-recycle me-1"></i> Cycle</th> *@
                         </tr>
                     </thead>
@@ -100,12 +112,12 @@
                                         <i class="fas fa-eye me-1"></i> View
                                     </a>
                                 </td>
-                                @* <td>
+                                <td>
                                     <span class="status-@c.Status.ToLower()">
-                                        <i class="@(c.Status == "Paid" ? "fas fa-check-circle" : "fas fa-times-circle") me-1"></i>
+                                        <i class="@(c.Status == "Success" ? "fas fa-check-circle text-success" : "fas fa-times-circle text-danger") me-1"></i>
                                         @c.Status
                                     </span>
-                                </td> *@
+                                </td>
                                 @* <td>@c.Cycle</td> *@
                             </tr>
                         }

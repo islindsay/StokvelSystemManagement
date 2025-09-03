@@ -160,13 +160,17 @@
               @if (isAdmin)
                 {
                     <button type="button" 
-                            class="list-group-item list-group-item-action text-danger fw-semibold d-flex align-items-center" 
+                            class="list-group-item list-group-item-action text-danger fw-semibold d-flex align-items-center d-none" 
                             id="closeGroupBtn" 
                             data-group-id="@Model.Group.ID">
                         <i class="fas fa-lock me-2"></i>
-                        Close Group
+                        Close Group @Model.Closed
                     </button>
                 }
+            
+                
+                <p  class="list-group-item list-group-item-action text-danger fw-semibold d-flex align-items-center d-none" id="group-closed-status">This group is closed</p>
+                
             </div>
           
             <!-- Main Content Area -->
@@ -271,16 +275,106 @@
         </div>
     </div>
 
+        <!-- Close Group Confirmation Modal -->
+    <div class="modal fade" id="closeGroupModal" tabindex="-1" aria-labelledby="closeGroupModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+        <div class="modal-header">
+            <h5 class="modal-title" id="closeGroupModalLabel">Confirm Close Group</h5>
+            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body">
+            Are you sure you want to close this group?
+        </div>
+        <div class="modal-footer">
+            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">No</button>
+            <button type="button" class="btn btn-danger" id="confirmCloseGroupBtn">Yes, Close Group</button>
+        </div>
+        </div>
+    </div>
+    </div>
+
+
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script>
         document.addEventListener("DOMContentLoaded", () => {
             const groupId = @Model.Group.ID; // Pass group ID dynamically
             loadGroupStats(groupId);
+            loadGroupStatus(groupId);
             setupGroupSettings();
             setupActiveCollapses();
             setupPopupToggle();
             initializeCollapseIcons();
         });
+
+        document.addEventListener("DOMContentLoaded", () => {
+        const closeBtn = document.getElementById("closeGroupBtn");
+        const confirmBtn = document.getElementById("confirmCloseGroupBtn");
+        let groupIdToClose = null;
+        const closeModal = new bootstrap.Modal(document.getElementById("closeGroupModal"));
+
+        if (closeBtn && confirmBtn) {
+            closeBtn.addEventListener("click", () => {
+                groupIdToClose = closeBtn.getAttribute("data-group-id");
+                console.log("Group ID to close:", groupIdToClose);
+                closeModal.show();
+            });
+
+            confirmBtn.addEventListener("click", () => {
+                if (!groupIdToClose) return;
+
+                fetch("/Groups/DeactivateGroup", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/x-www-form-urlencoded" },
+                    body: `groupId=${encodeURIComponent(groupIdToClose)}`
+                })
+                .then(res => res.json())
+                .then(data => {
+                    closeModal.hide();
+                    if (data.success) {
+                        //alert(data.message);
+                        // Optionally reload page or update UI
+                        location.reload();
+                    } else {
+                        alert(data.message || "Failed to close group.");
+                    }
+                })
+                .catch(err => {
+                    closeModal.hide();
+                    console.error(err);
+                    alert("Unexpected error while closing group.");
+                });
+            });
+        }
+    });
+
+        //catch update 
+        document.addEventListener("submit", function (event) {
+        if (event.target && event.target.id === "updateGroupForm") {
+            event.preventDefault();
+            console.log("Form submitted from partial!");
+
+            const form = event.target;
+            const formData = new FormData(form);
+
+            fetch(form.action, {
+                method: "POST",
+                body: formData
+            })
+            .then(res => res.json())
+            .then(data => {
+                if (data.success) {
+                    document.getElementById("success-alert").classList.remove("d-none");
+                } else {
+                    document.getElementById("error-alert").classList.remove("d-none");
+                }
+            })
+            .catch(err => {
+                console.error("Error:", err);
+                document.getElementById("error-alert").classList.remove("d-none");
+            });
+        }
+    });
 
         // Initialize collapse icons
         function initializeCollapseIcons() {
@@ -328,6 +422,38 @@
                     if (stats) stats.textContent = "Error loading stats";
                 });
         }
+
+            // -------------------- Load Group Status --------------------
+            function loadGroupStatus(groupId) {
+                fetch(`/Groups/GroupStatus/${groupId}`)
+                    .then(res => res.ok ? res.json() : Promise.reject("Failed to load status"))
+                    .then(data => {
+                        const statusElement = document.getElementById('group-closed-status');
+                        const closeBtn = document.getElementById('closeGroupBtn');
+
+                        if (data.closed) {
+                            // Show the "closed" paragraph
+                            if (statusElement) statusElement.classList.remove('d-none');
+                            // Hide the button
+                            if (closeBtn) closeBtn.classList.add('d-none');
+                        } else {
+                            // Show the button
+                            if (closeBtn) closeBtn.classList.remove('d-none');
+                            // Hide the "closed" paragraph
+                            if (statusElement) statusElement.classList.add('d-none');
+                        }
+                    })
+                    .catch(err => {
+                        console.error(err);
+                        const statusElement = document.getElementById('group-closed-status');
+                        if (statusElement) {
+                            statusElement.textContent = "Error loading status";
+                            statusElement.classList.remove('d-none');
+                        }
+                    });
+            }
+
+
 
         // -------------------- Setup collapses for active item --------------------
         function setupActiveCollapses() {

@@ -65,47 +65,4 @@
     }
 </style>
 
-<script>
-document.addEventListener("DOMContentLoaded", function () {
-    const form = document.getElementById("updateGroupForm");
-    const successAlert = document.getElementById("success-alert");
-    const errorAlert = document.getElementById("error-alert");
 
-    form.addEventListener("submit", function (event) {
-    event.preventDefault(); // prevent redirect
-
-    // Clear old alerts
-    successAlert.classList.add("d-none");
-    errorAlert.classList.add("d-none");
-
-    const formData = new FormData(form);
-    const actionUrl = form.getAttribute("action");
-
-    fetch(actionUrl, {
-        method: "POST",
-        body: formData
-    })
-    .then(response => {
-        if (!response.ok) throw new Error("Network response was not ok");
-
-        return response.json(); // parse JSON
-    })
-    .then(data => {
-        if (data.success) {
-            successAlert.classList.remove("d-none");
-
-            setTimeout(() => {
-                successAlert.classList.add("d-none");
-            }, 4000);
-        } else {
-            errorAlert.classList.remove("d-none");
-        }
-    })
-    .catch(err => {
-        console.error(err);
-        errorAlert.classList.remove("d-none");
-    });
-});
-
-});
-</script>

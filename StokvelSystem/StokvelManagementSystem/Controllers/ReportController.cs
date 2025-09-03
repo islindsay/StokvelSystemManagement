@@ -21,7 +21,7 @@ namespace StokvelManagementSystem.Controllers
         }
 
         [Authorize]
-        public IActionResult MemberReport(int groupId, DateTime? dateFrom, DateTime? dateTo)
+        public IActionResult MemberReport(int groupId, DateTime? dateFrom, DateTime? dateTo, string statusFilter)
         {
             var memberId = User.FindFirst("member_id")?.Value;
             if (string.IsNullOrEmpty(memberId))
@@ -29,22 +29,25 @@ namespace StokvelManagementSystem.Controllers
                 return RedirectToAction("Login", "Account");
             }
 
+            // Determine reporting period string
             string period;
             if (dateFrom.HasValue && dateTo.HasValue)
-            {
                 period = $"{dateFrom:yyyy-MM-dd} to {dateTo:yyyy-MM-dd}";
-            }
             else if (dateFrom.HasValue)
-            {
                 period = $"From {dateFrom:yyyy-MM-dd} to {DateTime.Now:yyyy-MM-dd}";
-            }
             else if (dateTo.HasValue)
-            {
                 period = $"Up to {dateTo:yyyy-MM-dd}";
-            }
             else
-            {
                 period = "All time";
+
+            // Fetch contributions filtered by date and status
+            var contributions = GetMemberContributions(memberId, dateFrom, dateTo, statusFilter);
+
+            if (!string.IsNullOrEmpty(statusFilter))
+            {
+                contributions = contributions
+                    .Where(c => c.Status.Equals(statusFilter, StringComparison.OrdinalIgnoreCase))
+                    .ToList();
             }
 
             var report = new Report
@@ -53,12 +56,12 @@ namespace StokvelManagementSystem.Controllers
                 LastName = GetMemberLastName(memberId),
                 CurrentStatus = GetMemberStatus(memberId),
                 GroupName = GetMemberGroupName(memberId),
-                Contributions = GetMemberContributions(memberId, dateFrom, dateTo),
+                Contributions = contributions,
                 Date = DateTime.Now,
                 Period = period,
-                TotalContributionsPaid = CalculateTotalContributions(memberId, dateFrom, dateTo),
-                TotalMissedPayments = CountMissedPayments(memberId, dateFrom, dateTo),
-                PenaltiesApplied = CountPenalties(memberId, dateFrom, dateTo),
+                TotalContributionsPaid = CalculateTotalContributions(memberId, dateFrom, dateTo, statusFilter),
+                TotalMissedPayments = CountMissedPayments(memberId, dateFrom, dateTo, statusFilter),
+                PenaltiesApplied = CountPenalties(memberId, dateFrom, dateTo, statusFilter),
             };
 
             return View(report);
@@ -113,80 +116,87 @@ namespace StokvelManagementSystem.Controllers
             }
         }
 
-        private List<ContributionViewModel> GetMemberContributions(string memberId, DateTime? dateFrom, DateTime? dateTo)
+        private List<ContributionViewModel> GetMemberContributions(string memberId, DateTime? dateFrom, DateTime? dateTo, string statusFilter)
+{
+    var contributions = new List<ContributionViewModel>();
+
+    using (var conn = new SqlConnection(_connectionString))
+    {
+        // Base query
+        var sql = @"
+            SELECT 
+                c.TransactionDate AS Date, 
+                c.ContributionAmount AS Amount, 
+                pm.Method AS PaymentMethod, 
+                c.ProofOfPaymentPath AS ProofOfPayment, 
+                c.Status AS Status
+            FROM Contributions c
+            JOIN PaymentMethods pm ON c.PaymentMethodID = pm.ID
+            WHERE c.MemberGroupID IN (
+                SELECT GroupID FROM MemberGroups WHERE MemberID = @MemberId
+            )
+        ";
+
+        // Date filtering
+        if (dateFrom.HasValue && dateTo.HasValue)
+            sql += " AND c.TransactionDate BETWEEN @DateFrom AND @DateTo";
+        else if (dateFrom.HasValue)
+            sql += " AND c.TransactionDate >= @DateFrom";
+        else if (dateTo.HasValue)
+            sql += " AND c.TransactionDate <= @DateTo";
+
+        // Status filtering
+        if (!string.IsNullOrEmpty(statusFilter))
+            sql += " AND LTRIM(RTRIM(c.Status)) = @StatusFilter";
+
+        using (var cmd = new SqlCommand(sql, conn))
         {
-            var contributions = new List<ContributionViewModel>();
+            cmd.Parameters.AddWithValue("@MemberId", memberId);
 
-            using (var conn = new SqlConnection(_connectionString))
+            if (dateFrom.HasValue) cmd.Parameters.AddWithValue("@DateFrom", dateFrom.Value.Date);
+            if (dateTo.HasValue) cmd.Parameters.AddWithValue("@DateTo", dateTo.Value.Date.AddDays(1).AddTicks(-1));
+
+            if (!string.IsNullOrEmpty(statusFilter))
+                cmd.Parameters.AddWithValue("@StatusFilter", statusFilter.Trim());
+
+            conn.Open();
+            using (var reader = cmd.ExecuteReader())
             {
-                // Base query
-                var sql = @"
-                    SELECT 
-                        c.TransactionDate AS Date, 
-                        c.ContributionAmount AS Amount, 
-                        pm.Method AS PaymentMethod, 
-                        c.ProofOfPaymentPath AS ProofOfPayment, 
-                        CASE WHEN c.PenaltyAmount > 0 THEN 'Missed' ELSE 'Paid' END AS Status
-                    FROM Contributions c
-                    JOIN PaymentMethods pm ON c.PaymentMethodID = pm.ID
-                    WHERE c.MemberGroupID IN (
-                        SELECT GroupID FROM MemberGroups WHERE MemberID = @MemberId
-                    )
-                ";
-
-                // Add date filtering
-                if (dateFrom.HasValue && dateTo.HasValue)
+                while (reader.Read())
                 {
-                    sql += " AND c.TransactionDate BETWEEN @DateFrom AND @DateTo";
-                }
-                else if (dateFrom.HasValue)
-                {
-                    sql += " AND c.TransactionDate >= @DateFrom";
-                }
-                else if (dateTo.HasValue)
-                {
-                    sql += " AND c.TransactionDate <= @DateTo";
-                }
-
-                using (var cmd = new SqlCommand(sql, conn))
-                {
-                    cmd.Parameters.AddWithValue("@MemberId", memberId);
-                    if (dateFrom.HasValue) cmd.Parameters.AddWithValue("@DateFrom", dateFrom.Value.Date);
-                    if (dateTo.HasValue) cmd.Parameters.AddWithValue("@DateTo", dateTo.Value.Date.AddDays(1).AddTicks(-1)); // include the full end day
-
-                    conn.Open();
-                    using (var reader = cmd.ExecuteReader())
+                    contributions.Add(new ContributionViewModel
                     {
-                        while (reader.Read())
-                        {
-                            contributions.Add(new ContributionViewModel
-                            {
-                                Date = Convert.ToDateTime(reader["Date"]),
-                                Amount = Convert.ToDecimal(reader["Amount"]),
-                                PaymentMethod = reader["PaymentMethod"].ToString(),
-                                ProofOfPayment = reader["ProofOfPayment"].ToString(),
-                                Status = reader["Status"].ToString()
-                            });
-                        }
-                    }
+                        Date = Convert.ToDateTime(reader["Date"]),
+                        Amount = Convert.ToDecimal(reader["Amount"]),
+                        PaymentMethod = reader["PaymentMethod"].ToString(),
+                        ProofOfPayment = reader["ProofOfPayment"].ToString(),
+                        Status = reader["Status"].ToString()
+                    });
                 }
             }
-
-            return contributions;
         }
+    }
 
-        private decimal CalculateTotalContributions(string memberId, DateTime? dateFrom, DateTime? dateTo)
+    return contributions;
+}
+        private decimal CalculateTotalContributions(string memberId, DateTime? dateFrom, DateTime? dateTo, string statusFilter)
         {
             using (var conn = new SqlConnection(_connectionString))
             {
                 // Base SQL
-                var sql = @"
-                    SELECT ISNULL(SUM(ContributionAmount), 0)
-                    FROM Contributions
-                    WHERE MemberGroupID IN (
-                        SELECT GroupID FROM MemberGroups WHERE MemberID = @MemberId
-                    )
-                ";
+            var sql = @"
+                SELECT ISNULL(SUM(
+                    CASE 
+                        WHEN Status = 'Success' THEN ContributionAmount
+                        ELSE 0
+                    END
+                ), 0)
+                FROM Contributions
+                WHERE MemberGroupID IN (
+                    SELECT GroupID FROM MemberGroups WHERE MemberID = @MemberId
+                )
+            ";
+
 
                 // Add date filters if provided
                 if (dateFrom.HasValue && dateTo.HasValue)
@@ -202,12 +212,19 @@ namespace StokvelManagementSystem.Controllers
                     sql += " AND TransactionDate <= @DateTo";
                 }
 
+                // Add status filter if provided
+                if (!string.IsNullOrEmpty(statusFilter))
+                {
+                    sql += " AND Status = @StatusFilter";
+                }
+
                 using (var cmd = new SqlCommand(sql, conn))
                 {
                     cmd.Parameters.AddWithValue("@MemberId", memberId);
 
                     if (dateFrom.HasValue) cmd.Parameters.AddWithValue("@DateFrom", dateFrom.Value.Date);
                     if (dateTo.HasValue) cmd.Parameters.AddWithValue("@DateTo", dateTo.Value.Date.AddDays(1).AddTicks(-1));
+                    if (!string.IsNullOrEmpty(statusFilter)) cmd.Parameters.AddWithValue("@StatusFilter", statusFilter);
 
                     conn.Open();
                     return Convert.ToDecimal(cmd.ExecuteScalar() ?? 0);
@@ -215,8 +232,7 @@ namespace StokvelManagementSystem.Controllers
             }
         }
 
-
-        private int CountMissedPayments(string memberId, DateTime? dateFrom, DateTime? dateTo)
+        private int CountMissedPayments(string memberId, DateTime? dateFrom, DateTime? dateTo, string statusFilter)
         {
             using (var conn = new SqlConnection(_connectionString))
             {
@@ -224,11 +240,28 @@ namespace StokvelManagementSystem.Controllers
                 var sql = @"
                     SELECT ISNULL(COUNT(*), 0)
                     FROM Contributions
-                    WHERE PenaltyAmount > 0
-                    AND MemberGroupID IN (
+                    WHERE MemberGroupID IN (
                         SELECT GroupID FROM MemberGroups WHERE MemberID = @MemberId
                     )
                 ";
+
+                // Only count missed payments (PenaltyAmount > 0)
+                if (string.IsNullOrEmpty(statusFilter))
+                {
+                    sql += " AND PenaltyAmount > 0";
+                }
+                else if (statusFilter == "Success")
+                {
+                    sql += " AND Status = 'Success'";
+                }
+                else if (statusFilter == "Pending")
+                {
+                    sql += " AND Status = 'Pending'";
+                }
+                else if (statusFilter == "Fail")
+                {
+                    sql += " AND Status = 'Fail'";
+                }
 
                 // Add date filters if provided
                 if (dateFrom.HasValue && dateTo.HasValue)
@@ -257,8 +290,7 @@ namespace StokvelManagementSystem.Controllers
             }
         }
 
-
-        private int CountPenalties(string memberId, DateTime? dateFrom, DateTime? dateTo)
+        private int CountPenalties(string memberId, DateTime? dateFrom, DateTime? dateTo, string statusFilter)
         {
             using (var conn = new SqlConnection(_connectionString))
             {
@@ -271,6 +303,12 @@ namespace StokvelManagementSystem.Controllers
                         SELECT GroupID FROM MemberGroups WHERE MemberID = @MemberId
                     )
                 ";
+
+                // Apply status filter if provided
+                if (!string.IsNullOrEmpty(statusFilter))
+                {
+                    sql += " AND Status = @StatusFilter";
+                }
 
                 // Add date filters if provided
                 if (dateFrom.HasValue && dateTo.HasValue)
@@ -290,15 +328,20 @@ namespace StokvelManagementSystem.Controllers
                 {
                     cmd.Parameters.AddWithValue("@MemberId", memberId);
 
-                    if (dateFrom.HasValue) cmd.Parameters.AddWithValue("@DateFrom", dateFrom.Value.Date);
-                    if (dateTo.HasValue) cmd.Parameters.AddWithValue("@DateTo", dateTo.Value.Date.AddDays(1).AddTicks(-1));
+                    if (!string.IsNullOrEmpty(statusFilter))
+                        cmd.Parameters.AddWithValue("@StatusFilter", statusFilter);
+
+                    if (dateFrom.HasValue) 
+                        cmd.Parameters.AddWithValue("@DateFrom", dateFrom.Value.Date);
+
+                    if (dateTo.HasValue) 
+                        cmd.Parameters.AddWithValue("@DateTo", dateTo.Value.Date.AddDays(1).AddTicks(-1));
 
                     conn.Open();
                     return Convert.ToInt32(cmd.ExecuteScalar() ?? 0);
                 }
             }
         }
-
 
 
         // This is for Group Reports
