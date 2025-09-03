@@ -20,7 +20,7 @@
         <header class="report-header">
             <h1><i class="fas fa-users me-2"></i>@Model.GroupName Group Report</h1>
             <div class="report-meta">
-                <span><i class="fas fa-calendar-day me-1"></i><strong>Started On:</strong> @Model.GroupStartDate?.ToString("yyyy-MM-dd")</span>
+                <span><i class="fas fa-calendar-day me-1"></i><strong>Group Length:</strong> @Model.GroupStartDate</span>
                 <span><i class="fas fa-user-friends me-1"></i><strong>Total Members:</strong> @Model.TotalMembers</span>
                 <span><i class="fas fa-clock me-1"></i><strong>Frequency:</strong> @Model.ContributionFrequency</span>
                 <span><i class="fas fa-hand-holding-usd me-1"></i><strong>Amount per Member:</strong> @Model.ContributionPerMember.ToString("N2") @Model.Currency</span>
@@ -49,6 +49,17 @@
                     max="@DateTime.Now.ToString("yyyy-MM-dd")" />
             </div>
 
+            <span class="no-print"> Status </span>
+            <div class="input-group input-group-sm no-print" style="max-width: 220px;">
+                <span class="input-group-text"><i class="fas fa-filter"></i></span>
+                <select id="statusFilter" name="statusFilter" class="form-select">
+                <option value="" selected="@(string.IsNullOrEmpty(Context.Request.Query["statusFilter"]))">All</option>
+                <option value="Success" selected="@(Context.Request.Query["statusFilter"] == "Success")">Success</option>
+                <option value="Pending" selected="@(Context.Request.Query["statusFilter"] == "Pending")">Pending</option>
+                <option value="Fail" selected="@(Context.Request.Query["statusFilter"] == "Fail")">Failed</option>
+                </select>
+            </div>
+
            
                 <button type="submit" class="btn btn-primary btn-sm no-print">
                     <i class="fas fa-filter me-1"></i> Filter
@@ -61,7 +72,7 @@
             <div class="card">
                 <h3><i class="fas fa-piggy-bank me-2"></i>Contribution Summary</h3>
                 <div class="card-content">
-                    <p><strong>Total Contributions Collected:</strong> <span class="text-success">@Model.GroupTotalContributions.ToString("N2")</span></p>
+                    <p><strong>Total Contributions Collected:</strong> <span class="text-success">@Model.Currency @Model.GroupTotalContributions.ToString("N2")</span></p>
                     <p><strong>Cycles Completed:</strong> @Model.TotalCycles</p>
                 </div>
             </div>
@@ -73,7 +84,7 @@
                 <h3><i class="fas fa-exclamation-circle me-2"></i>Penalty Summary</h3>
                 <div class="card-content">
                     <p><strong>Number of Penalties:</strong> @Model.TotalGroupPenalties</p>
-                    <p><strong>Total Penalty Amount:</strong> @Model.TotalPenaltiesAmount.ToString("N2")</p>
+                    <p><strong>Total Penalty Amount:</strong>@Model.Currency @Model.TotalPenaltiesAmount.ToString("N2")</p>
                 </div>
             </div>
 
@@ -93,7 +104,7 @@
                     <thead class="table-dark">
                         <tr>
                             <th>Member</th>
-                            <th>Total Paid</th>
+                            <th>Total Paid (@Model.Currency)</th>
                             <th>Missed Payments</th>
                             <th>Penalties</th>
                         </tr>
@@ -168,7 +179,7 @@
             responsive: true,
             plugins: {
                 legend: { display: true },
-                title: { display: true, text: 'Member Contributions' }
+                title: { display: true, text: 'Member Contributions (@Model.Currency)' }
             },
             scales: {
                 y: { beginAtZero: true }

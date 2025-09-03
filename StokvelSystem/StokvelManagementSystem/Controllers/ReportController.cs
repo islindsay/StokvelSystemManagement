@@ -464,13 +464,13 @@ namespace StokvelManagementSystem.Controllers
         // This is for Group Reports
         [Authorize(Roles = "Admin")]
         [HttpGet]
-        public IActionResult GroupReport(int groupId, DateTime? dateFrom, DateTime? dateTo)
+        public IActionResult GroupReport(int groupId, DateTime? dateFrom, DateTime? dateTo, string statusFilter)
         {
             // Fetch member summaries, optionally filtered by dates
-            var memberSummaries = GetGroupMemberSummaries(groupId, dateFrom, dateTo);
+            var memberSummaries = GetGroupMemberSummaries(groupId, dateFrom, dateTo, statusFilter);
 
             // Fetch contributions optionally filtered
-            var contributions = GetGroupContributions(groupId, dateFrom, dateTo);
+            var contributions = GetGroupContributions(groupId, dateFrom, dateTo, statusFilter);
             var (totalCycles, contributionPerMember) = GetGroupCyclesAndContribution(groupId);
 
             var report = new Report
@@ -479,9 +479,9 @@ namespace StokvelManagementSystem.Controllers
                 GroupName = GetGroupName(groupId),
                 Currency = GetGroupCurrency(groupId),
                 TotalMembers = CountGroupMembers(groupId),
-                GroupStartDate = GetGroupStartDate(groupId),
+                GroupStartDate = GetGroupDateRangeString(groupId),
                 ContributionFrequency = GetGroupFrequency(groupId),
-                GroupTotalContributions = CalculateGroupTotalContributions(groupId, dateFrom, dateTo),
+                GroupTotalContributions = CalculateGroupTotalContributions(groupId, dateFrom, dateTo, statusFilter),
                 Period = dateFrom.HasValue && dateTo.HasValue
                             ? $"{dateFrom:yyyy-MM-dd} to {dateTo:yyyy-MM-dd}"
                             : dateFrom.HasValue
@@ -529,19 +529,38 @@ namespace StokvelManagementSystem.Controllers
             return Convert.ToInt32(cmd.ExecuteScalar());
         }
 
-        private DateTime? GetGroupStartDate(int groupId)
+        private string GetGroupDateRangeString(int groupId)
         {
             using var conn = new SqlConnection(_connectionString);
-            var cmd = new SqlCommand("SELECT StartDate FROM Groups WHERE ID = @GroupId", conn);
+
+            var sql = @"
+                SELECT 
+                    g.StartDate AS StartDate,
+                    CASE g.FrequencyID
+                        WHEN 1 THEN DATEADD(DAY, CAST(g.Duration AS INT), g.StartDate)      -- Daily
+                        WHEN 2 THEN DATEADD(MONTH, CAST(g.Duration AS INT), g.StartDate)    -- Monthly
+                        WHEN 3 THEN DATEADD(YEAR, CAST(g.Duration AS INT), g.StartDate)     -- Annually
+                        WHEN 4 THEN DATEADD(DAY, CAST(g.Duration AS INT) * 7, g.StartDate)  -- Weekly
+                    END AS EndDate
+                FROM Groups g
+                WHERE g.ID = @GroupId";
+
+            using var cmd = new SqlCommand(sql, conn);
             cmd.Parameters.AddWithValue("@GroupId", groupId);
+
             conn.Open();
+            var reader = cmd.ExecuteReader();
 
-            var result = cmd.ExecuteScalar();
+            if (reader.Read())
+            {
+                var startDate = reader["StartDate"] != DBNull.Value ? Convert.ToDateTime(reader["StartDate"]).ToString("yyyy-MM-dd") : null;
+                var endDate = reader["EndDate"] != DBNull.Value ? Convert.ToDateTime(reader["EndDate"]).ToString("yyyy-MM-dd") : null;
 
-            if (result == DBNull.Value || result == null)
-                return null;
+                if (!string.IsNullOrEmpty(startDate) && !string.IsNullOrEmpty(endDate))
+                    return $"{startDate} - {endDate}";
+            }
 
-            return Convert.ToDateTime(result);
+            return string.Empty;
         }
 
         private string GetGroupFrequency(int groupId)
@@ -583,42 +602,47 @@ namespace StokvelManagementSystem.Controllers
         }
 
 
-
-        private decimal CalculateGroupTotalContributions(int groupId, DateTime? dateFrom = null, DateTime? dateTo = null)
+        private decimal CalculateGroupTotalContributions(int groupId, DateTime? dateFrom = null, DateTime? dateTo = null, string statusFilter = null)
         {
             using var conn = new SqlConnection(_connectionString);
 
-            // Base query
+            // Base query: always include Status = 'Success'
             var sql = @"SELECT ISNULL(SUM(ContributionAmount), 0) 
                         FROM Contributions 
-                        WHERE MemberGroupID = @GroupId {0}";
+                        WHERE MemberGroupID = @GroupId AND LTRIM(RTRIM(Status)) = 'Success' {0}";
 
-            // Build date filter
-            string dateFilter = "";
+            // Build optional filters
+            var filters = new List<string>();
+
             if (dateFrom.HasValue && dateTo.HasValue)
             {
-                // Extend dateTo to include the end of the day
-                var endOfDay = dateTo.Value.Date.AddDays(1).AddTicks(-1);
-                dateFilter = "AND TransactionDate BETWEEN @DateFrom AND @DateTo";
+                filters.Add("TransactionDate BETWEEN @DateFrom AND @DateTo");
             }
             else if (dateFrom.HasValue)
             {
-                dateFilter = "AND TransactionDate >= @DateFrom";
+                filters.Add("TransactionDate >= @DateFrom");
             }
             else if (dateTo.HasValue)
             {
-                var endOfDay = dateTo.Value.Date.AddDays(1).AddTicks(-1);
-                dateFilter = "AND TransactionDate <= @DateTo";
+                filters.Add("TransactionDate <= @DateTo");
             }
 
-            sql = string.Format(sql, dateFilter);
+            if (!string.IsNullOrEmpty(statusFilter) && statusFilter != "All")
+            {
+                filters.Add("LTRIM(RTRIM(Status)) = @StatusFilter");
+            }
+
+            var filterClause = filters.Count > 0 ? "AND " + string.Join(" AND ", filters) : "";
+            sql = string.Format(sql, filterClause);
 
             using var cmd = new SqlCommand(sql, conn);
             cmd.Parameters.AddWithValue("@GroupId", groupId);
-            if (dateFrom.HasValue) cmd.Parameters.AddWithValue("@DateFrom", dateFrom.Value);
+            if (dateFrom.HasValue) cmd.Parameters.AddWithValue("@DateFrom", dateFrom.Value.Date);
             if (dateTo.HasValue) cmd.Parameters.AddWithValue("@DateTo", dateTo.Value.Date.AddDays(1).AddTicks(-1));
+            if (!string.IsNullOrEmpty(statusFilter) && statusFilter != "All") cmd.Parameters.AddWithValue("@StatusFilter", statusFilter.Trim());
 
-            _logger.LogInformation("Executing CalculateGroupTotalContributions with GroupId={GroupId}, DateFrom={DateFrom}, DateTo={DateTo}", groupId, dateFrom, dateTo);
+            _logger.LogInformation("Executing CalculateGroupTotalContributions with GroupId={GroupId}, DateFrom={DateFrom}, DateTo={DateTo}, StatusFilter={StatusFilter}", 
+                groupId, dateFrom, dateTo, statusFilter);
             _logger.LogInformation("SQL Query: {SQL}", sql);
 
             conn.Open();
@@ -626,75 +650,72 @@ namespace StokvelManagementSystem.Controllers
         }
 
 
-        private List<ContributionViewModel> GetGroupContributions(int groupId, DateTime? dateFrom = null, DateTime? dateTo = null)
+        private List<ContributionViewModel> GetGroupContributions(int groupId, DateTime? dateFrom = null, DateTime? dateTo = null, string statusFilter = null)
+        {
+            var contributions = new List<ContributionViewModel>();
+
+            using (var conn = new SqlConnection(_connectionString))
             {
-                var contributions = new List<ContributionViewModel>();
-
-                using var conn = new SqlConnection(_connectionString);
-
                 // Base query
                 var sql = @"
-                    SELECT c.TransactionDate AS Date, 
+                    SELECT 
+                        c.TransactionDate AS Date, 
                         c.ContributionAmount AS Amount, 
                         pm.Method AS PaymentMethod, 
                         c.ProofOfPaymentPath AS ProofOfPayment, 
-                        CASE WHEN c.PenaltyAmount > 0 THEN 'Missed' ELSE 'Paid' END AS Status
+                        c.Status AS Status
                     FROM Contributions c
                     JOIN PaymentMethods pm ON c.PaymentMethodID = pm.ID
                     WHERE c.MemberGroupID = @GroupId
-                        {0}"; // placeholder for date filter
+                ";
 
-                // Build date filter
-                var dateFilter = "";
-            if (dateFrom.HasValue && dateTo.HasValue)
-            {
-                // Extend dateTo to the end of the day
-                var endOfDay = dateTo.Value.Date.AddDays(1).AddTicks(-1);
-                dateFilter = "AND c.TransactionDate BETWEEN @DateFrom AND @DateTo";
-                _logger.LogInformation("dateFrom={DateFrom}, dateTo={DateTo}", dateFrom.Value, endOfDay);
-                _logger.LogInformation("SQL: {SQL}", sql);
-                _logger.LogInformation("Parameters: @GroupId={GroupId}, @DateFrom={DateFrom}, @DateTo={DateTo}", groupId, dateFrom, dateTo);
+                // Date filtering
+                if (dateFrom.HasValue && dateTo.HasValue)
+                    sql += " AND c.TransactionDate BETWEEN @DateFrom AND @DateTo";
+                else if (dateFrom.HasValue)
+                    sql += " AND c.TransactionDate >= @DateFrom";
+                else if (dateTo.HasValue)
+                    sql += " AND c.TransactionDate <= @DateTo";
 
-                }
-            else if (dateFrom.HasValue)
-            {
-                dateFilter = "AND c.TransactionDate >= @DateFrom";
-                _logger.LogInformation("dateFrom={DateFrom}", dateFrom.Value);
-            }
-            else if (dateTo.HasValue)
-            {
-                var endOfDay = dateTo.Value.Date.AddDays(1).AddTicks(-1);
-                dateFilter = "AND c.TransactionDate <= @DateTo";
-                _logger.LogInformation("dateTo={DateTo}", endOfDay);
-            }
+                // Status filtering
+                if (!string.IsNullOrEmpty(statusFilter) && statusFilter != "All")
+                    sql += " AND LTRIM(RTRIM(c.Status)) = @StatusFilter";
 
-
-                sql = string.Format(sql, dateFilter);
-
-                using var cmd = new SqlCommand(sql, conn);
-                cmd.Parameters.AddWithValue("@GroupId", groupId);
-                if (dateFrom.HasValue) cmd.Parameters.AddWithValue("@DateFrom", dateFrom.Value);
-                if (dateTo.HasValue) cmd.Parameters.AddWithValue("@DateTo", dateTo.Value.Date.AddDays(1).AddTicks(-1));
-
-
-                conn.Open();
-                using var reader = cmd.ExecuteReader();
-                while (reader.Read())
+                using (var cmd = new SqlCommand(sql, conn))
                 {
-                    contributions.Add(new ContributionViewModel
-                    {
-                        Date = Convert.ToDateTime(reader["Date"]),
-                        Amount = Convert.ToDecimal(reader["Amount"]),
-                        PaymentMethod = reader["PaymentMethod"].ToString(),
-                        ProofOfPayment = reader["ProofOfPayment"].ToString(),
-                        Status = reader["Status"].ToString()
-                    });
-                }
+                    cmd.Parameters.AddWithValue("@GroupId", groupId);
 
-                return contributions;
+                    if (dateFrom.HasValue)
+                        cmd.Parameters.AddWithValue("@DateFrom", dateFrom.Value.Date);
+
+                    if (dateTo.HasValue)
+                        cmd.Parameters.AddWithValue("@DateTo", dateTo.Value.Date.AddDays(1).AddTicks(-1));
+
+                    if (!string.IsNullOrEmpty(statusFilter) && statusFilter != "All")
+                        cmd.Parameters.AddWithValue("@StatusFilter", statusFilter.Trim());
+
+                    conn.Open();
+                    using (var reader = cmd.ExecuteReader())
+                    {
+                        while (reader.Read())
+                        {
+                            contributions.Add(new ContributionViewModel
+                            {
+                                Date = Convert.ToDateTime(reader["Date"]),
+                                Amount = Convert.ToDecimal(reader["Amount"]),
+                                PaymentMethod = reader["PaymentMethod"].ToString(),
+                                ProofOfPayment = reader["ProofOfPayment"].ToString(),
+                                Status = reader["Status"].ToString()
+                            });
+                        }
+                    }
+                }
             }
 
-        private List<GroupMemberSummary> GetGroupMemberSummaries(int groupId, DateTime? dateFrom = null, DateTime? dateTo = null)
+            return contributions;
+        }
+
+        private List<GroupMemberSummary> GetGroupMemberSummaries(int groupId, DateTime? dateFrom = null, DateTime? dateTo = null, string statusFilter = null)
         {
             var summaries = new List<GroupMemberSummary>();
             using var conn = new SqlConnection(_connectionString);
@@ -703,33 +724,44 @@ namespace StokvelManagementSystem.Controllers
             var sql = @"
                 SELECT 
                     m.FirstName + ' ' + m.LastName AS FullName,
-                    ISNULL(SUM(c.ContributionAmount), 0) AS TotalPaid,
+                   ISNULL(SUM(CASE WHEN LTRIM(RTRIM(c.Status)) = 'Success' THEN c.ContributionAmount ELSE 0 END), 0) AS TotalPaid,
                     COUNT(CASE WHEN c.PenaltyAmount > 0 THEN 1 END) AS MissedPayments,
                     ISNULL(SUM(c.PenaltyAmount), 0) AS Penalties,
                     m.Status
                 FROM Members m
                 JOIN MemberGroups mg ON m.ID = mg.MemberID
                 LEFT JOIN Contributions c ON mg.ID = c.MemberGroupID
-                    {0}  -- date filter placeholder
                 WHERE mg.GroupID = @GroupId
-                GROUP BY m.FirstName, m.LastName, m.Status";
+            ";
 
-            // Build date filter conditions
-            var dateFilter = "";
+            // Build filters
+            var filters = new List<string>();
+
             if (dateFrom.HasValue && dateTo.HasValue)
-                dateFilter = "AND c.TransactionDate BETWEEN @DateFrom AND @DateTo";
+                filters.Add("c.TransactionDate BETWEEN @DateFrom AND @DateTo");
             else if (dateFrom.HasValue)
-                dateFilter = "AND c.TransactionDate >= @DateFrom";
+                filters.Add("c.TransactionDate >= @DateFrom");
             else if (dateTo.HasValue)
-                dateFilter = "AND c.TransactionDate <= @DateTo";
+                filters.Add("c.TransactionDate <= @DateTo");
 
-            // Inject filter into query
-            sql = string.Format(sql, dateFilter);
+            if (!string.IsNullOrEmpty(statusFilter) && statusFilter != "All")
+                filters.Add("LTRIM(RTRIM(c.Status)) = @StatusFilter");
+
+            if (filters.Count > 0)
+                sql += " AND " + string.Join(" AND ", filters);
+
+            sql += " GROUP BY m.FirstName, m.LastName, m.Status";
 
             using var cmd = new SqlCommand(sql, conn);
             cmd.Parameters.AddWithValue("@GroupId", groupId);
-            if (dateFrom.HasValue) cmd.Parameters.AddWithValue("@DateFrom", dateFrom.Value);
-            if (dateTo.HasValue) cmd.Parameters.AddWithValue("@DateTo", dateTo.Value);
+
+            if (dateFrom.HasValue)
+                cmd.Parameters.AddWithValue("@DateFrom", dateFrom.Value.Date);
+            if (dateTo.HasValue)
+                cmd.Parameters.AddWithValue("@DateTo", dateTo.Value.Date.AddDays(1).AddTicks(-1));
+
+            if (!string.IsNullOrEmpty(statusFilter) && statusFilter != "All")
+                cmd.Parameters.AddWithValue("@StatusFilter", statusFilter.Trim());
 
             conn.Open();
             using var reader = cmd.ExecuteReader();

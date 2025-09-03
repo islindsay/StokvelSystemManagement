@@ -29,7 +29,7 @@ namespace StokvelManagementSystem.Models
 
         //Group Report 
         public int TotalMembers { get; set; }
-        public DateTime? GroupStartDate { get; set; }
+        public String? GroupStartDate { get; set; }
         public string ContributionFrequency { get; set; } // e.g. "Monthly", "Weekly"
         public decimal ContributionAmount { get; set; }
         public decimal GroupTotalContributions { get; set; }
