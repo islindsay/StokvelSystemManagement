@@ -4,6 +4,7 @@ using StokvelManagementSystem.Models;
 using System.Data.SqlClient;
 using System.Security.Claims;
 using Microsoft.Extensions.Logging;
+using System.Text.Json;
 
 namespace StokvelManagementSystem.Controllers
 {
@@ -55,11 +56,12 @@ namespace StokvelManagementSystem.Controllers
                 FirstName = GetMemberFirstName(memberId),
                 LastName = GetMemberLastName(memberId),
                 CurrentStatus = GetMemberStatus(memberId),
-                GroupName = GetMemberGroupName(memberId),
+                GroupName = GetMemberGroupInfo(memberId),
                 Contributions = contributions,
                 Date = DateTime.Now,
                 Period = period,
                 TotalContributionsPaid = CalculateTotalContributions(memberId, dateFrom, dateTo, statusFilter),
+                Graphs = GetGraphs(memberId, dateFrom, dateTo, statusFilter),
                 TotalMissedPayments = CountMissedPayments(memberId, dateFrom, dateTo, statusFilter),
                 PenaltiesApplied = CountPenalties(memberId, dateFrom, dateTo, statusFilter),
             };
@@ -101,29 +103,44 @@ namespace StokvelManagementSystem.Controllers
             }
         }
 
-        private string GetMemberGroupName(string memberId)
+        private string GetMemberGroupInfo(string memberId)
         {
             using (var conn = new SqlConnection(_connectionString))
             {
                 var cmd = new SqlCommand(@"
-                    SELECT g.GroupName 
+                    SELECT g.GroupName, g.Cycles, g.Duration
                     FROM Groups g
                     JOIN MemberGroups mg ON g.ID = mg.GroupID
                     WHERE mg.MemberID = @MemberId", conn);
+
                 cmd.Parameters.AddWithValue("@MemberId", memberId);
+
                 conn.Open();
-                return cmd.ExecuteScalar()?.ToString() ?? "No Group";
+                using (var reader = cmd.ExecuteReader())
+                {
+                    if (reader.Read())
+                    {
+                        var groupName = reader["GroupName"]?.ToString() ?? "No Group";
+                        var cycles = reader["Cycles"] != DBNull.Value ? reader["Cycles"].ToString() : "0";
+                        var duration = reader["Duration"] != DBNull.Value ? reader["Duration"].ToString() : "0";
+
+                        return $"{groupName} - [Cycle ({cycles}/{duration})]";
+                    }
+                }
             }
+
+            return "No Group - [Cycle (0/0)]";
         }
 
-        private List<ContributionViewModel> GetMemberContributions(string memberId, DateTime? dateFrom, DateTime? dateTo, string statusFilter)
-{
-    var contributions = new List<ContributionViewModel>();
 
-    using (var conn = new SqlConnection(_connectionString))
-    {
-        // Base query
-        var sql = @"
+        private List<ContributionViewModel> GetMemberContributions(string memberId, DateTime? dateFrom, DateTime? dateTo, string statusFilter)
+        {
+            var contributions = new List<ContributionViewModel>();
+
+            using (var conn = new SqlConnection(_connectionString))
+            {
+                // Base query
+                var sql = @"
             SELECT 
                 c.TransactionDate AS Date, 
                 c.ContributionAmount AS Amount, 
@@ -137,54 +154,154 @@ namespace StokvelManagementSystem.Controllers
             )
         ";
 
-        // Date filtering
-        if (dateFrom.HasValue && dateTo.HasValue)
-            sql += " AND c.TransactionDate BETWEEN @DateFrom AND @DateTo";
-        else if (dateFrom.HasValue)
-            sql += " AND c.TransactionDate >= @DateFrom";
-        else if (dateTo.HasValue)
-            sql += " AND c.TransactionDate <= @DateTo";
+                // Date filtering
+                if (dateFrom.HasValue && dateTo.HasValue)
+                    sql += " AND c.TransactionDate BETWEEN @DateFrom AND @DateTo";
+                else if (dateFrom.HasValue)
+                    sql += " AND c.TransactionDate >= @DateFrom";
+                else if (dateTo.HasValue)
+                    sql += " AND c.TransactionDate <= @DateTo";
 
-        // Status filtering
-        if (!string.IsNullOrEmpty(statusFilter))
-            sql += " AND LTRIM(RTRIM(c.Status)) = @StatusFilter";
+                // Status filtering
+                if (!string.IsNullOrEmpty(statusFilter))
+                    sql += " AND LTRIM(RTRIM(c.Status)) = @StatusFilter";
 
-        using (var cmd = new SqlCommand(sql, conn))
-        {
-            cmd.Parameters.AddWithValue("@MemberId", memberId);
-
-            if (dateFrom.HasValue) cmd.Parameters.AddWithValue("@DateFrom", dateFrom.Value.Date);
-            if (dateTo.HasValue) cmd.Parameters.AddWithValue("@DateTo", dateTo.Value.Date.AddDays(1).AddTicks(-1));
-
-            if (!string.IsNullOrEmpty(statusFilter))
-                cmd.Parameters.AddWithValue("@StatusFilter", statusFilter.Trim());
-
-            conn.Open();
-            using (var reader = cmd.ExecuteReader())
-            {
-                while (reader.Read())
+                using (var cmd = new SqlCommand(sql, conn))
                 {
-                    contributions.Add(new ContributionViewModel
+                    cmd.Parameters.AddWithValue("@MemberId", memberId);
+
+                    if (dateFrom.HasValue) cmd.Parameters.AddWithValue("@DateFrom", dateFrom.Value.Date);
+                    if (dateTo.HasValue) cmd.Parameters.AddWithValue("@DateTo", dateTo.Value.Date.AddDays(1).AddTicks(-1));
+
+                    if (!string.IsNullOrEmpty(statusFilter))
+                        cmd.Parameters.AddWithValue("@StatusFilter", statusFilter.Trim());
+
+                    conn.Open();
+                    using (var reader = cmd.ExecuteReader())
                     {
-                        Date = Convert.ToDateTime(reader["Date"]),
-                        Amount = Convert.ToDecimal(reader["Amount"]),
-                        PaymentMethod = reader["PaymentMethod"].ToString(),
-                        ProofOfPayment = reader["ProofOfPayment"].ToString(),
-                        Status = reader["Status"].ToString()
-                    });
+                        while (reader.Read())
+                        {
+                            contributions.Add(new ContributionViewModel
+                            {
+                                Date = Convert.ToDateTime(reader["Date"]),
+                                Amount = Convert.ToDecimal(reader["Amount"]),
+                                PaymentMethod = reader["PaymentMethod"].ToString(),
+                                ProofOfPayment = reader["ProofOfPayment"].ToString(),
+                                Status = reader["Status"].ToString()
+                            });
+                        }
+                    }
                 }
             }
-        }
-    }
 
-    return contributions;
-}
+            return contributions;
+
+        }
+
+        public GraphResult GetGraphs(string memberId, DateTime? dateFrom, DateTime? dateTo, string statusFilter)
+        {
+            var result = new GraphResult();
+
+            using (var conn = new SqlConnection(_connectionString))
+            {
+                var sql = @"
+                            SELECT 
+                                g.StartDate AS StartDate,
+                                CASE g.FrequencyID
+                                    WHEN 1 THEN DATEADD(DAY, CAST(g.Duration AS INT), g.StartDate)      -- Daily
+                                    WHEN 2 THEN DATEADD(MONTH, CAST(g.Duration AS INT), g.StartDate)    -- Monthly
+                                    WHEN 3 THEN DATEADD(YEAR, CAST(g.Duration AS INT), g.StartDate)     -- Annually
+                                    WHEN 4 THEN DATEADD(DAY, CAST(g.Duration AS INT) * 7, g.StartDate)  -- Weekly
+                                END AS EndDate,
+
+                                (
+                                    SELECT 
+                                        FORMAT(c.TransactionDate, 'yyyy-MM-dd') AS [Date],
+                                        SUM(c.ContributionAmount) AS [Amount]
+                                    FROM Contributions c
+                                    WHERE c.MemberGroupID IN (
+                                        SELECT GroupID FROM MemberGroups WHERE MemberID = @MemberId
+                                    )
+                                    AND (@Status = '' OR c.Status = @Status)   -- optional filter
+                                    AND (@DateFrom IS NULL OR c.TransactionDate >= @DateFrom)
+                                    AND (@DateTo IS NULL OR c.TransactionDate <= @DateTo)
+                                    GROUP BY FORMAT(c.TransactionDate, 'yyyy-MM-dd')
+                                    FOR JSON PATH
+                                ) AS ContributionsJson
+                            FROM Groups g
+                            JOIN MemberGroups mg ON g.ID = mg.GroupID
+                            WHERE mg.MemberID = @MemberId;
+                ";
+
+                using (var cmd = new SqlCommand(sql, conn))
+                {
+                    cmd.Parameters.AddWithValue("@MemberId", memberId);
+                    cmd.Parameters.AddWithValue("@DateFrom", (object?)dateFrom ?? DBNull.Value);
+                    cmd.Parameters.AddWithValue("@DateTo", (object?)dateTo ?? DBNull.Value);
+                    cmd.Parameters.AddWithValue("@Status", (object?)statusFilter ?? "");
+
+                    conn.Open();
+                    using (var reader = cmd.ExecuteReader())
+                    {
+                        if (reader.Read())
+                        {
+                            int startDateIndex = reader.GetOrdinal("StartDate");
+                            if (!reader.IsDBNull(startDateIndex))
+                                result.StartDate = reader.GetDateTime(startDateIndex);
+
+                            int endDateIndex = reader.GetOrdinal("EndDate");
+                            if (!reader.IsDBNull(endDateIndex))
+                                result.EndDate = reader.GetDateTime(endDateIndex);
+
+                            var contributionsJson = reader["ContributionsJson"]?.ToString() ?? "[]";
+
+                            if (string.IsNullOrWhiteSpace(contributionsJson))
+                                {
+                                    contributionsJson = "[]";
+                                }
+
+                            // Parse JSON into dictionary
+                            var contributions = JsonSerializer.Deserialize<List<Dictionary<string, object>>>(contributionsJson);
+                            if (contributions != null)
+                            {
+                                foreach (var item in contributions)
+                                {
+                                    if (item.ContainsKey("Date") && item.ContainsKey("Amount"))
+                                    {
+                                        var date = item["Date"].ToString();
+
+                                        decimal amount = 0;
+
+                                        // Handle if item["Amount"] is a JsonElement
+                                        if (item["Amount"] is JsonElement je && je.ValueKind == JsonValueKind.Number)
+                                        {
+                                            amount = je.GetDecimal();
+                                        }
+                                        else
+                                        {
+                                            amount = Convert.ToDecimal(item["Amount"]);
+                                        }
+
+                                        result.Contributions[date] = amount;
+                                    }
+                                }
+                            }
+                        }
+                    }
+
+                }
+            }
+
+            return result;
+        }
+
+
         private decimal CalculateTotalContributions(string memberId, DateTime? dateFrom, DateTime? dateTo, string statusFilter)
         {
             using (var conn = new SqlConnection(_connectionString))
             {
                 // Base SQL
-            var sql = @"
+                var sql = @"
                 SELECT ISNULL(SUM(
                     CASE 
                         WHEN Status = 'Success' THEN ContributionAmount

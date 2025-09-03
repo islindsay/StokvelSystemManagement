@@ -1,10 +1,18 @@
 namespace StokvelManagementSystem.Models
 {
 
+    public class GraphResult
+    {
+        public DateTime StartDate { get; set; }
+        public DateTime EndDate { get; set; }
+        public Dictionary<string, decimal> Contributions { get; set; } = new();
+    }
+
+
     public class Report
     {
-        public int GroupId { get; set; } 
-        public int MemberId { get; set; } 
+        public int GroupId { get; set; }
+        public int MemberId { get; set; }
         public string FirstName { get; set; }
         public string LastName { get; set; }
         public string Currency { get; set; }
@@ -32,6 +40,8 @@ namespace StokvelManagementSystem.Models
         public int TotalCycles { get; set; }
 
         public List<GroupMemberSummary> MemberSummaries { get; set; }
+
+        public GraphResult Graphs { get; set; }
     }
     public class ContributionViewModel
     {
