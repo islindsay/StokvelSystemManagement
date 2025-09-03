@@ -205,32 +205,47 @@ namespace StokvelManagementSystem.Controllers
             using (var conn = new SqlConnection(_connectionString))
             {
                 var sql = @"
-                            SELECT 
-                                g.StartDate AS StartDate,
-                                CASE g.FrequencyID
-                                    WHEN 1 THEN DATEADD(DAY, CAST(g.Duration AS INT), g.StartDate)      -- Daily
-                                    WHEN 2 THEN DATEADD(MONTH, CAST(g.Duration AS INT), g.StartDate)    -- Monthly
-                                    WHEN 3 THEN DATEADD(YEAR, CAST(g.Duration AS INT), g.StartDate)     -- Annually
-                                    WHEN 4 THEN DATEADD(DAY, CAST(g.Duration AS INT) * 7, g.StartDate)  -- Weekly
-                                END AS EndDate,
+                    SELECT 
+                        g.StartDate AS StartDate,
+                        CASE g.FrequencyID
+                            WHEN 1 THEN DATEADD(DAY, CAST(g.Duration AS INT), g.StartDate)      -- Daily
+                            WHEN 2 THEN DATEADD(MONTH, CAST(g.Duration AS INT), g.StartDate)    -- Monthly
+                            WHEN 3 THEN DATEADD(YEAR, CAST(g.Duration AS INT), g.StartDate)     -- Annually
+                            WHEN 4 THEN DATEADD(DAY, CAST(g.Duration AS INT) * 7, g.StartDate)  -- Weekly
+                        END AS EndDate,
 
-                                (
-                                    SELECT 
-                                        FORMAT(c.TransactionDate, 'yyyy-MM-dd') AS [Date],
-                                        SUM(c.ContributionAmount) AS [Amount]
-                                    FROM Contributions c
-                                    WHERE c.MemberGroupID IN (
-                                        SELECT GroupID FROM MemberGroups WHERE MemberID = @MemberId
-                                    )
-                                    AND (@Status = '' OR c.Status = @Status)   -- optional filter
-                                    AND (@DateFrom IS NULL OR c.TransactionDate >= @DateFrom)
-                                    AND (@DateTo IS NULL OR c.TransactionDate <= @DateTo)
-                                    GROUP BY FORMAT(c.TransactionDate, 'yyyy-MM-dd')
-                                    FOR JSON PATH
-                                ) AS ContributionsJson
-                            FROM Groups g
-                            JOIN MemberGroups mg ON g.ID = mg.GroupID
-                            WHERE mg.MemberID = @MemberId;
+                        (
+                            SELECT 
+                                FORMAT(c.TransactionDate, 'yyyy-MM-dd') AS [Date],
+                                SUM(c.ContributionAmount) AS [Amount]
+                            FROM Contributions c
+                            WHERE c.MemberGroupID IN (
+                                SELECT GroupID FROM MemberGroups WHERE MemberID = @MemberId
+                            )
+                            AND (@Status = '' OR c.Status = @Status)
+                            AND (@DateFrom IS NULL OR c.TransactionDate >= @DateFrom)
+                            AND (@DateTo IS NULL OR c.TransactionDate <= @DateTo)
+                            GROUP BY FORMAT(c.TransactionDate, 'yyyy-MM-dd')
+                            FOR JSON PATH
+                        ) AS ContributionsJson,
+
+                        (
+                            SELECT 
+                                FORMAT(p.TransactionDate, 'yyyy-MM-dd') AS [Date],
+                                SUM(p.Amount) AS [Amount]
+                            FROM Payouts p
+                            WHERE p.MemberGroupID IN (
+                                SELECT GroupID FROM MemberGroups WHERE MemberID = @MemberId
+                            )
+                            AND p.Status = 'Success'  -- only include successful payouts
+                            AND (@DateFrom IS NULL OR p.TransactionDate >= @DateFrom)
+                            AND (@DateTo IS NULL OR p.TransactionDate <= @DateTo)
+                            GROUP BY FORMAT(p.TransactionDate, 'yyyy-MM-dd')
+                            FOR JSON PATH
+                        ) AS PayoutsJson
+                    FROM Groups g
+                    JOIN MemberGroups mg ON g.ID = mg.GroupID
+                    WHERE mg.MemberID = @MemberId;
                 ";
 
                 using (var cmd = new SqlCommand(sql, conn))
@@ -245,22 +260,17 @@ namespace StokvelManagementSystem.Controllers
                     {
                         if (reader.Read())
                         {
-                            int startDateIndex = reader.GetOrdinal("StartDate");
-                            if (!reader.IsDBNull(startDateIndex))
-                                result.StartDate = reader.GetDateTime(startDateIndex);
+                            // Start and End Dates
+                            if (!reader.IsDBNull(reader.GetOrdinal("StartDate")))
+                                result.StartDate = reader.GetDateTime(reader.GetOrdinal("StartDate"));
+                            if (!reader.IsDBNull(reader.GetOrdinal("EndDate")))
+                                result.EndDate = reader.GetDateTime(reader.GetOrdinal("EndDate"));
 
-                            int endDateIndex = reader.GetOrdinal("EndDate");
-                            if (!reader.IsDBNull(endDateIndex))
-                                result.EndDate = reader.GetDateTime(endDateIndex);
-
+                            // Contributions JSON
                             var contributionsJson = reader["ContributionsJson"]?.ToString() ?? "[]";
-
                             if (string.IsNullOrWhiteSpace(contributionsJson))
-                                {
-                                    contributionsJson = "[]";
-                                }
+                                contributionsJson = "[]";
 
-                            // Parse JSON into dictionary
                             var contributions = JsonSerializer.Deserialize<List<Dictionary<string, object>>>(contributionsJson);
                             if (contributions != null)
                             {
@@ -269,32 +279,49 @@ namespace StokvelManagementSystem.Controllers
                                     if (item.ContainsKey("Date") && item.ContainsKey("Amount"))
                                     {
                                         var date = item["Date"].ToString();
-
                                         decimal amount = 0;
 
-                                        // Handle if item["Amount"] is a JsonElement
                                         if (item["Amount"] is JsonElement je && je.ValueKind == JsonValueKind.Number)
-                                        {
                                             amount = je.GetDecimal();
-                                        }
                                         else
-                                        {
                                             amount = Convert.ToDecimal(item["Amount"]);
-                                        }
 
                                         result.Contributions[date] = amount;
                                     }
                                 }
                             }
+
+                            // Payouts JSON
+                            var payoutsJson = reader["PayoutsJson"]?.ToString() ?? "[]";
+                            if (string.IsNullOrWhiteSpace(payoutsJson))
+                                payoutsJson = "[]";
+
+                            var payouts = JsonSerializer.Deserialize<List<Dictionary<string, object>>>(payoutsJson);
+                            if (payouts != null)
+                            {
+                                foreach (var item in payouts)
+                                {
+                                    if (item.ContainsKey("Date") && item.ContainsKey("Amount"))
+                                    {
+                                        var date = item["Date"].ToString();
+                                        decimal amount = 0;
+
+                                        if (item["Amount"] is JsonElement je && je.ValueKind == JsonValueKind.Number)
+                                            amount = je.GetDecimal();
+                                        else
+                                            amount = Convert.ToDecimal(item["Amount"]);
+
+                                        result.Payouts[date] = amount;
+                                    }
+                                }
+                            }
                         }
                     }
-
                 }
             }
 
             return result;
         }
-
 
         private decimal CalculateTotalContributions(string memberId, DateTime? dateFrom, DateTime? dateTo, string statusFilter)
         {
@@ -720,17 +747,19 @@ namespace StokvelManagementSystem.Controllers
             var summaries = new List<GroupMemberSummary>();
             using var conn = new SqlConnection(_connectionString);
 
-            // Base query
+            // Base query including Payouts
             var sql = @"
                 SELECT 
                     m.FirstName + ' ' + m.LastName AS FullName,
-                   ISNULL(SUM(CASE WHEN LTRIM(RTRIM(c.Status)) = 'Success' THEN c.ContributionAmount ELSE 0 END), 0) AS TotalPaid,
+                    ISNULL(SUM(CASE WHEN LTRIM(RTRIM(c.Status)) = 'Success' THEN c.ContributionAmount ELSE 0 END), 0) AS TotalPaid,
                     COUNT(CASE WHEN c.PenaltyAmount > 0 THEN 1 END) AS MissedPayments,
                     ISNULL(SUM(c.PenaltyAmount), 0) AS Penalties,
+                    ISNULL(SUM(CASE WHEN LTRIM(RTRIM(p.Status)) = 'Success' THEN p.Amount ELSE 0 END), 0) AS TotalPayouts,
                     m.Status
                 FROM Members m
                 JOIN MemberGroups mg ON m.ID = mg.MemberID
                 LEFT JOIN Contributions c ON mg.ID = c.MemberGroupID
+                LEFT JOIN Payouts p ON mg.ID = p.MemberGroupID
                 WHERE mg.GroupID = @GroupId
             ";
 
@@ -738,11 +767,11 @@ namespace StokvelManagementSystem.Controllers
             var filters = new List<string>();
 
             if (dateFrom.HasValue && dateTo.HasValue)
-                filters.Add("c.TransactionDate BETWEEN @DateFrom AND @DateTo");
+                filters.Add("(c.TransactionDate BETWEEN @DateFrom AND @DateTo OR p.TransactionDate BETWEEN @DateFrom AND @DateTo)");
             else if (dateFrom.HasValue)
-                filters.Add("c.TransactionDate >= @DateFrom");
+                filters.Add("(c.TransactionDate >= @DateFrom OR p.TransactionDate >= @DateFrom)");
             else if (dateTo.HasValue)
-                filters.Add("c.TransactionDate <= @DateTo");
+                filters.Add("(c.TransactionDate <= @DateTo OR p.TransactionDate <= @DateTo)");
 
             if (!string.IsNullOrEmpty(statusFilter) && statusFilter != "All")
                 filters.Add("LTRIM(RTRIM(c.Status)) = @StatusFilter");
@@ -773,6 +802,7 @@ namespace StokvelManagementSystem.Controllers
                     TotalPaid = Convert.ToDecimal(reader["TotalPaid"]),
                     MissedPayments = Convert.ToInt32(reader["MissedPayments"]),
                     Penalties = Convert.ToDecimal(reader["Penalties"]),
+                    TotalPayouts = Convert.ToDecimal(reader["TotalPayouts"]),
                     Status = reader["Status"].ToString()
                 });
             }

@@ -166,54 +166,66 @@
         });
     </script>
     <script>
-        var ctx = document.getElementById('contributionChart').getContext('2d');
+  var ctx = document.getElementById('contributionChart').getContext('2d');
 
-        // Prepare data from model
-        var labels = @Html.Raw(JsonSerializer.Serialize(Model.Graphs.Contributions.Keys));
-        var data = @Html.Raw(JsonSerializer.Serialize(Model.Graphs.Contributions.Values));
+            // Prepare data from model
+            var labels = @Html.Raw(JsonSerializer.Serialize(Model.Graphs.Contributions.Keys));
+            var contributionData = @Html.Raw(JsonSerializer.Serialize(Model.Graphs.Contributions.Values));
+            var payoutData = @Html.Raw(JsonSerializer.Serialize(Model.Graphs.Payouts.Values)); // Payouts
 
-        new Chart(ctx, {
-            type: 'line', // or 'bar'
-            data: {
-                labels: labels,
-                datasets: [{
-                    label: 'Contribution Amount',
-                    data: data,
-                    fill: true,
-                    borderColor: 'rgba(54, 162, 235, 1)',
-                    backgroundColor: 'rgba(54, 162, 235, 0.2)',
-                    tension: 0.3
-                }]
-            },
-            options: {
-                responsive: true,
-                plugins: {
-                    legend: {
-                        display: true,
-                        position: 'top'
-                    },
-                    tooltip: {
-                        mode: 'index',
-                        intersect: false
-                    }
+            new Chart(ctx, {
+                type: 'line', // or 'bar'
+                data: {
+                    labels: labels,
+                    datasets: [
+                        {
+                            label: 'Contribution Amount',
+                            data: contributionData,
+                            fill: true,
+                            borderColor: 'rgba(54, 162, 235, 1)',
+                            backgroundColor: 'rgba(54, 162, 235, 0.2)',
+                            tension: 0.3
+                        },
+                        {
+                            label: 'Payout Amount',
+                            data: payoutData,
+                            fill: true,
+                            borderColor: 'rgba(255, 99, 132, 1)',
+                            backgroundColor: 'rgba(255, 99, 132, 0.2)',
+                            tension: 0.3
+                        }
+                    ]
                 },
-                scales: {
-                    x: {
-                        title: {
+                options: {
+                    responsive: true,
+                    plugins: {
+                        legend: {
                             display: true,
-                            text: 'Date'
+                            position: 'top'
+                        },
+                        tooltip: {
+                            mode: 'index',
+                            intersect: false
                         }
                     },
-                    y: {
-                        title: {
-                            display: true,
-                            text: 'Amount'
+                    scales: {
+                        x: {
+                            title: {
+                                display: true,
+                                text: 'Date'
+                            }
                         },
-                        beginAtZero: true
+                        y: {
+                            title: {
+                                display: true,
+                                text: 'Amount'
+                            },
+                            beginAtZero: true
+                        }
                     }
                 }
-            }
-        });
+            });
+
     </script>
 </body>
 </html>

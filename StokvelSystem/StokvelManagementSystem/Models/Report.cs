@@ -1,12 +1,17 @@
 namespace StokvelManagementSystem.Models
 {
 
-    public class GraphResult
-    {
-        public DateTime StartDate { get; set; }
-        public DateTime EndDate { get; set; }
-        public Dictionary<string, decimal> Contributions { get; set; } = new();
-    }
+public class GraphResult
+{
+    public DateTime StartDate { get; set; }
+    public DateTime EndDate { get; set; }
+
+    // Contributions per day (key = date string "yyyy-MM-dd", value = amount)
+    public Dictionary<string, decimal> Contributions { get; set; } = new();
+
+    // Payouts per day (key = date string "yyyy-MM-dd", value = amount)
+    public Dictionary<string, decimal> Payouts { get; set; } = new();
+}
 
 
     public class Report
@@ -56,6 +61,7 @@ namespace StokvelManagementSystem.Models
     {
         public string FullName { get; set; }
         public decimal TotalPaid { get; set; }
+        public decimal TotalPayouts { get; set; }
         public int MissedPayments { get; set; }
         public decimal Penalties { get; set; }
         public string Status { get; set; }

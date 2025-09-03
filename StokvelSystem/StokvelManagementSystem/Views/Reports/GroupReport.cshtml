@@ -105,6 +105,7 @@
                         <tr>
                             <th>Member</th>
                             <th>Total Paid (@Model.Currency)</th>
+                            <th>Total Payouts (@Model.Currency)</th>
                             <th>Missed Payments</th>
                             <th>Penalties</th>
                         </tr>
@@ -118,6 +119,7 @@
                             <tr>
                                 <td>@member.FullName</td>
                                 <td class="text-success">@member.TotalPaid.ToString("N2")</td>
+                                <td class="text-success">@member.TotalPayouts.ToString("N2")</td>
                                 <td class="text-danger">@member.MissedPayments</td>
                                 <td>@member.Penalties.ToString("N2")</td>
                             </tr>
@@ -173,7 +175,19 @@
                 backgroundColor: 'rgba(54, 162, 235, 0.6)',
                 borderColor: 'rgba(54, 162, 235, 1)',
                 borderWidth: 1
-            }]
+            },
+
+                        {
+                label: 'Total Payouts',
+                data: @Html.Raw(JsonSerializer.Serialize(
+                    Model.MemberSummaries?.Select(m => m.TotalPayouts) ?? new List<decimal>()
+                )),
+                backgroundColor: 'rgba(255, 99, 132, 0.6)',
+                borderColor: 'rgba(255, 99, 132, 1)',
+                borderWidth: 1
+            }
+            
+            ]
         },
         options: {
             responsive: true,
