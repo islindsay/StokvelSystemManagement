@@ -9,6 +9,7 @@ using Microsoft.AspNetCore.Authorization;
 using System.Linq;
 using Microsoft.Extensions.Logging;
 using System;
+using System.Text.RegularExpressions;
 
 namespace StokvelManagementSystem.Controllers
 {
@@ -125,13 +126,12 @@ public IActionResult GetGroupDetails(int memberId)
             // [ValidateAntiForgeryToken]
             public IActionResult ContributionsCreate(Contribution model, int groupId)
             {
-
                 _logger.LogInformation($"Creating contribution for group ID: {groupId}");   
                 var memberIdClaim = User.Claims.FirstOrDefault(c => c.Type == "member_id");
                 if (memberIdClaim != null && int.TryParse(memberIdClaim.Value, out var memberId))
                 {
                     model.CreatedBy = memberId.ToString();
-                    ModelState.Remove("CreatedBy"); // ✅ Clear error manually since we set it ourselves
+                    ModelState.Remove("CreatedBy");
                 }
                 else
                 {
@@ -139,117 +139,65 @@ public IActionResult GetGroupDetails(int memberId)
                     ModelState.AddModelError("CreatedBy", "Unable to determine member identity.");
                 }
 
-                var members = new List<SelectListItem>();
-                using (var connection = new SqlConnection(_configuration.GetConnectionString("DefaultConnection")))
-                {
-                    var memberQuery = @"
-                        SELECT 
-                        mg.ID, 
-                        CONCAT(m.FirstName, ' ', m.LastName) AS FullName,
-                        m.Email,
-                        m.Phone
-                        FROM MemberGroups mg
-                        JOIN Members m ON mg.MemberID = m.ID
-                        WHERE mg.GroupID = @GroupId
-                        ";
-
-                    using (var command = new SqlCommand(memberQuery, connection))
-                    {
-                        command.Parameters.AddWithValue("@GroupId", groupId);
-                        connection.Open();
-                        using (var reader = command.ExecuteReader())
-                        {
-                            while (reader.Read())
-                            {
-                                members.Add(new SelectListItem
-                                {
-                                    Value = reader["ID"].ToString(),
-                                    Text = reader["FullName"].ToString()
-                                });
-                            }
-                        }
-                    }
-                }
-
-                // model.MemberOptions = members
-                // .Select(m => new MemberOption
-                // {
-                //     Id = int.Parse(m.Value),
-                //     FullName = m.Text
-                // })
-                // .ToList();
-
                 model.PaymentMethods = GetPaymentMethodsFromDatabase();
 
                 try
                 {
-                    // Calculate total amount
                     model.TotalAmount = model.ContributionAmount + model.PenaltyAmount;
-
-                    // Handle file upload
-                    // if (Request.Form.Files.Count > 0)
-                    // {
-                    //     var file = Request.Form.Files["ProofOfPayment"];
-                    //     if (file != null && file.Length > 0)
-                    //     {
-                    //         var uploadsFolder = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", "uploads");
-                    //         if (!Directory.Exists(uploadsFolder))
-                    //             Directory.CreateDirectory(uploadsFolder);
-
-                    //         var uniqueFileName = $"{Guid.NewGuid()}_{file.FileName}";
-                    //         var filePath = Path.Combine(uploadsFolder, uniqueFileName);
-
-                    //         using (var stream = new FileStream(filePath, FileMode.Create))
-                    //         {
-                    //             file.CopyTo(stream);
-                    //         }
-
-                    //         model.ProofOfPaymentPath = $"/uploads/{uniqueFileName}";
-                    //         _logger.LogInformation($"ProofOfPaymentPath: {model.ProofOfPaymentPath}");
-                    //         ModelState.Remove("ProofOfPaymentPath"); // ✅ Clear error manually since we set it ourselves
-                    //     }
-                    //     else{
-                    //         _logger.LogInformation($"File does not exist");
-                    //     }
-                    // }
-                    // else{
-                    //         _logger.LogInformation($"No uploaded files");
-                    //     }
-
                     model.GroupId = groupId;
 
-                    if (!ModelState.IsValid)
+                    // Validate CVC
+                    if (string.IsNullOrWhiteSpace(model.CVC) || !Regex.IsMatch(model.CVC, @"^\d{3,4}$"))
+                    {
+                        ModelState.AddModelError("CVC", "CVC must be 3 or 4 digits.");
+                    }
+
+                    // Validate Expiry
+                    if (string.IsNullOrWhiteSpace(model.Expiry) || !Regex.IsMatch(model.Expiry, @"^(0[1-9]|1[0-2])\/\d{2}$"))
+                    {
+                        ModelState.AddModelError("Expiry", "Expiry date must be in MM/YY format.");
+                    }
+                    else
+                    {
+                        // Check if expiry is in the past
+                        var parts = model.Expiry.Split('/');
+                        var month = int.Parse(parts[0]);
+                        var year = 2000 + int.Parse(parts[1]);
+                        var expiry = new DateTime(year, month, DateTime.DaysInMonth(year, month));
+                        if (expiry < DateTime.Now.Date)
+                            ModelState.AddModelError("Expiry", "Expiry date cannot be in the past.");
+                    }
+
+                   if (!ModelState.IsValid)
                         {
+                            _logger.LogInformation("Model not valid. Listing all validation errors:");
+
                             foreach (var state in ModelState)
+                            {
+                                var fieldKey = state.Key;
+                                var errors = state.Value.Errors;
+
+                                foreach (var error in errors)
                                 {
-                                    foreach (var error in state.Value.Errors)
-                                    {
-                                        _logger.LogError($"Field: {state.Key} - Error: {error.ErrorMessage}");
-                                    }
+                                    _logger.LogError("Field: {Field}, Error: {ErrorMessage}", fieldKey, error.ErrorMessage);
                                 }
+                            }
 
-                            model.GroupId = groupId;
-
-                            // Optional: Reload member list and payment methods if needed again
-
-                            model.PaymentMethods = GetPaymentMethodsFromDatabase();
-
-                            _logger.LogInformation("Model not valid");
                             return View("~/Views/Transactions/ContributionsCreate.cshtml", model);
                         }
-                    
-                    // Insert into DB
-                    _logger.LogInformation($"Attempting to insert into DB. with groupId: {groupId} and membergroup id: {model.MemberGroupID}");
+
+
+                    // Insert into DB with CVC and Expiry
                     using (var connection = new SqlConnection(_configuration.GetConnectionString("DefaultConnection")))
                     {
                         var query = @"
                             INSERT INTO Contributions 
                                 (MemberGroupID, PaymentMethodID, PenaltyAmount, ContributionAmount, 
-                                TotalAmount, TransactionDate, AccountNumber, CreatedBy, PaidForCycle)
+                                TotalAmount, TransactionDate, AccountNumber, CVC, Expiry, CreatedBy, PaidForCycle)
                             SELECT 
                                 @MemberGroupID, @PaymentMethodID, @PenaltyAmount, @ContributionAmount, 
-                                @TotalAmount, @TransactionDate, @AccountNumber, @CreatedBy,
-                                g.Cycles  -- This sets PaidForCycle from Groups table
+                                @TotalAmount, @TransactionDate, @AccountNumber, @CVC, @Expiry, @CreatedBy,
+                                g.Cycles
                             FROM MemberGroups mg
                             JOIN Groups g ON mg.GroupID = g.ID
                             WHERE mg.ID = @MemberGroupID;";
@@ -263,35 +211,27 @@ public IActionResult GetGroupDetails(int memberId)
                             command.Parameters.AddWithValue("@TotalAmount", model.TotalAmount);
                             command.Parameters.AddWithValue("@TransactionDate", model.TransactionDate);
                             command.Parameters.AddWithValue("@AccountNumber", model.AccountNumber ?? (object)DBNull.Value);
+                            command.Parameters.AddWithValue("@CVC", model.CVC ?? (object)DBNull.Value);
+                            command.Parameters.AddWithValue("@Expiry", model.Expiry ?? (object)DBNull.Value);
                             command.Parameters.AddWithValue("@CreatedBy", model.CreatedBy);
 
                             connection.Open();
                             int rowsAffected = command.ExecuteNonQuery();
-
                             if (rowsAffected == 0)
-                            {
-                                throw new Exception("Insert failed: No rows affected. Check MemberGroupID or related data.");
-                            }
+                                throw new Exception("Insert failed: No rows affected.");
                         }
                     }
 
-
-                    model.GroupId = groupId;
-                    _logger.LogInformation($"Group Id being passdown: {model.GroupId} vs {groupId}");
                     TempData["SuccessMessage"] = "Transaction recorded successfully!";
                     return RedirectToAction("ContributionsIndex", new { groupId = model.GroupId });
                 }
                 catch (Exception ex)
                 {
                     ModelState.AddModelError("", $"Error saving transaction: {ex.Message}");
-                    model.GroupId = groupId;
-
-                    // Optional: Reload member list and payment methods if needed again
                     model.PaymentMethods = GetPaymentMethodsFromDatabase();
                     return View("~/Views/Transactions/ContributionsCreate.cshtml", model);
                 }
             }
-
 
 
             [AllowAnonymous]
