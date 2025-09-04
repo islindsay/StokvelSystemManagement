@@ -68,21 +68,21 @@
                     <h5 class="mb-3 text-primary"><i class="bi bi-cash me-2"></i>Contribution Summary</h5>
                     <div class="row">
                         <div class="col-md-4">
-                            <label asp-for="ContributionAmount" class="form-label fw-bold">Contribution</label>
+                            <label asp-for="ContributionAmount" class="form-label fw-bold">Contribution Amount</label>
                             <div class="input-group">
                                 <span class="input-group-text">@Model.CurrencySymbol</span>
                                 <input asp-for="ContributionAmount" class="form-control" type="number" readonly />
                             </div>
                         </div>
                         <div class="col-md-4">
-                            <label asp-for="PenaltyAmount" class="form-label fw-bold">Penalty</label>
+                            <label asp-for="PenaltyAmount" class="form-label fw-bold">Penalty Amount</label>
                             <div class="input-group">
                                 <span class="input-group-text">@Model.CurrencySymbol</span>
                                 <input asp-for="PenaltyAmount" class="form-control" type="number" readonly />
                             </div>
                         </div>
                         <div class="col-md-4">
-                            <label asp-for="TotalAmount" class="form-label fw-bold">Total Payable</label>
+                            <label asp-for="TotalAmount" class="form-label fw-bold">Total Amount</label>
                             <div class="input-group">
                                 <span class="input-group-text">@Model.CurrencySymbol</span>
                                 <input asp-for="TotalAmount" class="form-control fw-bold text-success" type="number" readonly />

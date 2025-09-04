@@ -274,7 +274,7 @@
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script>
         document.addEventListener("DOMContentLoaded", () => {
-            const groupId = @Model.Group.ID; // Pass group ID dynamically
+            const groupId = @Model.Group.ID; 
             loadGroupStats(groupId);
             setupGroupSettings();
             setupActiveCollapses();
@@ -282,20 +282,16 @@
             initializeCollapseIcons();
         });
 
-        // Initialize collapse icons
         function initializeCollapseIcons() {
-            // Set up all collapse toggles
             document.querySelectorAll('[data-bs-toggle="collapse"]').forEach(button => {
                 const target = button.getAttribute('data-bs-target');
                 const collapseElement = document.querySelector(target);
                 
-                // Check if collapse is shown by default
                 if (collapseElement.classList.contains('show')) {
                     button.querySelector('.collapse-toggle').classList.add('fa-chevron-up');
                     button.querySelector('.collapse-toggle').classList.remove('fa-chevron-down');
                 }
                 
-                // Add event listener for collapse show/hide
                 collapseElement.addEventListener('show.bs.collapse', function () {
                     button.querySelector('.collapse-toggle').classList.add('fa-chevron-up');
                     button.querySelector('.collapse-toggle').classList.remove('fa-chevron-down');
@@ -308,7 +304,6 @@
             });
         }
 
-        // -------------------- Load Group Stats --------------------
         function loadGroupStats(groupId) {
             fetch(`/Invites/GroupStats/${groupId}`)
                 .then(res => res.ok ? res.json() : Promise.reject("Failed to load stats"))
@@ -329,17 +324,14 @@
                 });
         }
 
-        // -------------------- Setup collapses for active item --------------------
         function setupActiveCollapses() {
             const activeItem = document.querySelector('.list-group-item.active');
             if (!activeItem) return;
 
             const collapseDiv = activeItem.closest('.collapse');
             if (collapseDiv) {
-                // Show the collapse that contains the active item
                 const bsCollapse = new bootstrap.Collapse(collapseDiv, { show: true });
                 
-                // Update the toggle button state
                 const toggleBtn = document.querySelector(`[data-bs-target="#${collapseDiv.id}"]`);
                 if (toggleBtn) {
                     toggleBtn.setAttribute('aria-expanded', 'true');
@@ -349,7 +341,6 @@
             }
         }
 
-        // -------------------- Group Settings Partial --------------------
         function setupGroupSettings() {
             const editLink = document.getElementById("editGroupSettingsLink");
             const container = document.getElementById("partial-content-container");
@@ -372,7 +363,6 @@
             }
         }
 
-        // -------------------- Admin Report Popup --------------------
         function setupPopupToggle() {
             const reportBtn = document.getElementById('reportToggleBtn');
             const popup = document.getElementById('reportPopup');
@@ -383,7 +373,6 @@
                 e.preventDefault();
                 e.stopPropagation();
                 
-                // Toggle popup visibility
                 if (popup.style.display === 'block') {
                     popup.style.display = 'none';
                 } else {
@@ -391,20 +380,17 @@
                 }
             });
 
-            // Close popup when clicking outside
             document.addEventListener('click', (e) => {
                 if (!popup.contains(e.target) && e.target !== reportBtn) {
                     popup.style.display = 'none';
                 }
             });
 
-            // Stop propagation for popup items
             popup.querySelectorAll('.dropdown-item').forEach(item => {
                 item.addEventListener('click', (e) => e.stopPropagation());
             });
         }
 
-        // -------------------- Request Actions (Approve / Reject / Delete) --------------------
         function handleRequestAction(url, requestId, button, method = 'POST', confirmMsg = null) {
             if (confirmMsg && !confirm(confirmMsg)) return;
 
