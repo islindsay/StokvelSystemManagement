@@ -995,6 +995,23 @@ namespace StokvelManagementSystem.Controllers
                             });
                         }
                     }
+
+                    // Fetch all frequencies for dropdown
+                    string freqQuery = "SELECT FrequencyName FROM Frequencies";
+                    using (var cmd = new SqlCommand(freqQuery, conn))
+                    using (var reader = cmd.ExecuteReader())
+                    {
+                        while (reader.Read())
+                        {
+                            string freq = reader["FrequencyName"].ToString();
+                            groupInfo.FrequencyOptions.Add(new SelectListItem
+                            {
+                                Value = freq,
+                                Text = freq,
+                                Selected = freq == groupInfo.FrequencyName
+                            });
+                        }
+                    }
                 }
             }
 

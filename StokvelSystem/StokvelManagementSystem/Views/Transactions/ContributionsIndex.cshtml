@@ -67,9 +67,9 @@
                                 <tr>
                                     <td>@(item.GroupName ?? "N/A")</td>
                                     <td>@(item.FirstName ?? "N/A")</td>
-                                    <td class="text-end">@item.ContributionAmount.ToString("C")</td>
-                                    <td class="text-end @(item.PenaltyAmount > 0 ? "text-danger" : "")">@item.PenaltyAmount.ToString("C")</td>
-                                    <td class="text-end fw-bold">@item.TotalAmount.ToString("C")</td>
+                                    <td class="text-end text-primary"><span class="fw-bold text-muted">@item.CurrencySymbol</span> @item.ContributionAmount</td>
+                                    <td class="text-end text-primary @(item.PenaltyAmount > 0 ? "text-danger" : "")"><span class="fw-bold text-muted">@item.CurrencySymbol</span> @item.PenaltyAmount</td>
+                                    <td class="text-end fw-bold text-primary"><span class="fw-bold text-muted">@item.CurrencySymbol</span> @item.TotalAmount</td>
                                     <td>@item.TransactionDate.ToString("dd MMM yyyy")</td>
                                     <td>@item.ID</td>
                                     <td>@item.CreatedBy</td>
@@ -77,11 +77,12 @@
                                         <button type="button" class="btn btn-sm btn-outline-primary view-details-btn"
                                             data-group="@item.GroupName"
                                             data-member="@item.FirstName"
-                                            data-contribution="@item.ContributionAmount.ToString("C")"
-                                            data-penalty="@item.PenaltyAmount.ToString("C")"
-                                            data-total="@item.TotalAmount.ToString("C")"
+                                            data-contribution="@item.ContributionAmount"
+                                            data-penalty="@item.PenaltyAmount"
+                                            data-total="@item.TotalAmount"
                                             data-date="@item.TransactionDate.ToString("dd MMM yyyy")"
                                             data-createdby="@item.CreatedBy"
+                                            data-currency="@item.CurrencySymbol""
                                             data-accountnumber="@item.AccountNumber"
                                             data-cvc="@item.CVC"
                                             data-expiry="@item.Expiry">
@@ -132,30 +133,30 @@
 @section Scripts {
     @await Html.PartialAsync("_ValidationScriptsPartial")
     <script>
-        document.querySelectorAll(".view-details-btn").forEach(button => {
-            button.addEventListener("click", function () {
-                document.getElementById("modalGroupName").textContent = this.dataset.group;
-                document.getElementById("modalMemberName").textContent = this.dataset.member;
-                document.getElementById("modalContribution").textContent = this.dataset.contribution;
-                document.getElementById("modalPenalty").textContent = this.dataset.penalty;
-                document.getElementById("modalTotal").textContent = this.dataset.total;
-                document.getElementById("modalDate").textContent = this.dataset.date;
-                document.getElementById("modalCreatedBy").textContent = this.dataset.createdby;
+            document.querySelectorAll(".view-details-btn").forEach(button => {
+                button.addEventListener("click", function () {
+                    
+                    document.getElementById("modalGroupName").textContent = this.dataset.group;
+                    document.getElementById("modalMemberName").textContent = this.dataset.member;
+                    document.getElementById("modalContribution").textContent = this.dataset.currency + " " + this.dataset.contribution;
+                    document.getElementById("modalPenalty").textContent = this.dataset.currency + " " + this.dataset.penalty;
+                    document.getElementById("modalTotal").textContent = this.dataset.currency + " " + this.dataset.total;
+                    document.getElementById("modalDate").textContent = this.dataset.date;
+                    document.getElementById("modalCreatedBy").textContent = this.dataset.createdby;
 
-                // New fields
-                document.getElementById("modalAccountNumber").textContent =
-                this.dataset.accountnumber
-                ? "**** **** **** " + this.dataset.accountnumber.slice(-4)
-                : "";
+                    document.getElementById("modalAccountNumber").textContent =
+                        this.dataset.accountnumber
+                        ? "**** **** **** " + this.dataset.accountnumber.slice(-4)
+                        : "";
 
-                // The property names must match the converted data attributes
-                document.getElementById("modalCVC").textContent = this.dataset.cvc;
-                document.getElementById("modalExpiry").textContent = this.dataset.expiry;
+                    document.getElementById("modalCVC").textContent = this.dataset.cvc;
+                    document.getElementById("modalExpiry").textContent = this.dataset.expiry;
 
-                var modal = new bootstrap.Modal(document.getElementById('contributionModal'));
-                modal.show();
+                    var modal = new bootstrap.Modal(document.getElementById('contributionModal'));
+                    modal.show();
+                });
             });
-        });
+
 
 
         $(document).ready(function () {

@@ -28,6 +28,7 @@ namespace StokvelManagementSystem.Models
         public string? Currency { get; set; }
         public List<SelectListItem> CurrencyOptions { get; set; } = new();
         public string FrequencyName { get; set; }
+        public List<SelectListItem> FrequencyOptions { get; set; } = new(); // new
 
         // New properties for member tracking
         public int CurrentMembers { get; set; } = 0;
