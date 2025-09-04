@@ -49,17 +49,48 @@
                             <option value="">-- Select --</option>
                         </select>
                     </div>
-                    <div class="form-group mb-3">
-                        <label for="AccountNumber" class="form-label fw-bold">Account Number</label>
-                        <input id="AccountNumber" 
-                            name="AccountNumber" 
-                            class="form-control" 
-                            type="text" 
-                            pattern="\d{13,19}" 
-                            title="Enter a valid account number (13–19 digits)" 
-                            required>
-                        <div id="accountError" class="text-danger mt-1"></div>
+                    <div class="row g-2 mb-3">
+                        <div class="col-6">
+                            <label for="AccountNumber" class="form-label fw-bold">Account Number</label>
+                            <input id="AccountNumber" 
+                                name="AccountNumber" 
+                                class="form-control" 
+                                type="text" 
+                                pattern="\d{13,19}" 
+                                title="Enter a valid account number (13–19 digits)" 
+                                required>
+                            <div id="accountError" class="text-danger mt-1"></div>
+                        </div>
+
+                        <div class="col-3">
+                            <label for="CVC" class="form-label fw-bold">CVC</label>
+                            <input id="CVC" 
+                                name="CVC" 
+                                class="form-control " 
+                                 placeholder="123"
+                                maxlength="3"
+                                type="text" 
+                                pattern="\d{3}" 
+                                title="Enter a valid CVC (3 digits)" 
+                                required>
+                            <div id="cvcError" class="text-danger mt-1"></div>
+                        </div>
+
+                        <div class="col-3">
+                            <label for="Expiry" class="form-label fw-bold">Expiry Date</label>
+                            <input id="Expiry" 
+                                name="Expiry" 
+                                class="form-control " 
+                                maxlength="5"
+                                placeholder="MM/YY"
+                                type="text" 
+                                pattern="\d{2}/\d{2}" 
+                                title="Enter a valid Expiry date" 
+                                required>
+                            <div id="expiryError" class="text-danger mt-1"></div>
+                        </div>
                     </div>
+
 
                 </div>
 
@@ -121,8 +152,12 @@
 <script>
 
 const accountInput = document.getElementById("AccountNumber");
-const payNowButton = document.querySelector('button[type="submit"]');
 const accountError = document.getElementById("accountError");
+const cvcInput = document.getElementById("CVC");
+const cvcError = document.getElementById("cvcError");
+const expiryInput = document.getElementById("Expiry");
+const expiryError = document.getElementById("expiryError");
+const payNowButton = document.getElementById("payNowButton");
 
 // Luhn check function
 function isValidLuhn(number) {
@@ -139,6 +174,42 @@ function isValidLuhn(number) {
     }
     return sum % 10 === 0;
 }
+
+// --- Expiry Validation ---
+expiryInput.addEventListener("input", () => {
+    const value = expiryInput.value.trim();
+    const match = /^(\d{2})\/(\d{2})$/.exec(value); // MM/YY format
+    if (match) {
+        const month = parseInt(match[1], 10);
+        const year = parseInt(match[2], 10) + 2000; // Convert YY to 20YY
+        const expiryDate = new Date(year, month - 1, 1);
+        const today = new Date();
+        today.setDate(1); // Compare first day of current month
+        if (expiryDate >= today && month >= 1 && month <= 12) {
+            expiryInput.setCustomValidity("");
+            expiryError.textContent = "";
+            checkFormValidity();
+            return;
+        }
+    }
+    expiryInput.setCustomValidity("Invalid Expiry");
+    expiryError.textContent = "Expiry must be valid and not in the past";
+    payNowButton.disabled = true;
+});
+
+// --- CVC Validation ---
+cvcInput.addEventListener("input", () => {
+    const value = cvcInput.value.trim();
+    if (/^\d{3,4}$/.test(value)) {
+        cvcInput.setCustomValidity("");
+        cvcError.textContent = "";
+        checkFormValidity();
+    } else {
+        cvcInput.setCustomValidity("Invalid CVC");
+        cvcError.textContent = "CVC must be 3 or 4 digits";
+        payNowButton.disabled = true;
+    }
+});
 
 // Real-time validation
 accountInput.addEventListener("input", () => {

@@ -1,10 +1,23 @@
 namespace StokvelManagementSystem.Models
 {
 
+public class GraphResult
+{
+    public DateTime StartDate { get; set; }
+    public DateTime EndDate { get; set; }
+
+    // Contributions per day (key = date string "yyyy-MM-dd", value = amount)
+    public Dictionary<string, decimal> Contributions { get; set; } = new();
+
+    // Payouts per day (key = date string "yyyy-MM-dd", value = amount)
+    public Dictionary<string, decimal> Payouts { get; set; } = new();
+}
+
+
     public class Report
     {
-        public int GroupId { get; set; } 
-        public int MemberId { get; set; } 
+        public int GroupId { get; set; }
+        public int MemberId { get; set; }
         public string FirstName { get; set; }
         public string LastName { get; set; }
         public string Currency { get; set; }
@@ -21,7 +34,7 @@ namespace StokvelManagementSystem.Models
 
         //Group Report 
         public int TotalMembers { get; set; }
-        public DateTime? GroupStartDate { get; set; }
+        public String? GroupStartDate { get; set; }
         public string ContributionFrequency { get; set; } // e.g. "Monthly", "Weekly"
         public decimal ContributionAmount { get; set; }
         public decimal GroupTotalContributions { get; set; }
@@ -32,6 +45,8 @@ namespace StokvelManagementSystem.Models
         public int TotalCycles { get; set; }
 
         public List<GroupMemberSummary> MemberSummaries { get; set; }
+
+        public GraphResult Graphs { get; set; }
     }
     public class ContributionViewModel
     {
@@ -46,6 +61,7 @@ namespace StokvelManagementSystem.Models
     {
         public string FullName { get; set; }
         public decimal TotalPaid { get; set; }
+        public decimal TotalPayouts { get; set; }
         public int MissedPayments { get; set; }
         public decimal Penalties { get; set; }
         public string Status { get; set; }
