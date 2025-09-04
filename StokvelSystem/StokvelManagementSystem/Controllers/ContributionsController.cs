@@ -250,6 +250,10 @@ public IActionResult GetGroupDetails(int memberId)
                     c.TotalAmount, 
                     c.TransactionDate, 
                     c.ProofOfPaymentPath,
+                    c.AccountNumber,
+                    c.CVC,
+                    c.Expiry,
+
 
                     g.GroupName AS GroupName,
 
@@ -291,15 +295,19 @@ public IActionResult GetGroupDetails(int memberId)
                                     ContributionAmount = Convert.ToDecimal(reader["ContributionAmount"]),
                                     TotalAmount = Convert.ToDecimal(reader["TotalAmount"]),
                                     TransactionDate = Convert.ToDateTime(reader["TransactionDate"]),
-                                    // Reference = reader["Reference"].ToString(),
-                                    // ProofOfPaymentPath = reader["ProofOfPaymentPath"]?.ToString(),
                                     CreatedBy = reader["CreatedBy"]?.ToString(),
                                     GroupName = reader["GroupName"].ToString(),
                                     FirstName = reader["MemberName"].ToString(),
-                                    Phone = reader["Phone"].ToString(), // ✅
-                                    Email = reader["Email"].ToString()
+                                    Phone = reader["Phone"].ToString(),
+                                    Email = reader["Email"].ToString(),
+
+                                    // 👇 Add these if your query SELECTs them
+                                    AccountNumber = reader["AccountNumber"]?.ToString(),
+                                    CVC = reader["CVC"]?.ToString(),
+                                    Expiry = reader["Expiry"]?.ToString()
                                 });
                             }
+
                         }
                     }
                 }

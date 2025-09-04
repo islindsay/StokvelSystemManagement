@@ -81,9 +81,13 @@
                                             data-penalty="@item.PenaltyAmount.ToString("C")"
                                             data-total="@item.TotalAmount.ToString("C")"
                                             data-date="@item.TransactionDate.ToString("dd MMM yyyy")"
-                                            data-createdby="@item.CreatedBy">
+                                            data-createdby="@item.CreatedBy"
+                                            data-accountnumber="@item.AccountNumber"
+                                            data-cvc="@item.CVC"
+                                            data-expiry="@item.Expiry">
                                             <i class="bi bi-eye"></i> View
                                         </button>
+
                                     </td>
                                 </tr>
                             }
@@ -103,15 +107,21 @@
         <h5 class="modal-title" id="contributionModalLabel">Contribution Details</h5>
         <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
       </div>
-      <div class="modal-body">
-        <p><strong>Group Name:</strong> <span id="modalGroupName"></span></p>
-        <p><strong>Member Name:</strong> <span id="modalMemberName"></span></p>
-        <p><strong>Contribution:</strong> <span id="modalContribution"></span></p>
-        <p><strong>Penalty:</strong> <span id="modalPenalty"></span></p>
-        <p><strong>Total:</strong> <span id="modalTotal"></span></p>
-        <p><strong>Transaction Date:</strong> <span id="modalDate"></span></p>
-        <p><strong>Recorded By:</strong> <span id="modalCreatedBy"></span></p>
-      </div>
+        <div class="modal-body">
+            <p><strong>Group Name:</strong> <span id="modalGroupName"></span></p>
+            <p><strong>Member Name:</strong> <span id="modalMemberName"></span></p>
+            <p><strong>Contribution:</strong> <span id="modalContribution"></span></p>
+            <p><strong>Penalty:</strong> <span id="modalPenalty"></span></p>
+            <p><strong>Total:</strong> <span id="modalTotal"></span></p>
+            <p><strong>Transaction Date:</strong> <span id="modalDate"></span></p>
+            <p><strong>Recorded By:</strong> <span id="modalCreatedBy"></span></p>
+            
+            <!-- Add these new fields -->
+            <p><strong>Account Number:</strong> <span id="modalAccountNumber"></span></p>
+            <p><strong>CVC:</strong> <span id="modalCVC"></span></p>
+            <p><strong>Expiry:</strong> <span id="modalExpiry"></span></p>
+        </div>
+
       <div class="modal-footer">
         <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
       </div>
@@ -132,10 +142,21 @@
                 document.getElementById("modalDate").textContent = this.dataset.date;
                 document.getElementById("modalCreatedBy").textContent = this.dataset.createdby;
 
+                // New fields
+                document.getElementById("modalAccountNumber").textContent =
+                this.dataset.accountnumber
+                ? "**** **** **** " + this.dataset.accountnumber.slice(-4)
+                : "";
+
+                // The property names must match the converted data attributes
+                document.getElementById("modalCVC").textContent = this.dataset.cvc;
+                document.getElementById("modalExpiry").textContent = this.dataset.expiry;
+
                 var modal = new bootstrap.Modal(document.getElementById('contributionModal'));
                 modal.show();
             });
         });
+
 
         $(document).ready(function () {
             // Calculate total dynamically

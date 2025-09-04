@@ -1,4 +1,6 @@
-﻿namespace StokvelManagementSystem.Models
+﻿using Microsoft.AspNetCore.Mvc.Rendering;
+
+namespace StokvelManagementSystem.Models
 {
     public class JoinRequestView
     {
@@ -21,8 +23,10 @@
     public class GroupInfoDto
     {
         public int ID { get; set; }
+        public int CurrencyID { get; set; }
         public string Name { get; set; }
-        public string Currency { get; set; }
+        public string? Currency { get; set; }
+        public List<SelectListItem> CurrencyOptions { get; set; } = new();
         public string FrequencyName { get; set; }
 
         // New properties for member tracking

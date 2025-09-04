@@ -348,6 +348,57 @@
         }
     });
 
+
+        function setupIsActiveToggle(formId) {
+            const form = document.getElementById(formId);
+            if (!form) return;
+
+            const isActiveCheckbox = form.querySelector("input[name='IsActive']");
+            if (!isActiveCheckbox) return;
+
+            function updateFieldStates() {
+                const isActive = isActiveCheckbox.checked;
+
+                form.querySelectorAll("input, select").forEach(el => {
+                    if (el.name === "IsActive") return; // skip checkbox
+
+                    if (el.tagName === "INPUT") {
+                        if (isActive) {
+                            el.readOnly = true;   // readonly instead of disabled
+                            el.classList.add("is-readonly");
+                        } else {
+                            if (el.name === "StartDate" || el.name === "CurrentMembers") {
+                                el.readOnly = true;
+                                el.classList.add("is-readonly");
+                            } else {
+                                el.readOnly = false;
+                                el.classList.remove("is-readonly");
+                            }
+                        }
+                    }
+
+                    if (el.tagName === "SELECT") {
+                        if (isActive) {
+                            el.style.pointerEvents = "none";  // prevent changing
+                            el.classList.add("is-readonly");
+                        } else {
+                            if (el.name === "StartDate" || el.name === "CurrentMembers") {
+                                el.style.pointerEvents = "none";
+                                el.classList.add("is-readonly");
+                            } else {
+                                el.style.pointerEvents = "auto";
+                                el.classList.remove("is-readonly");
+                            }
+                        }
+                    }
+                });
+            }
+
+            updateFieldStates();
+            //isActiveCheckbox.addEventListener("change", updateFieldStates);
+        }
+
+
         //catch update 
         document.addEventListener("submit", function (event) {
         if (event.target && event.target.id === "updateGroupForm") {
@@ -365,6 +416,7 @@
             .then(data => {
                 if (data.success) {
                     document.getElementById("success-alert").classList.remove("d-none");
+                    setupIsActiveToggle("updateGroupForm");
                 } else {
                     document.getElementById("error-alert").classList.remove("d-none");
                 }

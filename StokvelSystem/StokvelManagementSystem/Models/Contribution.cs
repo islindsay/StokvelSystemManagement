@@ -76,7 +76,7 @@ namespace StokvelManagementSystem.Models
         public int MemberCount { get; set; }
         public int FrequencyID { get; set; }
         public int PayoutTypeID { get; set; }
-        public string? AccountNumber { get; set; }
+        public string AccountNumber { get; set; }
         public string? CVC { get; set; }
         public string? Expiry { get; set; }
         public string? FullName { get; set; }
