@@ -60,11 +60,8 @@ namespace StokvelManagementSystem.Controllers
         }
 
         [HttpPost]
-        //[ValidateAntiForgeryToken]
-    
         public IActionResult Index(Member model, bool create)
         {
-
             LoadGenderDropdown();
 
             if (!ModelState.IsValid)
@@ -72,19 +69,16 @@ namespace StokvelManagementSystem.Controllers
                 var errors = string.Join("; ", ModelState.Values
                                             .SelectMany(v => v.Errors)
                                             .Select(e => e.ErrorMessage));
-
                 _logger.LogWarning("Model validation errors: " + errors);
-
                 return View(model);
-
             }
+
             if (model.Password != model.ConfirmPassword)
             {
                 ModelState.AddModelError("", "Passwords do not match.");
                 _logger.LogWarning("Passwords do not match.");
                 return View(model);
             }
-
 
             int newMemberId;
             int newLoginId;
@@ -98,98 +92,83 @@ namespace StokvelManagementSystem.Controllers
                     {
                         try
                         {
-                          // Step 0: Check if member already exists
-               // Check NationalID
-                string checkNationalId = "SELECT COUNT(*) FROM Members WHERE NationalID = @NationalID";
-                using (SqlCommand cmd = new SqlCommand(checkNationalId, connection, transaction))
-                {
-                    cmd.Parameters.AddWithValue("@NationalID", model.NationalID);
-                    if ((int)cmd.ExecuteScalar() > 0)
-                        ModelState.AddModelError("NationalID", "National ID already exists.");
-                }
-
-                // Check Email
-                string checkEmail = "SELECT COUNT(*) FROM Members WHERE Email = @Email";
-                using (SqlCommand cmd = new SqlCommand(checkEmail, connection, transaction))
-                {
-                    cmd.Parameters.AddWithValue("@Email", model.Email);
-                    if ((int)cmd.ExecuteScalar() > 0)
-                        ModelState.AddModelError("Email", "Email already exists.");
-                }
-
-                // Check Phone
-                if (!string.IsNullOrEmpty(model.Phone))
-                {
-                    string checkPhone = "SELECT COUNT(*) FROM Members WHERE Phone = @Phone";
-                    using (SqlCommand cmd = new SqlCommand(checkPhone, connection, transaction))
-                    {
-                        cmd.Parameters.AddWithValue("@Phone", model.Phone);
-                        if ((int)cmd.ExecuteScalar() > 0)
-                            ModelState.AddModelError("Phone", "Phone already exists.");
-                    }
-                }
-                
-                  // Check Username
-                if (!string.IsNullOrEmpty(model.Username))
-                {
-                    string checkUsername = "SELECT COUNT(*) FROM Logins WHERE Username = @Username";
-                    using (SqlCommand cmd = new SqlCommand(checkUsername, connection, transaction))
-                    {
-                        cmd.Parameters.AddWithValue("@Username", model.Username);
-                        if ((int)cmd.ExecuteScalar() > 0)
-                            ModelState.AddModelError("Username", "Username already exists.");
-                    }
-                }
-
-                // If any errors, return immediately
-                            if (!ModelState.IsValid)
+                            // --- Step 0: Check uniqueness constraints ---
+                            // NationalID, Email, Phone, Username
+                            string checkNationalId = "SELECT COUNT(*) FROM Members WHERE NationalID = @NationalID";
+                            using (SqlCommand cmd = new SqlCommand(checkNationalId, connection, transaction))
                             {
-                                // MVC: return View(model);
-                                // API: return BadRequest(ModelState);
-                                return View(model);
+                                cmd.Parameters.AddWithValue("@NationalID", model.NationalID);
+                                if ((int)cmd.ExecuteScalar() > 0)
+                                    ModelState.AddModelError("NationalID", "National ID already exists.");
                             }
 
+                            string checkEmail = "SELECT COUNT(*) FROM Members WHERE Email = @Email";
+                            using (SqlCommand cmd = new SqlCommand(checkEmail, connection, transaction))
+                            {
+                                cmd.Parameters.AddWithValue("@Email", model.Email);
+                                if ((int)cmd.ExecuteScalar() > 0)
+                                    ModelState.AddModelError("Email", "Email already exists.");
+                            }
 
+                            if (!string.IsNullOrEmpty(model.Phone))
+                            {
+                                string checkPhone = "SELECT COUNT(*) FROM Members WHERE Phone = @Phone";
+                                using (SqlCommand cmd = new SqlCommand(checkPhone, connection, transaction))
+                                {
+                                    cmd.Parameters.AddWithValue("@Phone", model.Phone);
+                                    if ((int)cmd.ExecuteScalar() > 0)
+                                        ModelState.AddModelError("Phone", "Phone already exists.");
+                                }
+                            }
 
-                        // Step 1: Insert into Members
-                        string memberQuery = @"
-                            INSERT INTO Members (FirstName, MiddleName, LastName, DOB, NationalID, Phone, Email, GenderID, Address, RegistrationDate, Status)
-                            VALUES (@FirstName, @MiddleName, @LastName, @DOB, @NationalID, @Phone, @Email, @GenderID, @Address, @RegistrationDate, @Status);
-                            SELECT CAST(scope_identity() AS int)";
+                            if (!string.IsNullOrEmpty(model.Username))
+                            {
+                                string checkUsername = "SELECT COUNT(*) FROM Logins WHERE Username = @Username";
+                                using (SqlCommand cmd = new SqlCommand(checkUsername, connection, transaction))
+                                {
+                                    cmd.Parameters.AddWithValue("@Username", model.Username);
+                                    if ((int)cmd.ExecuteScalar() > 0)
+                                        ModelState.AddModelError("Username", "Username already exists.");
+                                }
+                            }
 
-                        using (SqlCommand memberCommand = new SqlCommand(memberQuery, connection, transaction))
-                        {
-                            memberCommand.Parameters.AddWithValue("@FirstName", model.FirstName);
-                            memberCommand.Parameters.AddWithValue("@MiddleName", (object)model.MiddleName ?? DBNull.Value);
-                            memberCommand.Parameters.AddWithValue("@LastName", model.LastName);
-                            memberCommand.Parameters.AddWithValue("@DOB", model.DOB);
-                            memberCommand.Parameters.AddWithValue("@NationalID", model.NationalID);
-                            memberCommand.Parameters.AddWithValue("@Phone", (object)model.Phone ?? DBNull.Value);
-                            memberCommand.Parameters.AddWithValue("@Email", model.Email);
-                            memberCommand.Parameters.AddWithValue("@GenderID", model.GenderID);
-                            memberCommand.Parameters.AddWithValue("@Address", (object)model.Address ?? DBNull.Value);
-                            memberCommand.Parameters.AddWithValue("@RegistrationDate", DateTime.Now);
-                            memberCommand.Parameters.AddWithValue("@Status", 1);
+                            if (!ModelState.IsValid)
+                                return View(model);
 
-                            newMemberId = (int)memberCommand.ExecuteScalar();
-                        }
+                            // --- Step 1: Insert member ---
+                            string memberQuery = @"
+                                INSERT INTO Members (FirstName, MiddleName, LastName, DOB, NationalID, Phone, Email, GenderID, Address, RegistrationDate, Status)
+                                VALUES (@FirstName, @MiddleName, @LastName, @DOB, @NationalID, @Phone, @Email, @GenderID, @Address, @RegistrationDate, @Status);
+                                SELECT CAST(scope_identity() AS int)";
+                            using (SqlCommand memberCommand = new SqlCommand(memberQuery, connection, transaction))
+                            {
+                                memberCommand.Parameters.AddWithValue("@FirstName", model.FirstName);
+                                memberCommand.Parameters.AddWithValue("@MiddleName", (object)model.MiddleName ?? DBNull.Value);
+                                memberCommand.Parameters.AddWithValue("@LastName", model.LastName);
+                                memberCommand.Parameters.AddWithValue("@DOB", model.DOB);
+                                memberCommand.Parameters.AddWithValue("@NationalID", model.NationalID);
+                                memberCommand.Parameters.AddWithValue("@Phone", (object)model.Phone ?? DBNull.Value);
+                                memberCommand.Parameters.AddWithValue("@Email", model.Email);
+                                memberCommand.Parameters.AddWithValue("@GenderID", model.GenderID);
+                                memberCommand.Parameters.AddWithValue("@Address", (object)model.Address ?? DBNull.Value);
+                                memberCommand.Parameters.AddWithValue("@RegistrationDate", DateTime.Now);
+                                memberCommand.Parameters.AddWithValue("@Status", 1);
 
+                                newMemberId = (int)memberCommand.ExecuteScalar();
+                            }
 
-                            // Step 2: Create login credentials
+                            // --- Step 2: Insert login credentials ---
                             var saltBytes = new byte[16];
                             using (var rng = new System.Security.Cryptography.RNGCryptoServiceProvider())
-                            {
                                 rng.GetBytes(saltBytes);
-                            }
+
                             string salt = Convert.ToBase64String(saltBytes);
                             string hashedPassword = HashPassword(model.Password, salt);
 
-                            // Step 3: Insert into Logins and get the new Login ID
                             string loginQuery = @"
                                 INSERT INTO Logins (Username, PasswordHash, PasswordSalt, MemberID, NationalID)
                                 VALUES (@Username, @PasswordHash, @PasswordSalt, @MemberID, @NationalID);
                                 SELECT CAST(scope_identity() AS int)";
-
                             using (SqlCommand loginCommand = new SqlCommand(loginQuery, connection, transaction))
                             {
                                 loginCommand.Parameters.AddWithValue("@Username", model.Username);
@@ -200,7 +179,7 @@ namespace StokvelManagementSystem.Controllers
                                 newLoginId = (int)loginCommand.ExecuteScalar();
                             }
 
-                            // Step 4: Update the Members table with the new UserID from Logins
+                            // --- Step 3: Update member with login ID ---
                             string updateMemberQuery = "UPDATE Members SET UserID = @UserID WHERE ID = @MemberID";
                             using (SqlCommand updateCommand = new SqlCommand(updateMemberQuery, connection, transaction))
                             {
@@ -214,17 +193,15 @@ namespace StokvelManagementSystem.Controllers
                         catch (Exception error)
                         {
                             _logger.LogInformation("DB Error: " + error.Message);
-                            ModelState.AddModelError("", "Error saving member: " + error.Message);
                             transaction.Rollback();
-                            throw;
+                            ModelState.AddModelError("", "Error saving member: " + error.Message);
+                            return View(model);
                         }
                     }
                 }
+
+                // --- Step 4: Set cookies ---
                 string token = GenerateJwtToken(newMemberId, newLoginId, model.Username, model.FirstName, model.NationalID);
-
-                bool isAdmin = CheckIsAdmin(newLoginId);
-
-                // Store the token in a cookie (or return it however your frontend expects)
                 HttpContext.Response.Cookies.Append("jwt", token, new CookieOptions
                 {
                     HttpOnly = true,
@@ -233,14 +210,21 @@ namespace StokvelManagementSystem.Controllers
                     Expires = DateTime.UtcNow.AddHours(2)
                 });
 
-                if (create)
+                // ✅ Set HasBankDetails cookie to false for a new account
+                HttpContext.Response.Cookies.Append("HasBankDetails", "false", new CookieOptions
                 {
-                    // Redirect to group creation screen for admins
+                    HttpOnly = false,
+                    Secure = true,
+                    SameSite = SameSiteMode.Strict,
+                    Expires = DateTime.UtcNow.AddHours(2)
+                });
+
+                bool isAdmin = CheckIsAdmin(newLoginId);
+
+                if (create)
                     return RedirectToAction("ListGroups", "Groups", new { showCreate = true });
-                }
 
                 return RedirectToAction("ListGroups", "Groups", new { showCreate = true });
-
             }
             catch (Exception ex)
             {
@@ -249,6 +233,7 @@ namespace StokvelManagementSystem.Controllers
                 return View(model);
             }
         }
+
         private string HashPassword(string password, string salt)
         {
             using var sha = System.Security.Cryptography.SHA256.Create();
