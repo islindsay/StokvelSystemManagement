@@ -137,7 +137,6 @@ namespace StokvelManagementSystem.Controllers
         {
             LoadGenderDropdown();
 
-            // Make sure model is valid
             if (!ModelState.IsValid)
                 return View(model);
 
@@ -182,7 +181,7 @@ namespace StokvelManagementSystem.Controllers
                     cmd.Parameters.AddWithValue("@UserId", userId);
                     cmd.ExecuteNonQuery();
 
-                    // 2️⃣ Update Logins table (Username, NationalID, optionally Password)
+                    // 2️⃣ Update Logins table (Username, NationalID)
                     string updateLoginSql = @"
                         UPDATE Logins
                         SET Username=@Username,
@@ -217,7 +216,23 @@ namespace StokvelManagementSystem.Controllers
                         cmdPass.ExecuteNonQuery();
                     }
 
+                    // ✅ Commit transaction
                     transaction.Commit();
+
+                    // ✅ Set HasBankDetails cookie if all 3 fields exist
+                    if (!string.IsNullOrWhiteSpace(model.AccountNumber) &&
+                        !string.IsNullOrWhiteSpace(model.CVC) &&
+                        !string.IsNullOrWhiteSpace(model.Expiry))
+                    {
+                        Response.Cookies.Append("HasBankDetails", "true", new CookieOptions
+                        {
+                            HttpOnly = false,
+                            Secure = true,
+                            SameSite = SameSiteMode.Strict,
+                            Expires = DateTime.UtcNow.AddYears(1)
+                        });
+                    }
+
                     ViewBag.SuccessMessage = "Profile updated successfully.";
                     return View(model);
                 }

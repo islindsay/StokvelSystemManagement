@@ -56,10 +56,28 @@
     </header>
 
     <div class="container">
+        @{
+            //var jwtCookie = Context.Request.Cookies["jwt"];
+            var hasBankDetailsCookie = Context.Request.Cookies["HasBankDetails"];
+            bool hasBankDetails = string.IsNullOrEmpty(hasBankDetailsCookie) ? true : bool.Parse(hasBankDetailsCookie);
+        }
+
+        @* Show notification only if JWT exists (user is logged in) and bank details are missing *@
+        @if (!string.IsNullOrEmpty(jwtCookie) && !hasBankDetails)
+        {
+            <a asp-controller="Profile" asp-action="Index" class="text-decoration-none" id="update-bank-details">
+                <div class="alert alert-warning mb-0" role="alert" style="cursor:pointer;">
+                    ⚠️ You have not updated your bank details. Click here to update.
+                </div>
+            </a>
+        }
+
         <main role="main" class="pb-3">
             @RenderBody()
         </main>
     </div>
+
+
 
     <footer class="mt-auto py-3 bg-light text-center text-muted border-top">
         <div class="container">

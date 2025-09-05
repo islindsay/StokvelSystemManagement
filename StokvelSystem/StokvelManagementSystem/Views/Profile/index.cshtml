@@ -133,6 +133,8 @@
 <script>
 document.addEventListener("DOMContentLoaded", function () {
     const form = document.querySelector("form");
+    const saveBtn = form.querySelector('button[type="submit"]');
+
     const accountNumberInput = document.querySelector("#AccountNumber");
     const cvcInput = document.querySelector("#CVC");
     const expiryInput = document.querySelector("#Expiry");
@@ -141,6 +143,28 @@ document.addEventListener("DOMContentLoaded", function () {
     const cvcError = cvcInput.nextElementSibling;
     const expiryError = expiryInput.nextElementSibling;
 
+    // Store initial values of all fields
+    const inputs = Array.from(form.querySelectorAll("input, textarea, select"));
+    const initialValues = {};
+    inputs.forEach(input => initialValues[input.id || input.name] = input.value);
+
+    function isFormChanged() {
+        return inputs.some(input => input.value !== (initialValues[input.id || input.name] || ""));
+    }
+
+    function hasValidationErrors() {
+        return (
+            !accountNumberInput.value || accountNumberInput.validationMessage ||
+            !cvcInput.value || cvcInput.validationMessage ||
+            !expiryInput.value || expiryInput.validationMessage
+        );
+    }
+
+    function updateSaveButtonState() {
+        saveBtn.disabled = !isFormChanged() || hasValidationErrors();
+    }
+
+    // --- Validation functions ---
     function isValidLuhn(number) {
         let sum = 0;
         let shouldDouble = false;
@@ -156,7 +180,7 @@ document.addEventListener("DOMContentLoaded", function () {
         return sum % 10 === 0;
     }
 
-    accountNumberInput.addEventListener("input", () => {
+    function validateAccountNumber() {
         const value = accountNumberInput.value.trim();
         if (value === "" || (/^\d{8,16}$/.test(value) && isValidLuhn(value))) {
             accountNumberInput.setCustomValidity("");
@@ -165,9 +189,9 @@ document.addEventListener("DOMContentLoaded", function () {
             accountNumberInput.setCustomValidity("Invalid Account Number");
             accountNumberError.textContent = "Must be 8-16 digits and pass Luhn check";
         }
-    });
+    }
 
-    cvcInput.addEventListener("input", () => {
+    function validateCVC() {
         const value = cvcInput.value.trim();
         if (value === "" || /^\d{3,4}$/.test(value)) {
             cvcInput.setCustomValidity("");
@@ -176,32 +200,49 @@ document.addEventListener("DOMContentLoaded", function () {
             cvcInput.setCustomValidity("Invalid CVC");
             cvcError.textContent = "CVC must be 3 or 4 digits";
         }
-    });
+    }
 
-    expiryInput.addEventListener("input", () => {
+    function validateExpiry() {
         const value = expiryInput.value.trim();
         if (value === "") {
-            expiryInput.setCustomValidity("");
-            expiryError.textContent = "";
-            return;
-        }
-        const match = /^(\d{2})\/(\d{2})$/.exec(value);
-        if (match) {
-            const month = parseInt(match[1], 10);
-            const year = parseInt(match[2], 10) + 2000;
-            const expiryDate = new Date(year, month - 1, 1);
-            const today = new Date();
-            today.setDate(1);
-            if (expiryDate >= today && month >= 1 && month <= 12) {
-                expiryInput.setCustomValidity("");
-                expiryError.textContent = "";
-                return;
+            expiryInput.setCustomValidity("Expiry required");
+            expiryError.textContent = "Expiry must not be empty";
+        } else {
+            const match = /^(\d{2})\/(\d{2})$/.exec(value);
+            if (match) {
+                const month = parseInt(match[1], 10);
+                const year = parseInt(match[2], 10) + 2000;
+                const expiryDate = new Date(year, month - 1, 1);
+                const today = new Date();
+                today.setDate(1);
+                if (expiryDate >= today && month >= 1 && month <= 12) {
+                    expiryInput.setCustomValidity("");
+                    expiryError.textContent = "";
+                    return;
+                }
             }
+            expiryInput.setCustomValidity("Invalid Expiry");
+            expiryError.textContent = "Expiry must be valid and not in the past";
         }
-        expiryInput.setCustomValidity("Invalid Expiry");
-        expiryError.textContent = "Expiry must be valid and not in the past";
+    }
+
+    // Validate on input and update button
+    [accountNumberInput, cvcInput, expiryInput].forEach(input => {
+        input.addEventListener("input", () => {
+            validateAccountNumber();
+            validateCVC();
+            validateExpiry();
+            updateSaveButtonState();
+        });
     });
 
+    // Update button initially
+    validateAccountNumber();
+    validateCVC();
+    validateExpiry();
+    updateSaveButtonState();
+
+    // Prevent submission if invalid
     form.addEventListener("submit", function (e) {
         if (!form.checkValidity()) {
             e.preventDefault();
@@ -209,7 +250,7 @@ document.addEventListener("DOMContentLoaded", function () {
         }
     });
 
-    // Show modal if there's a success or error message
+    // --- Modal logic ---
     const successMessage = "@ViewBag.SuccessMessage";
     const errorMessage = "@ViewBag.ErrorMessage";
 
@@ -219,6 +260,9 @@ document.addEventListener("DOMContentLoaded", function () {
         const messageContainer = document.getElementById('updateStatusMessage');
 
         if (successMessage) {
+            const bankDetailsLink = document.getElementById('update-bank-details');
+            if (bankDetailsLink) bankDetailsLink.remove();
+
             iconContainer.innerHTML = `
                 <div style="width:80px; height:80px; background-color:#28a745; border-radius:50%; display:flex; align-items:center; justify-content:center; margin:auto;">
                     <svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" fill="white" class="bi bi-check2" viewBox="0 0 16 16">
@@ -240,7 +284,9 @@ document.addEventListener("DOMContentLoaded", function () {
 
         modal.show();
     }
+
 });
 </script>
+
 
 }

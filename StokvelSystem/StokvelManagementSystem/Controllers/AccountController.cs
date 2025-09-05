@@ -35,25 +35,39 @@ public class AccountController : Controller
 
         bool isAdmin = CheckIsAdmin(loginUser.ID);
 
-        // 🔎 Step 1: Retrieve MemberID from DB
+        // 🔎 Retrieve MemberID from DB
         int memberId;
         using (var conn = new SqlConnection(_configuration.GetConnectionString("DefaultConnection")))
         {
             conn.Open();
-            using (var cmd = new SqlCommand("SELECT ID FROM Members WHERE UserID = @UserId", conn))
+            using (var cmd = new SqlCommand("SELECT ID, AccountNumber, CVC, Expiry FROM Members WHERE UserID = @UserId", conn))
             {
                 cmd.Parameters.AddWithValue("@UserId", loginUser.ID);
-                var result = cmd.ExecuteScalar();
-                if (result == null)
-                    return Unauthorized("No member associated with this user.");
-                memberId = Convert.ToInt32(result);
+                using (var reader = cmd.ExecuteReader())
+                {
+                    if (!reader.Read())
+                        return Unauthorized("No member associated with this user.");
+
+                    memberId = Convert.ToInt32(reader["ID"]);
+                    var hasBankDetails = !string.IsNullOrWhiteSpace(reader["AccountNumber"]?.ToString())
+                                        && !string.IsNullOrWhiteSpace(reader["CVC"]?.ToString())
+                                        && !string.IsNullOrWhiteSpace(reader["Expiry"]?.ToString());
+
+                    // 🍪 Set a cookie to indicate missing bank details
+                    Response.Cookies.Append("HasBankDetails", hasBankDetails.ToString().ToLower(), new CookieOptions
+                    {
+                        HttpOnly = false,
+                        Secure = true,
+                        SameSite = SameSiteMode.Strict,
+                        Expires = DateTime.UtcNow.AddHours(2)
+                    });
+                }
             }
         }
 
-        // 🔐 Step 2: Include MemberID in token
+        // 🔐 Include MemberID in token
         var token = GenerateJwtToken(memberId, loginUser.ID, loginUser.Username, loginUser.FirstName, loginUser.NationalID);
 
-        // 🍪 Set JWT cookie
         Response.Cookies.Append("jwt", token, new CookieOptions 
         {
             HttpOnly = true,
@@ -62,7 +76,6 @@ public class AccountController : Controller
             Expires = DateTime.UtcNow.AddHours(2)
         });
 
-        // 🍪 Set isAdmin cookie
         Response.Cookies.Append("isAdmin", isAdmin.ToString().ToLower(), new CookieOptions
         {
             HttpOnly = false,
@@ -71,10 +84,9 @@ public class AccountController : Controller
             Expires = DateTime.UtcNow.AddHours(2)
         });
 
-        return RedirectToAction("Index", "Home"); 
+        return RedirectToAction("Index", "Home");
     }
 
-    
 
     [HttpPost]
     public IActionResult Logout()
