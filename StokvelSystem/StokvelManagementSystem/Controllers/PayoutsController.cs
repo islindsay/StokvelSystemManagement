@@ -209,9 +209,40 @@ namespace StokvelManagementSystem.Controllers
                     }
                 }
 
+                // ✅ 5. Bulk payout stats (only if group is Periodic)
+                if (model.PayoutTypeID == 2) 
+                {
+                    var bulkStatsQuery = @"
+                        SELECT 
+                            COUNT(DISTINCT mg.ID) AS TotalMembers,
+                            COUNT(DISTINCT p.MemberGroupID) AS PaidMembers
+                        FROM MemberGroups mg
+                        LEFT JOIN Payouts p 
+                            ON p.MemberGroupID = mg.ID
+                            AND p.PaidForCycle = g.Cycles
+                            AND p.Reference IS NOT NULL
+                        JOIN Groups g ON g.ID = mg.GroupID
+                        WHERE mg.GroupID = @GroupId;
+                    ";
+
+                    using (var command = new SqlCommand(bulkStatsQuery, connection))
+                    {
+                        command.Parameters.AddWithValue("@GroupId", groupId);
+                        using (var reader = command.ExecuteReader())
+                        {
+                            if (reader.Read())
+                            {
+                                ViewBag.TotalMembers = reader["TotalMembers"] != DBNull.Value ? Convert.ToInt32(reader["TotalMembers"]) : 0;
+                                ViewBag.PaidMembers = reader["PaidMembers"] != DBNull.Value ? Convert.ToInt32(reader["PaidMembers"]) : 0;
+                                ViewBag.UnpaidMembers = ViewBag.TotalMembers - ViewBag.PaidMembers;
+                            }
+                        }
+                    }
+                }
 
 
-                // ✅ 2. Get group name
+
+                // ✅ 6. Get group name
                 var groupNameQuery = "SELECT GroupName FROM Groups WHERE ID = @GroupId";
                 using (var command = new SqlCommand(groupNameQuery, connection))
                 {
@@ -340,9 +371,18 @@ namespace StokvelManagementSystem.Controllers
 
                     if (payoutTypeId == 2)
                     {
-                        // Bulk payout
-                        var memberGroupQuery = @"SELECT ID FROM MemberGroups WHERE GroupID = @GroupID";
-                        var memberGroupIds = new List<int>();
+                        // Bulk payout - only members with payment info
+                        var memberGroupQuery = @"
+                            SELECT mg.ID, m.AccountNumber, m.CVC, m.Expiry
+                            FROM MemberGroups mg
+                            INNER JOIN Members m ON mg.MemberID = m.ID
+                            WHERE mg.GroupID = @GroupID
+                            AND m.AccountNumber IS NOT NULL
+                            AND m.CVC IS NOT NULL
+                            AND m.Expiry IS NOT NULL";
+
+                        var memberGroupList = new List<(int MemberGroupID, string AccountNumber, string CVC, string Expiry)>();
+
                         using (var cmd = new SqlCommand(memberGroupQuery, connection))
                         {
                             cmd.Parameters.AddWithValue("@GroupID", groupId);
@@ -350,44 +390,80 @@ namespace StokvelManagementSystem.Controllers
                             {
                                 while (await reader.ReadAsync())
                                 {
-                                    memberGroupIds.Add(reader.GetInt32(0));
+                                    memberGroupList.Add((
+                                        reader.GetInt32(0),      // MemberGroupID
+                                        reader.GetString(1),     // AccountNumber
+                                        reader.GetString(2),     // CVC
+                                        reader.GetString(3)      // Expiry
+                                    ));
                                 }
                             }
                         }
 
-                        if (memberGroupIds.Count == 0)
+                        if (memberGroupList.Count == 0)
                         {
-                            ModelState.AddModelError("", "No members found in the group for bulk payout.");
+                            ModelState.AddModelError("", "No members with payment info found for bulk payout.");
                             return View("~/Views/Transactions/PayoutsCreate.cshtml", model);
                         }
 
-                        decimal perMemberAmount = model.Amount / memberGroupIds.Count;
+                        decimal perMemberAmount = model.Amount / memberGroupList.Count;
 
-                        var bulkInsertQuery = @"INSERT INTO Payouts 
+                        var bulkInsertQuery = @"
+                            INSERT INTO Payouts 
                             (MemberGroupID, PaymentMethodID, Amount, TransactionDate, Reference, CreatedBy, PaidForCycle, AccountNumber, CVC, Expiry, Status)
                             VALUES 
                             (@MemberGroupID, @PaymentMethodID, @Amount, @PayoutDate, @Reference, @CreatedBy, @PaidForCycle, @AccountNumber, @CVC, @Expiry, @Status);";
 
-                        foreach (var mgId in memberGroupIds)
-                        {
-                            using (var cmd = new SqlCommand(bulkInsertQuery, connection))
+                            foreach (var mg in memberGroupList)
                             {
-                                cmd.Parameters.AddWithValue("@MemberGroupID", mgId);
-                                cmd.Parameters.AddWithValue("@PaymentMethodID", model.PayoutTypeId);
-                                cmd.Parameters.AddWithValue("@Amount", perMemberAmount);
-                                cmd.Parameters.AddWithValue("@PayoutDate", model.PayoutDate);
-                                cmd.Parameters.AddWithValue("@Reference", model.Reference ?? (object)DBNull.Value);
-                                // cmd.Parameters.AddWithValue("@ProofOfPaymentPath", DBNull.Value); // removed
-                                cmd.Parameters.AddWithValue("@CreatedBy", model.CreatedBy);
-                                cmd.Parameters.AddWithValue("@PaidForCycle", currentCycle);
-                                cmd.Parameters.AddWithValue("@AccountNumber", model.AccountNumber ?? (object)DBNull.Value);
-                                cmd.Parameters.AddWithValue("@CVC", model.CVC ?? (object)DBNull.Value);
-                                cmd.Parameters.AddWithValue("@Expiry", model.Expiry ?? (object)DBNull.Value);
-                                cmd.Parameters.AddWithValue("@Status", status);
+                                // First check if a payout already exists for this MemberGroupID + Reference
+                                var existsQuery = @"
+                                    SELECT COUNT(1) 
+                                    FROM Payouts 
+                                    WHERE MemberGroupID = @MemberGroupID 
+                                    AND Reference = @Reference";
 
-                                await cmd.ExecuteNonQueryAsync();
+                                using (var existsCmd = new SqlCommand(existsQuery, connection))
+                                {
+                                    existsCmd.Parameters.AddWithValue("@MemberGroupID", mg.MemberGroupID);
+                                    existsCmd.Parameters.AddWithValue("@Reference", model.Reference ?? (object)DBNull.Value);
+
+                                    int alreadyPaid = (int)await existsCmd.ExecuteScalarAsync();
+                                    if (alreadyPaid > 0)
+                                    {
+                                        // Skip this member, already paid with the same reference
+                                        continue;
+                                    }
+                                }
+
+                                // Determine payout status
+                                string bulkPayoutStatus = "Success"; // default status
+                                if (!string.IsNullOrEmpty(mg.AccountNumber))
+                                {
+                                    if (mg.AccountNumber == "4111111111111111")
+                                        bulkPayoutStatus = "Fail";
+                                    else if (mg.AccountNumber == "4000000000009995")
+                                        bulkPayoutStatus = "Pending";
+                                }
+
+                                // Insert payout record
+                                using (var cmd = new SqlCommand(bulkInsertQuery, connection))
+                                {
+                                    cmd.Parameters.AddWithValue("@MemberGroupID", mg.MemberGroupID);
+                                    cmd.Parameters.AddWithValue("@PaymentMethodID", model.PayoutTypeId);
+                                    cmd.Parameters.AddWithValue("@Amount", perMemberAmount);
+                                    cmd.Parameters.AddWithValue("@PayoutDate", model.PayoutDate);
+                                    cmd.Parameters.AddWithValue("@Reference", model.Reference ?? (object)DBNull.Value);
+                                    cmd.Parameters.AddWithValue("@CreatedBy", model.CreatedBy);
+                                    cmd.Parameters.AddWithValue("@PaidForCycle", currentCycle);
+                                    cmd.Parameters.AddWithValue("@AccountNumber", mg.AccountNumber);
+                                    cmd.Parameters.AddWithValue("@CVC", mg.CVC);
+                                    cmd.Parameters.AddWithValue("@Expiry", mg.Expiry);
+                                    cmd.Parameters.AddWithValue("@Status", bulkPayoutStatus);
+
+                                    await cmd.ExecuteNonQueryAsync();
+                                }
                             }
-                        }
 
                     }
                     else

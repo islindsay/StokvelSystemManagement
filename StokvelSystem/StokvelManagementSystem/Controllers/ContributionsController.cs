@@ -121,226 +121,258 @@ public IActionResult GetGroupDetails(int memberId)
             return Json(penaltySettings);
         }
 
-            [HttpPost]
-            //[Authorize(Roles = "Admin")]
-            // [ValidateAntiForgeryToken]
+        [HttpPost]
+        //[Authorize(Roles = "Admin")]
+        // [ValidateAntiForgeryToken]
         public IActionResult ContributionsCreate(Contribution model, int groupId)
+        {
+            _logger.LogInformation($"Creating contribution for group ID: {groupId}");  
+
+            string status = "Success"; // default
+                            
+            // Example test account numbers
+            // 4111111111111111 → Fail
+            // 4000000000009995 → Pending
+            if (!string.IsNullOrEmpty(model.AccountNumber))
             {
-                _logger.LogInformation($"Creating contribution for group ID: {groupId}");  
-
-                string status = "Success"; // default
-                    
-                    // Example test account numbers
-                    // 4111111111111111 → Fail
-                    // 4000000000009995 → Pending
-
-                    if (!string.IsNullOrEmpty(model.AccountNumber))
-                    {
-                        if (model.AccountNumber == "4111111111111111")
-                        {
-                            status = "Fail";
-                        }
-                        else if (model.AccountNumber == "4000000000009995")
-                        {
-                            status = "Pending";
-                        }
-                    }
-
-                var memberIdClaim = User.Claims.FirstOrDefault(c => c.Type == "member_id");
-                if (memberIdClaim != null && int.TryParse(memberIdClaim.Value, out var memberId))
+                if (model.AccountNumber == "4111111111111111")
                 {
-                    model.CreatedBy = memberId.ToString();
-                    ModelState.Remove("CreatedBy");
+                    status = "Fail";
+                }
+                else if (model.AccountNumber == "4000000000009995")
+                {
+                    status = "Pending";
+                }
+            }
+
+            var memberIdClaim = User.Claims.FirstOrDefault(c => c.Type == "member_id");
+            if (memberIdClaim != null && int.TryParse(memberIdClaim.Value, out var memberId))
+            {
+                model.CreatedBy = memberId.ToString();
+                ModelState.Remove("CreatedBy");
+            }
+            else
+            {
+                _logger.LogError("MemberID not found in JWT claims");
+                ModelState.AddModelError("CreatedBy", "Unable to determine member identity.");
+            }
+
+            model.PaymentMethods = GetPaymentMethodsFromDatabase();
+
+            try
+            {
+                model.TotalAmount = model.ContributionAmount + model.PenaltyAmount;
+                model.GroupId = groupId;
+
+                // ✅ Validation for card inputs
+                if (string.IsNullOrWhiteSpace(model.CVC) || !Regex.IsMatch(model.CVC, @"^\d{3,4}$"))
+                {
+                    ModelState.AddModelError("CVC", "CVC must be 3 or 4 digits.");
+                }
+
+                if (string.IsNullOrWhiteSpace(model.Expiry) || !Regex.IsMatch(model.Expiry, @"^(0[1-9]|1[0-2])\/\d{2}$"))
+                {
+                    ModelState.AddModelError("Expiry", "Expiry date must be in MM/YY format.");
                 }
                 else
                 {
-                    _logger.LogError("MemberID not found in JWT claims");
-                    ModelState.AddModelError("CreatedBy", "Unable to determine member identity.");
+                    var parts = model.Expiry.Split('/');
+                    var month = int.Parse(parts[0]);
+                    var year = 2000 + int.Parse(parts[1]);
+                    var expiry = new DateTime(year, month, DateTime.DaysInMonth(year, month));
+                    if (expiry < DateTime.Now.Date)
+                        ModelState.AddModelError("Expiry", "Expiry date cannot be in the past.");
                 }
 
-                model.PaymentMethods = GetPaymentMethodsFromDatabase();
-
-                try
+                if (!ModelState.IsValid)
                 {
-                    model.TotalAmount = model.ContributionAmount + model.PenaltyAmount;
-                    model.GroupId = groupId;
-
-                    // Validate CVC
-                    if (string.IsNullOrWhiteSpace(model.CVC) || !Regex.IsMatch(model.CVC, @"^\d{3,4}$"))
+                    _logger.LogInformation("Model not valid. Listing all validation errors:");
+                    foreach (var state in ModelState)
                     {
-                        ModelState.AddModelError("CVC", "CVC must be 3 or 4 digits.");
-                    }
-
-                    // Validate Expiry
-                    if (string.IsNullOrWhiteSpace(model.Expiry) || !Regex.IsMatch(model.Expiry, @"^(0[1-9]|1[0-2])\/\d{2}$"))
-                    {
-                        ModelState.AddModelError("Expiry", "Expiry date must be in MM/YY format.");
-                    }
-                    else
-                    {
-                        // Check if expiry is in the past
-                        var parts = model.Expiry.Split('/');
-                        var month = int.Parse(parts[0]);
-                        var year = 2000 + int.Parse(parts[1]);
-                        var expiry = new DateTime(year, month, DateTime.DaysInMonth(year, month));
-                        if (expiry < DateTime.Now.Date)
-                            ModelState.AddModelError("Expiry", "Expiry date cannot be in the past.");
-                    }
-
-                   if (!ModelState.IsValid)
+                        foreach (var error in state.Value.Errors)
                         {
-                            _logger.LogInformation("Model not valid. Listing all validation errors:");
-
-                            foreach (var state in ModelState)
-                            {
-                                var fieldKey = state.Key;
-                                var errors = state.Value.Errors;
-
-                                foreach (var error in errors)
-                                {
-                                    _logger.LogError("Field: {Field}, Error: {ErrorMessage}", fieldKey, error.ErrorMessage);
-                                }
-                            }
-
-                            return View("~/Views/Transactions/ContributionsCreate.cshtml", model);
-                        }
-
-
-                    // Insert into DB with CVC and Expiry
-                    using (var connection = new SqlConnection(_configuration.GetConnectionString("DefaultConnection")))
-                    {
-                        var query = @"
-                            INSERT INTO Contributions 
-                                (MemberGroupID, PaymentMethodID, PenaltyAmount, ContributionAmount, 
-                                TotalAmount, TransactionDate, AccountNumber, CVC, Expiry, CreatedBy, PaidForCycle, Status)
-                            SELECT 
-                                @MemberGroupID, 
-                                @PaymentMethodID, 
-                                @PenaltyAmount, 
-                                @ContributionAmount, 
-                                @TotalAmount, 
-                                @TransactionDate, 
-                                @AccountNumber, 
-                                @CVC, 
-                                @Expiry, 
-                                @CreatedBy,
-                                g.Cycles,
-                                @Status
-                            FROM MemberGroups mg
-                            JOIN Groups g ON mg.GroupID = g.ID
-                            WHERE mg.ID = @MemberGroupID;";
-
-                        using (var command = new SqlCommand(query, connection))
-                        {
-                            command.Parameters.AddWithValue("@MemberGroupID", model.MemberGroupID);
-                            command.Parameters.AddWithValue("@PaymentMethodID", model.PaymentMethodID);
-                            command.Parameters.AddWithValue("@PenaltyAmount", model.PenaltyAmount);
-                            command.Parameters.AddWithValue("@ContributionAmount", model.ContributionAmount);
-                            command.Parameters.AddWithValue("@TotalAmount", model.TotalAmount);
-                            command.Parameters.AddWithValue("@TransactionDate", model.TransactionDate);
-                            command.Parameters.AddWithValue("@AccountNumber", model.AccountNumber ?? (object)DBNull.Value);
-                            command.Parameters.AddWithValue("@CVC", model.CVC ?? (object)DBNull.Value);
-                            command.Parameters.AddWithValue("@Expiry", model.Expiry ?? (object)DBNull.Value);
-                            command.Parameters.AddWithValue("@CreatedBy", model.CreatedBy);
-                            command.Parameters.AddWithValue("@Status", status); // ✅ pass from C#
-
-                            connection.Open();
-                            int rowsAffected = command.ExecuteNonQuery();
-                            if (rowsAffected == 0)
-                                throw new Exception("Insert failed: No rows affected.");
+                            _logger.LogError("Field: {Field}, Error: {ErrorMessage}", state.Key, error.ErrorMessage);
                         }
                     }
-
-
-
-                    TempData["SuccessMessage"] = "Transaction recorded successfully!";
-                    return RedirectToAction("ContributionsIndex", new { groupId = model.GroupId });
-                }
-                catch (Exception ex)
-                {
-                    ModelState.AddModelError("", $"Error saving transaction: {ex.Message}");
-                    model.PaymentMethods = GetPaymentMethodsFromDatabase();
                     return View("~/Views/Transactions/ContributionsCreate.cshtml", model);
                 }
-            }
 
-
-[AllowAnonymous]
-public IActionResult ContributionsIndex(int groupId)
-{
-    var contributions = new List<Contribution>();
-    _logger.LogInformation($"Group Id being passdown now: {groupId}");
-    using (var connection = new SqlConnection(_configuration.GetConnectionString("DefaultConnection")))
-    {
-        var query = @"
-            SELECT 
-                c.ID, 
-                c.PaymentMethodID, 
-                c.PenaltyAmount, 
-                c.ContributionAmount, 
-                c.TotalAmount, 
-                c.TransactionDate, 
-                c.ProofOfPaymentPath,
-                c.AccountNumber,
-                c.CVC,
-                c.Expiry,
-                c.Status,
-
-                g.GroupName AS GroupName,
-
-                CONCAT(m.FirstName, ' ', m.LastName) AS MemberName,
-                m.Phone, 
-                m.Email,
-                
-                CONCAT(mcreator.FirstName, ' ', mcreator.LastName) AS CreatedBy,
-
-                cur.Currency AS Currency
-
-            FROM dbo.Contributions c
-            JOIN dbo.MemberGroups mg ON mg.ID = c.MemberGroupID
-            JOIN dbo.Groups g ON mg.GroupID = g.ID
-            JOIN dbo.Members m ON m.ID = mg.MemberID
-            LEFT JOIN dbo.Members mcreator ON mcreator.ID = TRY_CAST(c.CreatedBy AS INT)
-            JOIN dbo.Currencies cur ON cur.ID = g.CurrencyID  -- Join to get currency
-
-            WHERE mg.GroupID = @groupID
-            ORDER BY c.TransactionDate DESC;
-        ";
-
-        using (var command = new SqlCommand(query, connection))
-        {
-            command.Parameters.AddWithValue("@GroupId", groupId);
-            connection.Open();
-            using (var reader = command.ExecuteReader())
-            {
-                while (reader.Read())
+                using (var connection = new SqlConnection(_configuration.GetConnectionString("DefaultConnection")))
                 {
-                    contributions.Add(new Contribution
+                    connection.Open();
+
+                    // ✅ Step 1: Ensure Cycles is not null
+                    var updateCyclesQuery = @"
+                        UPDATE g
+                        SET g.Cycles = 0
+                        FROM Groups g
+                        JOIN MemberGroups mg ON g.ID = mg.GroupID
+                        WHERE mg.ID = @MemberGroupID AND g.Cycles IS NULL;
+                    ";
+
+                    using (var updateCmd = new SqlCommand(updateCyclesQuery, connection))
                     {
-                        ID = Convert.ToInt32(reader["ID"]),
-                        PaymentMethodID = Convert.ToInt32(reader["PaymentMethodID"]),
-                        PenaltyAmount = Convert.ToDecimal(reader["PenaltyAmount"]),
-                        ContributionAmount = Convert.ToDecimal(reader["ContributionAmount"]),
-                        TotalAmount = Convert.ToDecimal(reader["TotalAmount"]),
-                        TransactionDate = Convert.ToDateTime(reader["TransactionDate"]),
-                        CreatedBy = reader["CreatedBy"]?.ToString(),
-                        GroupName = reader["GroupName"].ToString(),
-                        FirstName = reader["MemberName"].ToString(),
-                        Phone = reader["Phone"].ToString(),
-                        Email = reader["Email"].ToString(),
-                        AccountNumber = reader["AccountNumber"]?.ToString(),
-                        CVC = reader["CVC"]?.ToString(),
-                        Expiry = reader["Expiry"]?.ToString(),
-                        CurrencySymbol = reader["Currency"]?.ToString(), // <-- Added currency here
-                        Status = reader["Status"]?.ToString()
-                    });
+                        updateCmd.Parameters.AddWithValue("@MemberGroupID", model.MemberGroupID);
+                        updateCmd.ExecuteNonQuery();
+                    }
+
+                    // ✅ Step 2: Insert the contribution
+                    var insertQuery = @"
+                        INSERT INTO Contributions 
+                            (MemberGroupID, PaymentMethodID, PenaltyAmount, ContributionAmount, 
+                            TotalAmount, TransactionDate, AccountNumber, CVC, Expiry, CreatedBy, PaidForCycle, Status)
+                        SELECT 
+                            @MemberGroupID, 
+                            @PaymentMethodID, 
+                            @PenaltyAmount, 
+                            @ContributionAmount, 
+                            @TotalAmount, 
+                            @TransactionDate, 
+                            @AccountNumber, 
+                            @CVC, 
+                            @Expiry, 
+                            @CreatedBy,
+                            ISNULL(g.Cycles, 0),   -- ✅ always safe
+                            @Status
+                        FROM MemberGroups mg
+                        JOIN Groups g ON mg.GroupID = g.ID
+                        WHERE mg.ID = @MemberGroupID;
+                    ";
+
+                    using (var insertCmd = new SqlCommand(insertQuery, connection))
+                    {
+                        insertCmd.Parameters.AddWithValue("@MemberGroupID", model.MemberGroupID);
+                        insertCmd.Parameters.AddWithValue("@PaymentMethodID", model.PaymentMethodID);
+                        insertCmd.Parameters.AddWithValue("@PenaltyAmount", model.PenaltyAmount);
+                        insertCmd.Parameters.AddWithValue("@ContributionAmount", model.ContributionAmount);
+                        insertCmd.Parameters.AddWithValue("@TotalAmount", model.TotalAmount);
+                        insertCmd.Parameters.AddWithValue("@TransactionDate", model.TransactionDate);
+                        insertCmd.Parameters.AddWithValue("@AccountNumber", model.AccountNumber ?? (object)DBNull.Value);
+                        insertCmd.Parameters.AddWithValue("@CVC", model.CVC ?? (object)DBNull.Value);
+                        insertCmd.Parameters.AddWithValue("@Expiry", model.Expiry ?? (object)DBNull.Value);
+                        insertCmd.Parameters.AddWithValue("@CreatedBy", model.CreatedBy);
+                        insertCmd.Parameters.AddWithValue("@Status", status);
+
+                        int rowsAffected = insertCmd.ExecuteNonQuery();
+                        if (rowsAffected == 0)
+                            throw new Exception("Insert failed: No rows affected.");
+                    }
                 }
+
+                TempData["SuccessMessage"] = "Transaction recorded successfully!";
+                return RedirectToAction("ContributionsIndex", new { groupId = model.GroupId });
+            }
+            catch (Exception ex)
+            {
+                ModelState.AddModelError("", $"Error saving transaction: {ex.Message}");
+                model.PaymentMethods = GetPaymentMethodsFromDatabase();
+                return View("~/Views/Transactions/ContributionsCreate.cshtml", model);
             }
         }
-    }
 
-    return View("~/Views/Transactions/ContributionsIndex.cshtml", contributions);
-}
+
+        [AllowAnonymous]
+        public IActionResult ContributionsIndex(int groupId)
+        {
+            var contributions = new List<Contribution>();
+            int currentCycle = 0;
+            bool hasContributedThisCycle = false;
+
+            _logger.LogInformation($"Group Id being passed down now: {groupId}");
+
+            using (var connection = new SqlConnection(_configuration.GetConnectionString("DefaultConnection")))
+            {
+                connection.Open();
+
+                // 1️⃣ Get the current Cycle from Groups table
+                using (var cycleCmd = new SqlCommand("SELECT ISNULL(Cycles, 0) FROM Groups WHERE ID = @GroupId", connection))
+                {
+                    cycleCmd.Parameters.AddWithValue("@GroupId", groupId);
+                    currentCycle = (int)cycleCmd.ExecuteScalar();
+                }
+
+                // 2️⃣ Check if PaidForCycle = currentCycle for any member
+                using (var checkCmd = new SqlCommand(@"
+                    SELECT CASE WHEN COUNT(*) > 0 THEN 1 ELSE 0 END
+                    FROM Contributions c
+                    JOIN MemberGroups mg ON mg.ID = c.MemberGroupID
+                    WHERE mg.GroupID = @GroupId AND c.PaidForCycle = @CurrentCycle", connection))
+                {
+                    checkCmd.Parameters.AddWithValue("@GroupId", groupId);
+                    checkCmd.Parameters.AddWithValue("@CurrentCycle", currentCycle);
+                    hasContributedThisCycle = (int)checkCmd.ExecuteScalar() == 1;
+                }
+
+                // 3️⃣ Load contributions
+                var query = @"
+                    SELECT 
+                        c.ID, 
+                        c.PaymentMethodID, 
+                        c.PenaltyAmount, 
+                        c.ContributionAmount, 
+                        c.TotalAmount, 
+                        c.TransactionDate, 
+                        c.ProofOfPaymentPath,
+                        c.AccountNumber,
+                        c.PaidForCycle,
+                        c.CVC,
+                        c.Expiry,
+                        c.Status,
+                        g.GroupName AS GroupName,
+                        CONCAT(m.FirstName, ' ', m.LastName) AS MemberName,
+                        m.Phone, 
+                        m.Email,
+                        CONCAT(mcreator.FirstName, ' ', mcreator.LastName) AS CreatedBy,
+                        cur.Currency AS Currency
+                    FROM dbo.Contributions c
+                    JOIN dbo.MemberGroups mg ON mg.ID = c.MemberGroupID
+                    JOIN dbo.Groups g ON mg.GroupID = g.ID
+                    JOIN dbo.Members m ON m.ID = mg.MemberID
+                    LEFT JOIN dbo.Members mcreator ON mcreator.ID = TRY_CAST(c.CreatedBy AS INT)
+                    JOIN dbo.Currencies cur ON cur.ID = g.CurrencyID
+                    WHERE mg.GroupID = @groupID
+                    ORDER BY c.TransactionDate DESC;
+                ";
+
+                using (var command = new SqlCommand(query, connection))
+                {
+                    command.Parameters.AddWithValue("@GroupId", groupId);
+                    using (var reader = command.ExecuteReader())
+                    {
+                        while (reader.Read())
+                        {
+                            contributions.Add(new Contribution
+                            {
+                                ID = Convert.ToInt32(reader["ID"]),
+                                PaymentMethodID = Convert.ToInt32(reader["PaymentMethodID"]),
+                                PenaltyAmount = Convert.ToDecimal(reader["PenaltyAmount"]),
+                                ContributionAmount = Convert.ToDecimal(reader["ContributionAmount"]),
+                                TotalAmount = Convert.ToDecimal(reader["TotalAmount"]),
+                                TransactionDate = Convert.ToDateTime(reader["TransactionDate"]),
+                                CreatedBy = reader["CreatedBy"]?.ToString(),
+                                GroupName = reader["GroupName"].ToString(),
+                                FirstName = reader["MemberName"].ToString(),
+                                Phone = reader["Phone"].ToString(),
+                                Email = reader["Email"].ToString(),
+                                AccountNumber = reader["AccountNumber"]?.ToString(),
+                                CVC = reader["CVC"]?.ToString(),
+                                Expiry = reader["Expiry"]?.ToString(),
+                                CurrencySymbol = reader["Currency"]?.ToString(),
+                                Status = reader["Status"]?.ToString(),
+                                PaidForCycle = reader["PaidForCycle"]?.ToString(),
+                            });
+                        }
+                    }
+                }
+            }
+
+            // 4️⃣ Pass values to ViewBag
+            ViewBag.CurrentCycle = currentCycle;
+            ViewBag.HasContributedThisCycle = hasContributedThisCycle;
+
+            return View("~/Views/Transactions/ContributionsIndex.cshtml", contributions);
+        }
+
 
 
         private List<PaymentMethod> GetPaymentMethodsFromDatabase()

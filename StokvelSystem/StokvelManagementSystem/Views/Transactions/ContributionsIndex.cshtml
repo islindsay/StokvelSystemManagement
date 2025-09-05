@@ -11,6 +11,9 @@
         <h2 class="mb-0">
             <i class="bi bi-cash-stack me-2"></i>@ViewData["Title"]
         </h2>
+        <h6>
+            Current Cycle: @ViewBag.CurrentCycle
+        </h6>
 
         @{
             var isAdminCookie = Context.Request.Cookies["isAdmin"];
@@ -18,7 +21,9 @@
         }
         @if (isAdmin)
         {
-            <a asp-action="CreateContributionForm" asp-route-groupId="@groupId" class="btn btn-primary">
+            <a asp-action="CreateContributionForm" 
+            asp-route-groupId="@groupId" 
+            class="btn btn-primary @(ViewBag.HasContributedThisCycle ? "disabled" : "")">
                 <i class="bi bi-plus-circle me-1"></i>New Contribution
             </a>
         }
@@ -58,7 +63,8 @@
                                 @* <th><i class="bi bi-tag me-1"></i>Reference ID</th> *@
                                 @* <th><i class="bi bi-receipt me-1"></i>Proof</th> *@
                                 <th><i class="bi bi-person-plus me-1"></i>Recorded By</th>
-                                <th><i class="bi bi-settings-gear me-1"></i>Action</th>
+                                 <th><i class="me-1"></i>Cycle</th>
+                                <th><i class=" me-1"></i>Action</th>
                                 <th><i class=" me-1"></i>Status</th>
                             </tr>
                         </thead>
@@ -72,8 +78,8 @@
                                     <td class=" text-primary @(item.PenaltyAmount > 0 ? "text-danger" : "")"><span class="fw-bold text-muted">@item.CurrencySymbol</span> @item.PenaltyAmount</td>
                                     <td class=" fw-bold text-primary"><span class="fw-bold text-muted">@item.CurrencySymbol</span> @item.TotalAmount</td>
                                     <td>@item.TransactionDate.ToString("dd MMM yyyy")</td>
-                                    @* <td>@item.ID</td> *@
                                     <td>@item.CreatedBy</td>
+                                     <td>@item.PaidForCycle</td>
                                     <td>
                                         <button type="button" class="btn btn-sm btn-outline-primary view-details-btn"
                                             data-group="@item.GroupName"

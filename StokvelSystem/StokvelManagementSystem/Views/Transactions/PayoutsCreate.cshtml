@@ -123,52 +123,56 @@
                     </div>
                 </div>
 
-                <div class="mb-4 p-3 border rounded bg-light">
-                    <h5 class="mb-3 text-primary">
-                        <i class="bi bi-card-text me-2"></i>Card Information
-                    </h5>
-                                        <div class="row g-2 mb-3">
-                        <div class="col-6">
-                            <label for="AccountNumber" class="form-label fw-bold">Account Number</label>
-                            <input id="AccountNumber" 
-                                name="AccountNumber" 
-                                class="form-control" 
-                                type="text" 
-                                pattern="\d{13,19}" 
-                                title="Enter a valid account number (13–19 digits)" 
-                                required>
-                            <div id="accountError" class="text-danger mt-1"></div>
-                        </div>
 
-                        <div class="col-3">
-                            <label for="CVC" class="form-label fw-bold">CVC</label>
-                            <input id="CVC" 
-                                name="CVC" 
-                                class="form-control " 
-                                 placeholder="123"
-                                maxlength="3"
-                                type="text" 
-                                pattern="\d{3}" 
-                                title="Enter a valid CVC (3 digits)" 
-                                required>
-                            <div id="cvcError" class="text-danger mt-1"></div>
-                        </div>
+                @if (Model.PayoutTypeID != 2)
+                    {
+                        <div class="mb-4 p-3 border rounded bg-light">
+                            <h5 class="mb-3 text-primary">
+                                <i class="bi bi-card-text me-2"></i>Card Information
+                            </h5>
+                                                <div class="row g-2 mb-3">
+                                <div class="col-6">
+                                    <label for="AccountNumber" class="form-label fw-bold">Account Number</label>
+                                    <input id="AccountNumber" 
+                                        name="AccountNumber" 
+                                        class="form-control" 
+                                        type="text" 
+                                        pattern="\d{13,19}" 
+                                        title="Enter a valid account number (13–19 digits)" 
+                                        required>
+                                    <div id="accountError" class="text-danger mt-1"></div>
+                                </div>
 
-                        <div class="col-3">
-                            <label for="Expiry" class="form-label fw-bold">Expiry Date</label>
-                            <input id="Expiry" 
-                                name="Expiry" 
-                                class="form-control " 
-                                maxlength="5"
-                                placeholder="MM/YY"
-                                type="text" 
-                                pattern="\d{2}/\d{2}" 
-                                title="Enter a valid Expiry date" 
-                                required>
-                            <div id="expiryError" class="text-danger mt-1"></div>
-                        </div>
-                    </div>
-                </div>               
+                                <div class="col-3">
+                                    <label for="CVC" class="form-label fw-bold">CVC</label>
+                                    <input id="CVC" 
+                                        name="CVC" 
+                                        class="form-control " 
+                                        placeholder="123"
+                                        maxlength="3"
+                                        type="text" 
+                                        pattern="\d{3}" 
+                                        title="Enter a valid CVC (3 digits)" 
+                                        required>
+                                    <div id="cvcError" class="text-danger mt-1"></div>
+                                </div>
+
+                                <div class="col-3">
+                                    <label for="Expiry" class="form-label fw-bold">Expiry Date</label>
+                                    <input id="Expiry" 
+                                        name="Expiry" 
+                                        class="form-control " 
+                                        maxlength="5"
+                                        placeholder="MM/YY"
+                                        type="text" 
+                                        pattern="\d{2}/\d{2}" 
+                                        title="Enter a valid Expiry date" 
+                                        required>
+                                    <div id="expiryError" class="text-danger mt-1"></div>
+                                </div>
+                            </div>
+                        </div>   
+                    }            
 
              
                 <div class="mb-4 p-3 border rounded bg-light">
@@ -177,9 +181,24 @@
                     </h5>
                     <div class="form-group">
                         <label asp-for="Reference" class="form-label fw-bold">Reference</label>
-                        <input asp-for="Reference" class="form-control" placeholder="e.g., July Payout">
+
+                        @if (Model.PayoutTypeID == 2) // bulk payout
+                        {
+                            <input asp-for="Reference" 
+                                class="form-control" 
+                                readonly 
+                                value="@(Model.GroupName + " - Periodic")" />
+                        }
+                        else
+                        {
+                            <input asp-for="Reference" 
+                                class="form-control" 
+                                placeholder="e.g., July Payoutt" />
+                        }
+
                         <span asp-validation-for="Reference" class="text-danger"></span>
                     </div>
+
                 </div>
 
                 <!-- Buttons -->
