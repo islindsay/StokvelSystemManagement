@@ -24,14 +24,24 @@ namespace StokvelManagementSystem.Models
         public string GenderText{  get; set; }
         public int RoleID { get; set; }
         public DateTime RegistrationDate { get; set; }
+
+        
+        public string? CVC { get; set; }
+        public string? Expiry { get; set; } 
+        public string? Status { get; set; }
+        public string? AccountNumber { get; set; }
        
         public string Address { get; set; }
         //FOR LOGIN 
         public string Username { get; set; }
-        public string Password { get; set; }
-        [Required]
-        [Compare("Password", ErrorMessage ="Passwords dont match")]
-        public string ConfirmPassword { get; set; }
+        
+        [DataType(DataType.Password)]
+        public string? Password { get; set; }  // make nullable
+
+        [DataType(DataType.Password)]
+        [Compare("Password", ErrorMessage = "Passwords do not match.")]
+        public string? ConfirmPassword { get; set; } // nullable
+
 
     }
 }

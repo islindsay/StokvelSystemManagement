@@ -5,13 +5,11 @@ using System.Text;
 
 var builder = WebApplication.CreateBuilder(args);
 
-
 var jwtKey = builder.Configuration["Jwt:Key"];
 if (string.IsNullOrEmpty(jwtKey))
     throw new Exception("JWT Key is missing from configuration.");
 
 var key = Encoding.ASCII.GetBytes(jwtKey);
-
 
 builder.Services.AddAuthentication(options =>
 {
@@ -42,10 +40,13 @@ builder.Services.AddAuthentication(options =>
     };
 });
 
+// ⚡ ADD THIS
+builder.Services.AddHttpContextAccessor();
+
+// Add MVC
 builder.Services.AddControllersWithViews();
 
 var app = builder.Build();
-
 
 var cultureInfo = new CultureInfo("en-US");
 CultureInfo.DefaultThreadCurrentCulture = cultureInfo;
@@ -61,7 +62,6 @@ app.UseHttpsRedirection();
 app.UseStaticFiles();
 
 app.UseRouting();
-
 
 app.UseAuthentication();
 app.UseAuthorization();
