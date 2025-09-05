@@ -45,13 +45,14 @@
                     <table class="table table-hover">
                         <thead class="table-light">
                             <tr>
-                                <th><i class="bi bi-people me-1">Group</th>
-                                <th><i class="bi bi-person me-1">Member</th>
-                                <th class="text-end">Payout</th>
-                                <th><i class="bi bi-calendar me-1">Date</th>
-                                <th><i class="bi bi-tag me-1">Reference</th>
-                                <th><i class="bi bi-receipt me-1">Proof</th>
-                                <th><i class="bi bi-person-plus me-1">CreatedBy</th>
+                                <th class="bi bi-people me-1"> Group</th>
+                                <th class="bi bi-person me-1"> Member</th>
+                                <th class="bi bi-currency-dollar me-1"> Payout</th>
+                                <th class="bi bi-calendar me-1"> Date</th>
+                                <th class="bi bi-tag me-1"> Reference</th>
+                                <th class="bi bi-person-plus me-1"> CreatedBy</th>
+                                 <th class="bi bi-person-plus me-1"> Status</th>
+                                <th class="bi me-1"> Action</th>
                                
                             </tr>
                         </thead>
@@ -61,28 +62,43 @@
                                 <tr>
                                     <td>@item.GroupName</td>
                                     <td>@item.MemberName</td>
-                                    <td class="text-end">@item.Amount.ToString("C")</td>
+                                    <td class="text-primary"><span class="fw-bold text-muted">@item.Currency</span> @item.Amount</td>
                                     <td>@item.PayoutDate.ToString("dd MMM yyyy")</td>
                                     <td><span class="badge bg-primary">@item.Reference</span></td>
-                                  <td>
-                                    @if (!string.IsNullOrEmpty(item.ProofOfPaymentPath))
-                                    {
-                                        var paths = item.ProofOfPaymentPath.Split(',', StringSplitOptions.RemoveEmptyEntries);
-
-                                        foreach (var path in paths)
-                                        {
-                                            <a href="@path.Trim()" class="btn btn-sm btn-outline-primary me-1 mb-1" target="_blank">
-                                                <i class="bi bi-eye"></i> View
-                                            </a>
-                                        }
-                                    }
-                                    else
-                                    {
-                                        <span class="badge bg-secondary">None</span>
-                                    }
-                                </td>
-
                                     <td>@item.CreatedBy</td>
+                                    <td>
+                                        <button type="button" class="btn btn-sm btn-outline-primary view-details-btn"
+                                            data-group="@item.GroupName"
+                                            data-member="@item.FullName"
+                                            data-total="@item.Amount"
+                                            data-reference="@item.Reference"    
+                                            data-date="@item.PayoutDate.ToString("dd MMM yyyy")"
+                                            data-createdby="@item.CreatedBy"
+                                            data-currency="@item.Currency""
+                                            data-accountnumber="@item.AccountNumber"
+                                            data-cvc="@item.CVC"
+                                            data-expiry="@item.Expiry">
+                                            <i class="bi bi-eye"></i> View
+                                        </button>
+                                    <td>
+                                        @if (item.Status == "Success")
+                                        {
+                                            <span class="badge bg-success">@item.Status</span>
+                                        }
+                                        else if (item.Status == "Fail")
+                                        {
+                                            <span class="badge bg-danger">Failed</span>
+                                        }
+                                        else if (item.Status == "Pending")
+                                        {
+                                            <span class="badge bg-warning">@item.Status</span>
+                                        }
+                                        else
+                                        {
+                                            <span>@item.Status</span>
+                                        }
+                                    </td>
+                                    </td>
                                     
                                 </tr>
                             }
@@ -92,6 +108,33 @@
             }
         </div>
     </div>
+</div>
+
+<!-- Modal -->
+<div class="modal fade" id="contributionModal" tabindex="-1" aria-labelledby="contributionModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="contributionModalLabel">Payout Details</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+        <div class="modal-body">
+            <p><strong>Group Name:</strong> <span id="modalGroupName"></span></p>
+            <p><strong>Member Name:</strong> <span id="modalMemberName"></span></p>
+            <p><strong>Payout:</strong> <span id="modalTotal"></span></p>
+            <p><strong>Payout Date:</strong> <span id="modalDate"></span></p>
+            <p><strong>Recorded By:</strong> <span id="modalCreatedBy"></span></p>
+            <p><strong>Reference:</strong> <span id="modalReference"></span></p>
+            <p><strong>Account Number:</strong> <span id="modalAccountNumber"></span></p>
+            <p><strong>CVC:</strong> <span id="modalCVC"></span></p>
+            <p><strong>Expiry:</strong> <span id="modalExpiry"></span></p>
+        </div>
+
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+      </div>
+    </div>
+  </div>
 </div>
 
 @section Scripts {
@@ -104,5 +147,29 @@
                 }
             });
         });
+    </script>
+    <script>
+                document.querySelectorAll(".view-details-btn").forEach(button => {
+                button.addEventListener("click", function () {
+                    
+                    document.getElementById("modalGroupName").textContent = this.dataset.group;
+                    document.getElementById("modalMemberName").textContent = this.dataset.member;
+                    document.getElementById("modalReference").textContent = this.dataset.reference;
+                    document.getElementById("modalTotal").textContent = this.dataset.currency + " " + this.dataset.total;
+                    document.getElementById("modalDate").textContent = this.dataset.date;
+                    document.getElementById("modalCreatedBy").textContent = this.dataset.createdby;
+
+                    document.getElementById("modalAccountNumber").textContent =
+                        this.dataset.accountnumber
+                        ? "**** **** **** " + this.dataset.accountnumber.slice(-4)
+                        : "";
+
+                    document.getElementById("modalCVC").textContent = this.dataset.cvc;
+                    document.getElementById("modalExpiry").textContent = this.dataset.expiry;
+
+                    var modal = new bootstrap.Modal(document.getElementById('contributionModal'));
+                    modal.show();
+                });
+            });
     </script>
 }

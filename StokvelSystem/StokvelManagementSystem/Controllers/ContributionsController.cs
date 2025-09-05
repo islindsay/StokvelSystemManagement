@@ -124,9 +124,28 @@ public IActionResult GetGroupDetails(int memberId)
             [HttpPost]
             //[Authorize(Roles = "Admin")]
             // [ValidateAntiForgeryToken]
-            public IActionResult ContributionsCreate(Contribution model, int groupId)
+        public IActionResult ContributionsCreate(Contribution model, int groupId)
             {
-                _logger.LogInformation($"Creating contribution for group ID: {groupId}");   
+                _logger.LogInformation($"Creating contribution for group ID: {groupId}");  
+
+                string status = "Success"; // default
+                    
+                    // Example test account numbers
+                    // 4111111111111111 → Fail
+                    // 4000000000009995 → Pending
+
+                    if (!string.IsNullOrEmpty(model.AccountNumber))
+                    {
+                        if (model.AccountNumber == "4111111111111111")
+                        {
+                            status = "Fail";
+                        }
+                        else if (model.AccountNumber == "4000000000009995")
+                        {
+                            status = "Pending";
+                        }
+                    }
+
                 var memberIdClaim = User.Claims.FirstOrDefault(c => c.Type == "member_id");
                 if (memberIdClaim != null && int.TryParse(memberIdClaim.Value, out var memberId))
                 {
@@ -193,11 +212,20 @@ public IActionResult GetGroupDetails(int memberId)
                         var query = @"
                             INSERT INTO Contributions 
                                 (MemberGroupID, PaymentMethodID, PenaltyAmount, ContributionAmount, 
-                                TotalAmount, TransactionDate, AccountNumber, CVC, Expiry, CreatedBy, PaidForCycle)
+                                TotalAmount, TransactionDate, AccountNumber, CVC, Expiry, CreatedBy, PaidForCycle, Status)
                             SELECT 
-                                @MemberGroupID, @PaymentMethodID, @PenaltyAmount, @ContributionAmount, 
-                                @TotalAmount, @TransactionDate, @AccountNumber, @CVC, @Expiry, @CreatedBy,
-                                g.Cycles
+                                @MemberGroupID, 
+                                @PaymentMethodID, 
+                                @PenaltyAmount, 
+                                @ContributionAmount, 
+                                @TotalAmount, 
+                                @TransactionDate, 
+                                @AccountNumber, 
+                                @CVC, 
+                                @Expiry, 
+                                @CreatedBy,
+                                g.Cycles,
+                                @Status
                             FROM MemberGroups mg
                             JOIN Groups g ON mg.GroupID = g.ID
                             WHERE mg.ID = @MemberGroupID;";
@@ -214,6 +242,7 @@ public IActionResult GetGroupDetails(int memberId)
                             command.Parameters.AddWithValue("@CVC", model.CVC ?? (object)DBNull.Value);
                             command.Parameters.AddWithValue("@Expiry", model.Expiry ?? (object)DBNull.Value);
                             command.Parameters.AddWithValue("@CreatedBy", model.CreatedBy);
+                            command.Parameters.AddWithValue("@Status", status); // ✅ pass from C#
 
                             connection.Open();
                             int rowsAffected = command.ExecuteNonQuery();
@@ -221,6 +250,8 @@ public IActionResult GetGroupDetails(int memberId)
                                 throw new Exception("Insert failed: No rows affected.");
                         }
                     }
+
+
 
                     TempData["SuccessMessage"] = "Transaction recorded successfully!";
                     return RedirectToAction("ContributionsIndex", new { groupId = model.GroupId });
@@ -253,6 +284,7 @@ public IActionResult ContributionsIndex(int groupId)
                 c.AccountNumber,
                 c.CVC,
                 c.Expiry,
+                c.Status,
 
                 g.GroupName AS GroupName,
 
@@ -299,7 +331,8 @@ public IActionResult ContributionsIndex(int groupId)
                         AccountNumber = reader["AccountNumber"]?.ToString(),
                         CVC = reader["CVC"]?.ToString(),
                         Expiry = reader["Expiry"]?.ToString(),
-                        CurrencySymbol = reader["Currency"]?.ToString() // <-- Added currency here
+                        CurrencySymbol = reader["Currency"]?.ToString(), // <-- Added currency here
+                        Status = reader["Status"]?.ToString()
                     });
                 }
             }

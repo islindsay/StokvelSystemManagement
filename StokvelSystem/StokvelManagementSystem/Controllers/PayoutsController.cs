@@ -161,24 +161,34 @@ namespace StokvelManagementSystem.Controllers
 
                 // ✅ 4. Check if total group contributions meet expected value (per-person amount × members)
                 var enablePayoutQuery = @"
-                                    SELECT 
-                                        CASE 
-                                            WHEN ISNULL(SUM(c.ContributionAmount), 0) = g.ContributionAmount * COUNT(DISTINCT mg.ID) THEN 1
-                                            ELSE 0
-                                        END AS EnablePayout,
-                                        COUNT(DISTINCT mg.ID) AS MemberCount,
-                                        g.ContributionAmount * COUNT(DISTINCT mg.ID) AS ExpectedPayment,
-                                        ISNULL(SUM(c.ContributionAmount), 0) AS CurrentAmount,
-                                        g.FrequencyID,
-                                        g.PayoutTypeID,
-                                        g.Cycles AS CurrentCycle
-                                    FROM MemberGroups mg
-                                    JOIN Groups g ON mg.GroupID = g.ID
-                                    LEFT JOIN Contributions c 
-                                        ON c.MemberGroupID = mg.ID 
-                                    AND c.PaidForCycle = g.Cycles   -- ✅ match only contributions for the current cycle
-                                    WHERE mg.GroupID = @GroupId
-                                    GROUP BY g.ContributionAmount, g.FrequencyID, g.PayoutTypeID, g.Cycles;
+                                SELECT 
+                                    CASE 
+                                        WHEN ISNULL(SUM(c.ContributionAmount), 0) = g.ContributionAmount * COUNT(DISTINCT mg.ID) THEN 1
+                                        ELSE 0
+                                    END AS EnablePayout,
+                                    COUNT(DISTINCT mg.ID) AS MemberCount,
+                                    g.ContributionAmount * COUNT(DISTINCT mg.ID) AS ExpectedPayment,
+                                    ISNULL(SUM(c.ContributionAmount), 0) AS CurrentAmount,
+                                    g.FrequencyID,
+                                    g.PayoutTypeID,
+                                    g.Cycles AS CurrentCycle,
+                                    ccy.Currency
+ 
+                                FROM MemberGroups mg
+                                JOIN Groups g ON mg.GroupID = g.ID
+                                JOIN Currencies ccy ON g.CurrencyID = ccy.ID   -- ✅ bring currency from Currencies table
+                                LEFT JOIN Contributions c 
+                                    ON c.MemberGroupID = mg.ID 
+                                AND c.PaidForCycle = g.Cycles   -- ✅ match only contributions for the current cycle
+                                WHERE mg.GroupID = @GroupId
+                                GROUP BY 
+                                    g.ContributionAmount, 
+                                    g.FrequencyID, 
+                                    g.PayoutTypeID, 
+                                    g.Cycles,
+                                    ccy.Currency
+
+
                 ";
 
                 using (var command = new SqlCommand(enablePayoutQuery, connection))
@@ -193,6 +203,8 @@ namespace StokvelManagementSystem.Controllers
                             model.ExpectedPayment = reader["ExpectedPayment"] != DBNull.Value ? Convert.ToDecimal(reader["ExpectedPayment"]) : 0;
                             model.FrequencyID = reader["FrequencyID"] != DBNull.Value ? Convert.ToInt32(reader["FrequencyID"]) : 0;
                             model.PayoutTypeID = reader["PayoutTypeID"] != DBNull.Value ? Convert.ToInt32(reader["PayoutTypeID"]) : 0;
+                            model.Currency = reader["Currency"].ToString();
+                            
                         }
                     }
                 }
@@ -217,233 +229,261 @@ namespace StokvelManagementSystem.Controllers
         [HttpPost]
         [Authorize(Roles = "Admin")]
         public async Task<IActionResult> PayoutsCreate(Payout model, int groupId)
-    {
-    var memberIdClaim = User.Claims.FirstOrDefault(c => c.Type == "member_id");
-    if (memberIdClaim != null && int.TryParse(memberIdClaim.Value, out var memberId))
-    {
-        model.CreatedBy = memberId.ToString();
-        ModelState.Remove("CreatedBy");
-    }
-    else
-    {
-        _logger.LogError("MemberID not found in JWT claims");
-        ModelState.AddModelError("ProcessedBy", "Unable to determine member identity.");
-    }
-
-    // ✅ Handle multiple file uploads
-    if (Request.Form.Files.Count > 0)
-    {
-        var uploadsFolder = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", "uploads");
-        if (!Directory.Exists(uploadsFolder))
-            Directory.CreateDirectory(uploadsFolder);
-
-        var filePaths = new List<string>();
-
-        foreach (var file in Request.Form.Files)
         {
-            if (file != null && file.Length > 0)
-            {
-                var uniqueFileName = $"{Guid.NewGuid()}_{Path.GetFileName(file.FileName)}";
-                var filePath = Path.Combine(uploadsFolder, uniqueFileName);
+            var memberIdClaim = User.Claims.FirstOrDefault(c => c.Type == "member_id");
 
-                using (var stream = new FileStream(filePath, FileMode.Create))
+            string status = "Success"; // default
+            
+            // Example test account numbers
+            // 4111111111111111 → Fail
+            // 4000000000009995 → Pending
+
+            if (!string.IsNullOrEmpty(model.AccountNumber))
+            {
+                if (model.AccountNumber == "4111111111111111")
                 {
-                    await file.CopyToAsync(stream);
+                    status = "Fail";
                 }
-
-                // Store relative path
-                filePaths.Add($"/uploads/{uniqueFileName}");
-            }
-        }
-
-        // Save as comma-separated string
-        model.ProofOfPaymentPath = string.Join(",", filePaths);
-        ModelState.Remove("ProofOfPaymentPath");
-    }
-
-    model.MemberOptions = GetMemberOptionsForGroup(groupId);
-    model.PayoutTypes = GetPaymentMethodsFromDatabase().Select(p => new SelectListItem
-    {
-        Value = p.Id.ToString(),
-        Text = p.Method
-    }).ToList();
-    model.GroupId = groupId;
-
-    try
-    {
-        if (!ModelState.IsValid)
-        {
-            foreach (var state in ModelState)
-            {
-                foreach (var error in state.Value.Errors)
+                else if (model.AccountNumber == "4000000000009995")
                 {
-                    _logger.LogError("Field: {Field} - Error: {Message}", state.Key, error.ErrorMessage);
+                    status = "Pending";
                 }
             }
-            return View("~/Views/Transactions/PayoutsCreate.cshtml", model);
-        }
 
-        using (var connection = new SqlConnection(_configuration.GetConnectionString("DefaultConnection")))
-        {
-            await connection.OpenAsync();
-
-            int currentCycle = 0;
-            int payoutTypeId = 0;
-
-            // Get cycle + payout type
-            var getCycleAndPayoutTypeQuery = @"SELECT Cycles, PayoutTypeID FROM Groups WHERE ID = @GroupID";
-            using (var cmd = new SqlCommand(getCycleAndPayoutTypeQuery, connection))
+            if (memberIdClaim != null && int.TryParse(memberIdClaim.Value, out var memberId))
             {
-                cmd.Parameters.AddWithValue("@GroupID", groupId);
-                using (var reader = await cmd.ExecuteReaderAsync())
+                model.CreatedBy = memberId.ToString();
+                ModelState.Remove("CreatedBy");
+            }
+            else
+            {
+                _logger.LogError("MemberID not found in JWT claims");
+                ModelState.AddModelError("ProcessedBy", "Unable to determine member identity.");
+            }
+
+            /*
+            // ✅ Handle multiple file uploads (COMMENTED OUT)
+            if (Request.Form.Files.Count > 0)
+            {
+                var uploadsFolder = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", "uploads");
+                if (!Directory.Exists(uploadsFolder))
+                    Directory.CreateDirectory(uploadsFolder);
+
+                var filePaths = new List<string>();
+
+                foreach (var file in Request.Form.Files)
                 {
-                    if (await reader.ReadAsync())
+                    if (file != null && file.Length > 0)
                     {
-                        currentCycle = !reader.IsDBNull(0) ? reader.GetInt32(0) : 0;
-                        payoutTypeId = !reader.IsDBNull(1) ? reader.GetInt32(1) : 0;
+                        var uniqueFileName = $"{Guid.NewGuid()}_{Path.GetFileName(file.FileName)}";
+                        var filePath = Path.Combine(uploadsFolder, uniqueFileName);
+
+                        using (var stream = new FileStream(filePath, FileMode.Create))
+                        {
+                            await file.CopyToAsync(stream);
+                        }
+
+                        // Store relative path
+                        filePaths.Add($"/uploads/{uniqueFileName}");
                     }
                 }
-            }
 
-            if (payoutTypeId == 2)
+                // Save as comma-separated string
+                model.ProofOfPaymentPath = string.Join(",", filePaths);
+                ModelState.Remove("ProofOfPaymentPath");
+            }
+            */
+
+            model.MemberOptions = GetMemberOptionsForGroup(groupId);
+            model.PayoutTypes = GetPaymentMethodsFromDatabase().Select(p => new SelectListItem
             {
-                // Bulk payout
-                var memberGroupQuery = @"SELECT ID FROM MemberGroups WHERE GroupID = @GroupID";
-                var memberGroupIds = new List<int>();
-                using (var cmd = new SqlCommand(memberGroupQuery, connection))
+                Value = p.Id.ToString(),
+                Text = p.Method
+            }).ToList();
+            model.GroupId = groupId;
+
+            try
+            {
+                if (!ModelState.IsValid)
                 {
-                    cmd.Parameters.AddWithValue("@GroupID", groupId);
-                    using (var reader = await cmd.ExecuteReaderAsync())
+                    foreach (var state in ModelState)
                     {
-                        while (await reader.ReadAsync())
+                        foreach (var error in state.Value.Errors)
                         {
-                            memberGroupIds.Add(reader.GetInt32(0));
+                            _logger.LogError("Field: {Field} - Error: {Message}", state.Key, error.ErrorMessage);
+                        }
+                    }
+                    return View("~/Views/Transactions/PayoutsCreate.cshtml", model);
+                }
+
+                using (var connection = new SqlConnection(_configuration.GetConnectionString("DefaultConnection")))
+                {
+                    await connection.OpenAsync();
+
+                    int currentCycle = 0;
+                    int payoutTypeId = 0;
+
+                    // Get cycle + payout type
+                    var getCycleAndPayoutTypeQuery = @"SELECT Cycles, PayoutTypeID FROM Groups WHERE ID = @GroupID";
+                    using (var cmd = new SqlCommand(getCycleAndPayoutTypeQuery, connection))
+                    {
+                        cmd.Parameters.AddWithValue("@GroupID", groupId);
+                        using (var reader = await cmd.ExecuteReaderAsync())
+                        {
+                            if (await reader.ReadAsync())
+                            {
+                                currentCycle = !reader.IsDBNull(0) ? reader.GetInt32(0) : 0;
+                                payoutTypeId = !reader.IsDBNull(1) ? reader.GetInt32(1) : 0;
+                            }
+                        }
+                    }
+
+                    if (payoutTypeId == 2)
+                    {
+                        // Bulk payout
+                        var memberGroupQuery = @"SELECT ID FROM MemberGroups WHERE GroupID = @GroupID";
+                        var memberGroupIds = new List<int>();
+                        using (var cmd = new SqlCommand(memberGroupQuery, connection))
+                        {
+                            cmd.Parameters.AddWithValue("@GroupID", groupId);
+                            using (var reader = await cmd.ExecuteReaderAsync())
+                            {
+                                while (await reader.ReadAsync())
+                                {
+                                    memberGroupIds.Add(reader.GetInt32(0));
+                                }
+                            }
+                        }
+
+                        if (memberGroupIds.Count == 0)
+                        {
+                            ModelState.AddModelError("", "No members found in the group for bulk payout.");
+                            return View("~/Views/Transactions/PayoutsCreate.cshtml", model);
+                        }
+
+                        decimal perMemberAmount = model.Amount / memberGroupIds.Count;
+
+                        var bulkInsertQuery = @"INSERT INTO Payouts 
+                            (MemberGroupID, PaymentMethodID, Amount, TransactionDate, Reference, CreatedBy, PaidForCycle, AccountNumber, CVC, Expiry, Status)
+                            VALUES 
+                            (@MemberGroupID, @PaymentMethodID, @Amount, @PayoutDate, @Reference, @CreatedBy, @PaidForCycle, @AccountNumber, @CVC, @Expiry, @Status);";
+
+                        foreach (var mgId in memberGroupIds)
+                        {
+                            using (var cmd = new SqlCommand(bulkInsertQuery, connection))
+                            {
+                                cmd.Parameters.AddWithValue("@MemberGroupID", mgId);
+                                cmd.Parameters.AddWithValue("@PaymentMethodID", model.PayoutTypeId);
+                                cmd.Parameters.AddWithValue("@Amount", perMemberAmount);
+                                cmd.Parameters.AddWithValue("@PayoutDate", model.PayoutDate);
+                                cmd.Parameters.AddWithValue("@Reference", model.Reference ?? (object)DBNull.Value);
+                                // cmd.Parameters.AddWithValue("@ProofOfPaymentPath", DBNull.Value); // removed
+                                cmd.Parameters.AddWithValue("@CreatedBy", model.CreatedBy);
+                                cmd.Parameters.AddWithValue("@PaidForCycle", currentCycle);
+                                cmd.Parameters.AddWithValue("@AccountNumber", model.AccountNumber ?? (object)DBNull.Value);
+                                cmd.Parameters.AddWithValue("@CVC", model.CVC ?? (object)DBNull.Value);
+                                cmd.Parameters.AddWithValue("@Expiry", model.Expiry ?? (object)DBNull.Value);
+                                cmd.Parameters.AddWithValue("@Status", status);
+
+                                await cmd.ExecuteNonQueryAsync();
+                            }
+                        }
+
+                    }
+                    else
+                    {
+                        // Single payout
+                        var getMemberGroupQuery = @"SELECT ID FROM MemberGroups WHERE MemberID = @MemberID AND GroupID = @GroupID";
+                        int memberGroupId;
+                        using (var cmd = new SqlCommand(getMemberGroupQuery, connection))
+                        {
+                            cmd.Parameters.AddWithValue("@MemberID", model.MemberId);
+                            cmd.Parameters.AddWithValue("@GroupID", groupId);
+
+                            var result = await cmd.ExecuteScalarAsync();
+                            if (result == null)
+                            {
+                                ModelState.AddModelError("", "Selected member is not part of this group.");
+                                return View("~/Views/Transactions/PayoutsCreate.cshtml", model);
+                            }
+
+                            memberGroupId = Convert.ToInt32(result);
+                        }
+
+                        var insertQuery = @"INSERT INTO Payouts 
+                            (MemberGroupID, PaymentMethodID, Amount, TransactionDate, Reference, CreatedBy, PaidForCycle, AccountNumber, CVC, Expiry, Status)
+                            VALUES 
+                            (@MemberGroupID, @PaymentMethodID, @Amount, @PayoutDate, @Reference, @CreatedBy, @PaidForCycle, @AccountNumber, @CVC, @Expiry, @Status);";
+
+                        using (var command = new SqlCommand(insertQuery, connection))
+                        {
+                            command.Parameters.AddWithValue("@MemberGroupID", memberGroupId);
+                            command.Parameters.AddWithValue("@PaymentMethodID", model.PayoutTypeId);
+                            command.Parameters.AddWithValue("@Amount", model.Amount);
+                            command.Parameters.AddWithValue("@PayoutDate", model.PayoutDate);
+                            command.Parameters.AddWithValue("@Reference", model.Reference ?? (object)DBNull.Value);
+                            // command.Parameters.AddWithValue("@ProofOfPaymentPath", DBNull.Value); // removed
+                            command.Parameters.AddWithValue("@CreatedBy", model.CreatedBy);
+                            command.Parameters.AddWithValue("@PaidForCycle", currentCycle);
+                            command.Parameters.AddWithValue("@AccountNumber", model.AccountNumber ?? (object)DBNull.Value);
+                            command.Parameters.AddWithValue("@CVC", model.CVC ?? (object)DBNull.Value);
+                            command.Parameters.AddWithValue("@Expiry", model.Expiry ?? (object)DBNull.Value);
+                            command.Parameters.AddWithValue("@Status", status);
+
+                            await command.ExecuteNonQueryAsync();
+                        }
+                    }
+
+                    // Cycle completion check
+                    var totalMembersQuery = @"SELECT COUNT(*) FROM MemberGroups WHERE GroupID = @GroupID";
+                    var totalPayoutsQuery = @"SELECT COUNT(*) 
+                                            FROM Payouts P
+                                            INNER JOIN MemberGroups MG ON MG.ID = P.MemberGroupID
+                                            WHERE MG.GroupID = @GroupID AND P.PaidForCycle = @Cycle";
+
+                    int totalMembers, totalPayouts;
+
+                    using (var cmd = new SqlCommand(totalMembersQuery, connection))
+                    {
+                        cmd.Parameters.AddWithValue("@GroupID", groupId);
+                        totalMembers = (int)await cmd.ExecuteScalarAsync();
+                    }
+
+                    using (var cmd = new SqlCommand(totalPayoutsQuery, connection))
+                    {
+                        cmd.Parameters.AddWithValue("@GroupID", groupId);
+                        cmd.Parameters.AddWithValue("@Cycle", currentCycle);
+                        totalPayouts = (int)await cmd.ExecuteScalarAsync();
+                    }
+
+                    if (totalMembers == totalPayouts)
+                    {
+                        var updateCycleQuery = "UPDATE Groups SET Cycles = Cycles + 1 WHERE ID = @GroupID";
+                        using (var updateCmd = new SqlCommand(updateCycleQuery, connection))
+                        {
+                            updateCmd.Parameters.AddWithValue("@GroupID", groupId);
+                            await updateCmd.ExecuteNonQueryAsync();
                         }
                     }
                 }
 
-                if (memberGroupIds.Count == 0)
-                {
-                    ModelState.AddModelError("", "No members found in the group for bulk payout.");
-                    return View("~/Views/Transactions/PayoutsCreate.cshtml", model);
-                }
-
-                decimal perMemberAmount = model.Amount / memberGroupIds.Count;
-
-                var bulkInsertQuery = @"INSERT INTO Payouts 
-                                        (MemberGroupID, PaymentMethodID, Amount, TransactionDate, Reference, ProofOfPaymentPath, CreatedBy, PaidForCycle)
-                                        VALUES 
-                                        (@MemberGroupID, @PaymentMethodID, @Amount, @PayoutDate, @Reference, @ProofOfPaymentPath, @CreatedBy, @PaidForCycle);";
-
-                foreach (var mgId in memberGroupIds)
-                {
-                    using (var cmd = new SqlCommand(bulkInsertQuery, connection))
-                    {
-                        cmd.Parameters.AddWithValue("@MemberGroupID", mgId);
-                        cmd.Parameters.AddWithValue("@PaymentMethodID", model.PayoutTypeId);
-                        cmd.Parameters.AddWithValue("@Amount", perMemberAmount);
-                        cmd.Parameters.AddWithValue("@PayoutDate", model.PayoutDate);
-                        cmd.Parameters.AddWithValue("@Reference", model.Reference ?? (object)DBNull.Value);
-                        cmd.Parameters.AddWithValue("@ProofOfPaymentPath",
-                            string.IsNullOrEmpty(model.ProofOfPaymentPath) ? DBNull.Value : (object)model.ProofOfPaymentPath);
-                        cmd.Parameters.AddWithValue("@CreatedBy", model.CreatedBy);
-                        cmd.Parameters.AddWithValue("@PaidForCycle", currentCycle);
-
-                        await cmd.ExecuteNonQueryAsync();
-                    }
-                }
+                TempData["SuccessMessage"] = "Payout recorded successfully!";
+                return RedirectToAction("PayoutIndex", new { groupId = groupId });
             }
-            else
+            catch (Exception ex)
             {
-                // Single payout
-                var getMemberGroupQuery = @"SELECT ID FROM MemberGroups WHERE MemberID = @MemberID AND GroupID = @GroupID";
-                int memberGroupId;
-                using (var cmd = new SqlCommand(getMemberGroupQuery, connection))
-                {
-                    cmd.Parameters.AddWithValue("@MemberID", model.MemberId);
-                    cmd.Parameters.AddWithValue("@GroupID", groupId);
+                _logger.LogError(ex,
+                    "Error saving payout. Exception: {Message}, StackTrace: {StackTrace}, InnerException: {InnerException}, Model: {@Model}",
+                    ex.Message,
+                    ex.StackTrace,
+                    ex.InnerException?.Message,
+                    model
+                );
 
-                    var result = await cmd.ExecuteScalarAsync();
-                    if (result == null)
-                    {
-                        ModelState.AddModelError("", "Selected member is not part of this group.");
-                        return View("~/Views/Transactions/PayoutsCreate.cshtml", model);
-                    }
-
-                    memberGroupId = Convert.ToInt32(result);
-                }
-
-                var insertQuery = @"INSERT INTO Payouts 
-                                    (MemberGroupID, PaymentMethodID, Amount, TransactionDate, Reference, ProofOfPaymentPath, CreatedBy, PaidForCycle)
-                                    VALUES 
-                                    (@MemberGroupID, @PaymentMethodID, @Amount, @PayoutDate, @Reference, @ProofOfPaymentPath, @CreatedBy, @PaidForCycle);";
-
-                using (var command = new SqlCommand(insertQuery, connection))
-                {
-                    command.Parameters.AddWithValue("@MemberGroupID", memberGroupId);
-                    command.Parameters.AddWithValue("@PaymentMethodID", model.PayoutTypeId);
-                    command.Parameters.AddWithValue("@Amount", model.Amount);
-                    command.Parameters.AddWithValue("@PayoutDate", model.PayoutDate);
-                    command.Parameters.AddWithValue("@Reference", model.Reference ?? (object)DBNull.Value);
-                    command.Parameters.AddWithValue("@ProofOfPaymentPath",
-                        string.IsNullOrEmpty(model.ProofOfPaymentPath) ? DBNull.Value : (object)model.ProofOfPaymentPath);
-                    command.Parameters.AddWithValue("@CreatedBy", model.CreatedBy);
-                    command.Parameters.AddWithValue("@PaidForCycle", currentCycle);
-
-                    await command.ExecuteNonQueryAsync();
-                }
-            }
-
-            // Cycle completion check
-            var totalMembersQuery = @"SELECT COUNT(*) FROM MemberGroups WHERE GroupID = @GroupID";
-            var totalPayoutsQuery = @"SELECT COUNT(*) 
-                                    FROM Payouts P
-                                    INNER JOIN MemberGroups MG ON MG.ID = P.MemberGroupID
-                                    WHERE MG.GroupID = @GroupID AND P.PaidForCycle = @Cycle";
-
-            int totalMembers, totalPayouts;
-
-            using (var cmd = new SqlCommand(totalMembersQuery, connection))
-            {
-                cmd.Parameters.AddWithValue("@GroupID", groupId);
-                totalMembers = (int)await cmd.ExecuteScalarAsync();
-            }
-
-            using (var cmd = new SqlCommand(totalPayoutsQuery, connection))
-            {
-                cmd.Parameters.AddWithValue("@GroupID", groupId);
-                cmd.Parameters.AddWithValue("@Cycle", currentCycle);
-                totalPayouts = (int)await cmd.ExecuteScalarAsync();
-            }
-
-            if (totalMembers == totalPayouts)
-            {
-                var updateCycleQuery = "UPDATE Groups SET Cycles = Cycles + 1 WHERE ID = @GroupID";
-                using (var updateCmd = new SqlCommand(updateCycleQuery, connection))
-                {
-                    updateCmd.Parameters.AddWithValue("@GroupID", groupId);
-                    await updateCmd.ExecuteNonQueryAsync();
-                }
+                ModelState.AddModelError("", "An unexpected error occurred while saving the payout. Please check logs for more details.");
+                return View("~/Views/Transactions/PayoutsCreate.cshtml", model);
             }
         }
-
-        TempData["SuccessMessage"] = "Payout recorded successfully!";
-        return RedirectToAction("PayoutIndex", new { groupId = groupId });
-    }
-    catch (Exception ex)
-    {
-        _logger.LogError(ex,
-            "Error saving payout. Exception: {Message}, StackTrace: {StackTrace}, InnerException: {InnerException}, Model: {@Model}",
-            ex.Message,
-            ex.StackTrace,
-            ex.InnerException?.Message,
-            model
-        );
-
-        ModelState.AddModelError("", "An unexpected error occurred while saving the payout. Please check logs for more details.");
-        return View("~/Views/Transactions/PayoutsCreate.cshtml", model);
-    }
-}
 
         [HttpGet]
         public IActionResult PayoutIndex(int groupId)
@@ -455,25 +495,31 @@ namespace StokvelManagementSystem.Controllers
                 using (var connection = new SqlConnection(_configuration.GetConnectionString("DefaultConnection")))
                 {
                     var query = @"
-                        SELECT 
-                            p.PayoutID,
-                            p.PaymentMethodID, 
-                            p.Amount, 
-                            p.TransactionDate AS PayoutDate, 
-                            p.Reference, 
-                            p.ProofOfPaymentPath,
-                            g.GroupName,
-                            CONCAT(m.FirstName, ' ', m.LastName) AS MemberName,
-                            m.Phone, 
-                            m.Email,
-                            CONCAT(mcreator.FirstName, ' ', mcreator.LastName) AS CreatedBy
-                        FROM dbo.Payouts p
-                        JOIN dbo.MemberGroups mg ON mg.ID = p.MemberGroupID
-                        JOIN dbo.Groups g ON mg.GroupID = g.ID
-                        JOIN dbo.Members m ON m.ID = mg.MemberID
-                        LEFT JOIN dbo.Members mcreator ON mcreator.ID = TRY_CAST(p.CreatedBy AS INT)
-                        WHERE mg.GroupID = @GroupId
-                        ORDER BY p.CreatedAt DESC;";
+                                    SELECT 
+                                        p.PayoutID,
+                                        p.PaymentMethodID, 
+                                        p.Amount, 
+                                        p.TransactionDate AS PayoutDate, 
+                                        p.Reference, 
+                                        p.AccountNumber,
+                                        p.CVC,
+                                        p.Expiry,
+                                        p.Status,
+                                        g.GroupName,
+                                        c.Currency,                      
+                                        CONCAT(m.FirstName, ' ', m.LastName) AS MemberName,
+                                        m.Phone, 
+                                        m.Email,
+                                        CONCAT(mcreator.FirstName, ' ', mcreator.LastName) AS CreatedBy
+                                    FROM dbo.Payouts p
+                                    JOIN dbo.MemberGroups mg ON mg.ID = p.MemberGroupID
+                                    JOIN dbo.Groups g ON mg.GroupID = g.ID
+                                    JOIN dbo.Currencies c ON g.CurrencyID = c.ID   -- ✅ Join here
+                                    JOIN dbo.Members m ON m.ID = mg.MemberID
+                                    LEFT JOIN dbo.Members mcreator ON mcreator.ID = TRY_CAST(p.CreatedBy AS INT)
+                                    WHERE mg.GroupID = @GroupId
+                                    ORDER BY p.CreatedAt DESC;
+                                    ";
 
                     using (var command = new SqlCommand(query, connection))
                     {
@@ -491,12 +537,18 @@ namespace StokvelManagementSystem.Controllers
                                     Amount = Convert.ToDecimal(reader["Amount"]),
                                     PayoutDate = Convert.ToDateTime(reader["PayoutDate"]),
                                     Reference = reader["Reference"].ToString(),
-                                    ProofOfPaymentPath = reader["ProofOfPaymentPath"]?.ToString(),
+                                    //ProofOfPaymentPath = reader["ProofOfPaymentPath"]?.ToString(),
                                     CreatedBy = reader["CreatedBy"]?.ToString(),
                                     GroupName = reader["GroupName"].ToString(),
                                     MemberName = reader["MemberName"].ToString(),
                                     Phone = reader["Phone"].ToString(),
-                                    Email = reader["Email"].ToString()
+                                    Email = reader["Email"].ToString(),
+                                    Currency = reader["Currency"].ToString(),
+                                    AccountNumber = reader["AccountNumber"]?.ToString(),
+                                    CVC = reader["CVC"]?.ToString(),
+                                    Expiry = reader["Expiry"]?.ToString(),
+                                    Status = reader["Status"].ToString()
+
                                 });
                             }
                         }

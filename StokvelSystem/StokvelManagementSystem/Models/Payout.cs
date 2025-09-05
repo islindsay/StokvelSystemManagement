@@ -45,8 +45,8 @@ namespace StokvelManagementSystem.Models
         public string? Reference { get; set; }
 
 
-        public string? ProofOfPaymentPath { get; set; }
-        
+        //public string? ProofOfPaymentPath { get; set; }
+
 
         [Display(Name = "Processed By")]
         public string? CreatedBy { get; set; }
@@ -65,6 +65,12 @@ namespace StokvelManagementSystem.Models
         public MemberOption? NextMember { get; set; }
         public int FrequencyID { get; set; }
         public int PayoutTypeID { get; set; }
+        public string AccountNumber { get; set; }
+        public string? CVC { get; set; }
+        public string? Expiry { get; set; }
+        public string? FullName { get; set; }
+        public string? Currency { get; set; }
+        public string? Status { get; set; }
      
 
 

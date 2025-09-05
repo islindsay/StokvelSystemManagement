@@ -80,6 +80,7 @@ namespace StokvelManagementSystem.Models
         public string? CVC { get; set; }
         public string? Expiry { get; set; }
         public string? FullName { get; set; }
+        public string? Status { get; set; }
     }
 
     public class PaymentMethod

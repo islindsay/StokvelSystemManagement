@@ -6,7 +6,7 @@
 <div class="container mt-4">
     <div class="card shadow-sm">
         <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center py-3">
-            <h4 class="mb-0">@ViewData["Title"] <span style="font-size: 0.875rem;">(Balance @Model.TotalContributions.ToString("C") / @Model.ExpectedPayment.ToString("C")) Payable from @Model.NextPayoutDate?.ToString("dd MMMM yyyy")</span></h4>
+            <h4 class="mb-0">@ViewData["Title"] <span style="font-size: 0.875rem;">(Balance @Model.Currency @Model.TotalContributions / @Model.Currency @Model.ExpectedPayment) Payable from @Model.NextPayoutDate?.ToString("dd MMMM yyyy")</span></h4>
             <div class="text-end">
                 <span class="badge bg-light text-dark fs-6">
                     <i class="bi bi-calendar me-2"></i>@DateTime.Now.ToString("dd MMMM yyyy")
@@ -22,7 +22,7 @@
                                 <label class="form-label fw-bold">Group Name</label>
                                 <input type="text" class="form-control" value="@Model.GroupName" readonly>
                             </div>
-                <div class="mb-4 p-3 border rounded bg-light">
+                @* <div class="mb-4 p-3 border rounded bg-light">
                     <h5 class="mb-3 text-primary">
                 </h5>
                     <div class="form-group">
@@ -33,7 +33,7 @@
                            
                         </div>
                     </div>
-                </div>
+                </div> *@
 
             
                 <div class="row mb-4">
@@ -107,7 +107,7 @@
                             </div>
                             
                             <div class="form-group mb-3">
-                                <label asp-for="Amount" class="form-label fw-bold">Amount</label>
+                                <label asp-for="Amount" class="form-label fw-bold">Amount (@Model.Currency)</label>
                                 <div class="input-group">
                                     <input asp-for="Amount" class="form-control" type="number" step="0.01" min="5" value="@(Model.ExpectedPayment)" readonly required>
                                 </div>
@@ -123,7 +123,52 @@
                     </div>
                 </div>
 
-               
+                <div class="mb-4 p-3 border rounded bg-light">
+                    <h5 class="mb-3 text-primary">
+                        <i class="bi bi-card-text me-2"></i>Card Information
+                    </h5>
+                                        <div class="row g-2 mb-3">
+                        <div class="col-6">
+                            <label for="AccountNumber" class="form-label fw-bold">Account Number</label>
+                            <input id="AccountNumber" 
+                                name="AccountNumber" 
+                                class="form-control" 
+                                type="text" 
+                                pattern="\d{13,19}" 
+                                title="Enter a valid account number (13–19 digits)" 
+                                required>
+                            <div id="accountError" class="text-danger mt-1"></div>
+                        </div>
+
+                        <div class="col-3">
+                            <label for="CVC" class="form-label fw-bold">CVC</label>
+                            <input id="CVC" 
+                                name="CVC" 
+                                class="form-control " 
+                                 placeholder="123"
+                                maxlength="3"
+                                type="text" 
+                                pattern="\d{3}" 
+                                title="Enter a valid CVC (3 digits)" 
+                                required>
+                            <div id="cvcError" class="text-danger mt-1"></div>
+                        </div>
+
+                        <div class="col-3">
+                            <label for="Expiry" class="form-label fw-bold">Expiry Date</label>
+                            <input id="Expiry" 
+                                name="Expiry" 
+                                class="form-control " 
+                                maxlength="5"
+                                placeholder="MM/YY"
+                                type="text" 
+                                pattern="\d{2}/\d{2}" 
+                                title="Enter a valid Expiry date" 
+                                required>
+                            <div id="expiryError" class="text-danger mt-1"></div>
+                        </div>
+                    </div>
+                </div>               
 
              
                 <div class="mb-4 p-3 border rounded bg-light">
@@ -143,7 +188,7 @@
                         <i class="bi bi-x-circle me-2"></i>Cancel
                     </a>
                     @* <button type="submit" class="btn btn-primary px-4" @((Model.EnablePayout == true || DateTime.Now.Date > Model.NextPayoutDate?.Date) ? "" : "disabled")></button> *@
-                    <button type="submit" class="btn btn-primary px-4" @(Model.EnablePayout == true ? "" : "disabled")>
+                    <button type="submit" class="btn btn-primary px-4" @(Model.EnablePayout == false ? "" : "disabled")>
                         <i class="bi bi-check-circle me-2"></i>Submit Payout
                     </button>
                 </div>
@@ -202,6 +247,99 @@
                     }, false);
                 });
             })();
+        });
+    </script>
+    <script>
+        document.addEventListener("DOMContentLoaded", () => {
+            const accountInput = document.getElementById("AccountNumber");
+            const cvcInput = document.getElementById("CVC");
+            const expiryInput = document.getElementById("Expiry");
+
+            const accountError = document.getElementById("accountError");
+            const cvcError = document.getElementById("cvcError");
+            const expiryError = document.getElementById("expiryError");
+
+            const payNowButton = document.querySelector("button[type='submit']");
+
+            // ✅ Luhn check
+            function isValidLuhn(number) {
+                let sum = 0;
+                let shouldDouble = false;
+                for (let i = number.length - 1; i >= 0; i--) {
+                    let digit = parseInt(number[i], 10);
+                    if (shouldDouble) {
+                        digit *= 2;
+                        if (digit > 9) digit -= 9;
+                    }
+                    sum += digit;
+                    shouldDouble = !shouldDouble;
+                }
+                return sum % 10 === 0;
+            }
+
+            // ✅ Enable/disable button
+            function checkFormValidity() {
+                if (
+                    accountInput.checkValidity() &&
+                    cvcInput.checkValidity() &&
+                    expiryInput.checkValidity()
+                ) {
+                    payNowButton.disabled = false;
+                } else {
+                    payNowButton.disabled = true;
+                }
+            }
+
+            // --- Account Number Validation ---
+            accountInput.addEventListener("input", () => {
+                const value = accountInput.value.replace(/\s+/g, "");
+                if (value.length >= 13 && value.length <= 19 && isValidLuhn(value)) {
+                    accountInput.setCustomValidity("");
+                    accountError.textContent = "";
+                } else {
+                    accountInput.setCustomValidity("Invalid account number");
+                    accountError.textContent = "Invalid account number";
+                }
+                checkFormValidity();
+            });
+
+            // --- CVC Validation ---
+            cvcInput.addEventListener("input", () => {
+                const value = cvcInput.value.trim();
+                if (/^\d{3,4}$/.test(value)) {
+                    cvcInput.setCustomValidity("");
+                    cvcError.textContent = "";
+                } else {
+                    cvcInput.setCustomValidity("Invalid CVC");
+                    cvcError.textContent = "CVC must be 3 or 4 digits";
+                }
+                checkFormValidity();
+            });
+
+            // --- Expiry Validation ---
+            expiryInput.addEventListener("input", () => {
+                const value = expiryInput.value.trim();
+                const match = /^(\d{2})\/(\d{2})$/.exec(value); // MM/YY
+                if (match) {
+                    const month = parseInt(match[1], 10);
+                    const year = parseInt(match[2], 10) + 2000;
+                    const expiryDate = new Date(year, month - 1, 1);
+                    const today = new Date();
+                    today.setDate(1); // compare month
+                    if (expiryDate >= today && month >= 1 && month <= 12) {
+                        expiryInput.setCustomValidity("");
+                        expiryError.textContent = "";
+                        checkFormValidity();
+                        return;
+                    }
+                }
+                expiryInput.setCustomValidity("Invalid Expiry");
+                expiryError.textContent = "Expiry must be valid and not in the past";
+                checkFormValidity();
+            });
+
+            // Run initial validation
+            checkFormValidity();
         });
     </script>
 }

@@ -51,14 +51,15 @@
                             <tr>
                               <th><i class="bi bi-people me-1"></i>Group</th>
                                 <th><i class="bi bi-person me-1"></i>Member</th>
-                                <th class="text-end"><i ></i>Contribution</th>
-                                <th class="text-end"><i class="bi bi-exclamation-triangle me-1"></i>Penalty</th>
-                                <th class="text-end"><i class="bi bi-calculator me-1"></i>Total</th>
+                                <th class=""><i ></i>Contribution</th>
+                                <th class=""><i class="bi bi-exclamation-triangle me-1"></i>Penalty</th>
+                                <th class=""><i class="bi bi-calculator me-1"></i>Total</th>
                                 <th><i class="bi bi-calendar me-1"></i>Date</th>
-                                <th><i class="bi bi-tag me-1"></i>Reference ID</th>
+                                @* <th><i class="bi bi-tag me-1"></i>Reference ID</th> *@
                                 @* <th><i class="bi bi-receipt me-1"></i>Proof</th> *@
                                 <th><i class="bi bi-person-plus me-1"></i>Recorded By</th>
                                 <th><i class="bi bi-settings-gear me-1"></i>Action</th>
+                                <th><i class=" me-1"></i>Status</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -67,11 +68,11 @@
                                 <tr>
                                     <td>@(item.GroupName ?? "N/A")</td>
                                     <td>@(item.FirstName ?? "N/A")</td>
-                                    <td class="text-end text-primary"><span class="fw-bold text-muted">@item.CurrencySymbol</span> @item.ContributionAmount</td>
-                                    <td class="text-end text-primary @(item.PenaltyAmount > 0 ? "text-danger" : "")"><span class="fw-bold text-muted">@item.CurrencySymbol</span> @item.PenaltyAmount</td>
-                                    <td class="text-end fw-bold text-primary"><span class="fw-bold text-muted">@item.CurrencySymbol</span> @item.TotalAmount</td>
+                                    <td class=" text-primary"><span class="fw-bold text-muted">@item.CurrencySymbol</span> @item.ContributionAmount</td>
+                                    <td class=" text-primary @(item.PenaltyAmount > 0 ? "text-danger" : "")"><span class="fw-bold text-muted">@item.CurrencySymbol</span> @item.PenaltyAmount</td>
+                                    <td class=" fw-bold text-primary"><span class="fw-bold text-muted">@item.CurrencySymbol</span> @item.TotalAmount</td>
                                     <td>@item.TransactionDate.ToString("dd MMM yyyy")</td>
-                                    <td>@item.ID</td>
+                                    @* <td>@item.ID</td> *@
                                     <td>@item.CreatedBy</td>
                                     <td>
                                         <button type="button" class="btn btn-sm btn-outline-primary view-details-btn"
@@ -84,11 +85,30 @@
                                             data-createdby="@item.CreatedBy"
                                             data-currency="@item.CurrencySymbol""
                                             data-accountnumber="@item.AccountNumber"
+                                            data-status="@item.Status"
                                             data-cvc="@item.CVC"
                                             data-expiry="@item.Expiry">
                                             <i class="bi bi-eye"></i> View
                                         </button>
 
+                                    </td>
+                                    <td>
+                                        @if (item.Status == "Success")
+                                        {
+                                            <span class="badge bg-success">@item.Status</span>
+                                        }
+                                        else if (item.Status == "Fail")
+                                        {
+                                            <span class="badge bg-danger">Failed</span>
+                                        }
+                                        else if (item.Status == "Pending")
+                                        {
+                                            <span class="badge bg-warning">@item.Status</span>
+                                        }
+                                        else
+                                        {
+                                            <span>@item.Status</span>
+                                        }
                                     </td>
                                 </tr>
                             }
@@ -116,6 +136,7 @@
             <p><strong>Total:</strong> <span id="modalTotal"></span></p>
             <p><strong>Transaction Date:</strong> <span id="modalDate"></span></p>
             <p><strong>Recorded By:</strong> <span id="modalCreatedBy"></span></p>
+            <p><strong>Status</strong> <span id="modalStatus"></span></p>
             
             <!-- Add these new fields -->
             <p><strong>Account Number:</strong> <span id="modalAccountNumber"></span></p>
@@ -143,6 +164,8 @@
                     document.getElementById("modalTotal").textContent = this.dataset.currency + " " + this.dataset.total;
                     document.getElementById("modalDate").textContent = this.dataset.date;
                     document.getElementById("modalCreatedBy").textContent = this.dataset.createdby;
+                    document.getElementById("modalStatus").textContent = this.dataset.status;
+
 
                     document.getElementById("modalAccountNumber").textContent =
                         this.dataset.accountnumber
