@@ -9,19 +9,24 @@
         <span asp-validation-for="Name" class="text-danger"></span>
     </div>
 
-    <div class="mb-3">
-        <label asp-for="Currency" class="form-label"></label>
-        <input asp-for="Currency" class="form-control" readonly="@Model.IsActive" />
-        <span asp-validation-for="Currency" class="text-danger"></span>
-    </div>
+    <select asp-for="CurrencyID"
+            asp-items="Model.CurrencyOptions"
+            class="form-select @(Model.IsActive ? "is-readonly" : "")"
+        >
+    </select>
+
+    @if (Model.IsActive)
+    {
+        <input type="hidden" asp-for="CurrencyID" />
+    }
+
+
+
 
     <div class="mb-3">
         <label asp-for="FrequencyName" class="form-label"></label>
-        <select asp-for="FrequencyName" class="form-control @(Model.IsActive ? "is-readonly" : "")">
-            <option value="Daily">Daily</option>
-            <option value="Monthly">Monthly</option>
-            <option value="Annually">Annually</option>
-            <option value="Weekly">Weekly</option>
+        <select asp-for="FrequencyName" asp-items="Model.FrequencyOptions"
+                class="form-select @(Model.IsActive ? "is-readonly" : "")">
         </select>
         <span asp-validation-for="FrequencyName" class="text-danger"></span>
     </div>

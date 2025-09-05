@@ -234,79 +234,80 @@ public IActionResult GetGroupDetails(int memberId)
             }
 
 
-            [AllowAnonymous]
-            public IActionResult ContributionsIndex(int groupId)
+[AllowAnonymous]
+public IActionResult ContributionsIndex(int groupId)
+{
+    var contributions = new List<Contribution>();
+    _logger.LogInformation($"Group Id being passdown now: {groupId}");
+    using (var connection = new SqlConnection(_configuration.GetConnectionString("DefaultConnection")))
+    {
+        var query = @"
+            SELECT 
+                c.ID, 
+                c.PaymentMethodID, 
+                c.PenaltyAmount, 
+                c.ContributionAmount, 
+                c.TotalAmount, 
+                c.TransactionDate, 
+                c.ProofOfPaymentPath,
+                c.AccountNumber,
+                c.CVC,
+                c.Expiry,
+
+                g.GroupName AS GroupName,
+
+                CONCAT(m.FirstName, ' ', m.LastName) AS MemberName,
+                m.Phone, 
+                m.Email,
+                
+                CONCAT(mcreator.FirstName, ' ', mcreator.LastName) AS CreatedBy,
+
+                cur.Currency AS Currency
+
+            FROM dbo.Contributions c
+            JOIN dbo.MemberGroups mg ON mg.ID = c.MemberGroupID
+            JOIN dbo.Groups g ON mg.GroupID = g.ID
+            JOIN dbo.Members m ON m.ID = mg.MemberID
+            LEFT JOIN dbo.Members mcreator ON mcreator.ID = TRY_CAST(c.CreatedBy AS INT)
+            JOIN dbo.Currencies cur ON cur.ID = g.CurrencyID  -- Join to get currency
+
+            WHERE mg.GroupID = @groupID
+            ORDER BY c.TransactionDate DESC;
+        ";
+
+        using (var command = new SqlCommand(query, connection))
+        {
+            command.Parameters.AddWithValue("@GroupId", groupId);
+            connection.Open();
+            using (var reader = command.ExecuteReader())
             {
-                var contributions = new List<Contribution>();
-                _logger.LogInformation($"Group Id being passdown now: {groupId}");
-                using (var connection = new SqlConnection(_configuration.GetConnectionString("DefaultConnection")))
+                while (reader.Read())
                 {
-                    var query = @"
-                    SELECT 
-                    c.ID, 
-                    c.PaymentMethodID, 
-                    c.PenaltyAmount, 
-                    c.ContributionAmount, 
-                    c.TotalAmount, 
-                    c.TransactionDate, 
-                    c.ProofOfPaymentPath,
-
-                    g.GroupName AS GroupName,
-
-                    CONCAT(m.FirstName, ' ', m.LastName) AS MemberName,
-                    m.Phone, 
-                    m.Email,
-                 
-                    CONCAT(mcreator.FirstName, ' ', mcreator.LastName) AS CreatedBy
-
-                FROM dbo.Contributions c
-
-                JOIN dbo.MemberGroups mg ON mg.ID = c.MemberGroupID
-
-                JOIN dbo.Groups g ON mg.GroupID = g.ID
-
-                JOIN dbo.Members m ON m.ID = mg.MemberID
-
-                LEFT JOIN dbo.Members mcreator ON mcreator.ID = TRY_CAST(c.CreatedBy AS INT)
-
-                WHERE mg.GroupID = @groupID
-                ORDER BY c.TransactionDate DESC;
-                        ";
-
-
-
-                    using (var command = new SqlCommand(query, connection))
+                    contributions.Add(new Contribution
                     {
-                        command.Parameters.AddWithValue("@GroupId", groupId);
-                        connection.Open();
-                        using (var reader = command.ExecuteReader())
-                        {
-                            while (reader.Read())
-                            {
-                                contributions.Add(new Contribution
-                                {
-                                    ID = Convert.ToInt32(reader["ID"]),
-                                    PaymentMethodID = Convert.ToInt32(reader["PaymentMethodID"]),
-                                    PenaltyAmount = Convert.ToDecimal(reader["PenaltyAmount"]),
-                                    ContributionAmount = Convert.ToDecimal(reader["ContributionAmount"]),
-                                    TotalAmount = Convert.ToDecimal(reader["TotalAmount"]),
-                                    TransactionDate = Convert.ToDateTime(reader["TransactionDate"]),
-                                    // Reference = reader["Reference"].ToString(),
-                                    // ProofOfPaymentPath = reader["ProofOfPaymentPath"]?.ToString(),
-                                    CreatedBy = reader["CreatedBy"]?.ToString(),
-                                    GroupName = reader["GroupName"].ToString(),
-                                    FirstName = reader["MemberName"].ToString(),
-                                    Phone = reader["Phone"].ToString(), // ✅
-                                    Email = reader["Email"].ToString()
-                                });
-                            }
-                        }
-                    }
+                        ID = Convert.ToInt32(reader["ID"]),
+                        PaymentMethodID = Convert.ToInt32(reader["PaymentMethodID"]),
+                        PenaltyAmount = Convert.ToDecimal(reader["PenaltyAmount"]),
+                        ContributionAmount = Convert.ToDecimal(reader["ContributionAmount"]),
+                        TotalAmount = Convert.ToDecimal(reader["TotalAmount"]),
+                        TransactionDate = Convert.ToDateTime(reader["TransactionDate"]),
+                        CreatedBy = reader["CreatedBy"]?.ToString(),
+                        GroupName = reader["GroupName"].ToString(),
+                        FirstName = reader["MemberName"].ToString(),
+                        Phone = reader["Phone"].ToString(),
+                        Email = reader["Email"].ToString(),
+                        AccountNumber = reader["AccountNumber"]?.ToString(),
+                        CVC = reader["CVC"]?.ToString(),
+                        Expiry = reader["Expiry"]?.ToString(),
+                        CurrencySymbol = reader["Currency"]?.ToString() // <-- Added currency here
+                    });
                 }
-
-            //model.GroupId = groupId;
-                return View("~/Views/Transactions/ContributionsIndex.cshtml", contributions);
             }
+        }
+    }
+
+    return View("~/Views/Transactions/ContributionsIndex.cshtml", contributions);
+}
 
 
         private List<PaymentMethod> GetPaymentMethodsFromDatabase()
@@ -367,9 +368,11 @@ public IActionResult GetGroupDetails(int memberId)
                             g.Penalty, 
                             g.ContributionAmount AS GroupContributionAmount,
                             g.MemberLimit,
+                            c.Currency, 
                             f.FrequencyName
                         FROM Groups g
                         JOIN Frequencies f ON g.FrequencyID = f.ID
+                        JOIN Currencies c ON g.CurrencyID = c.ID
                         WHERE g.ID = @GroupId";
 
 
@@ -389,6 +392,7 @@ public IActionResult GetGroupDetails(int memberId)
                                         : DateTime.Now;
 
                                     int cycles = reader["Cycles"] != DBNull.Value ? Convert.ToInt32(reader["Cycles"]) : 0;
+                                    model.CurrencySymbol = reader["Currency"].ToString(); 
                                     string frequency = reader["FrequencyName"].ToString().ToLower();
                                     decimal groupPenalty = reader["Penalty"] != DBNull.Value ? Convert.ToDecimal(reader["Penalty"]) : 0;
 
