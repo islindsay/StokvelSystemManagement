@@ -318,11 +318,27 @@
 
     </div>
 
+@{
+    var jwtCookie = Context.Request.Cookies["jwt"];
+    var hasBankDetailsCookie = Context.Request.Cookies["HasBankDetails"];
+    bool hasBankDetails = string.IsNullOrEmpty(hasBankDetailsCookie) ? true : bool.Parse(hasBankDetailsCookie);
+    bool canJoin = hasBankDetails;
+}
+
+
 
 
 
 @section Scripts {
     @await Html.PartialAsync("_ValidationScriptsPartial")
+
+ <script>
+    // Razor outputs "true" or "false" directly into JS
+    const canJoin = @canJoin.ToString().ToLower();
+    console.log("jwtCookie:", "@jwtCookie");
+    console.log("hasBankDetails:", @hasBankDetails.ToString().ToLower());
+    console.log("canJoin:", @canJoin.ToString().ToLower());
+</script>   
 
 <script>
     // Inject ViewBag.CreateError into JavaScript and set localStorage flag
@@ -434,7 +450,7 @@
                     return;
                 }
 
-                const frequencies = ["Daily","Monthly", "Annually","Weekly", "Periodic"];
+                const frequencies = ["Daily", "Monthly", "Annually", "Weekly", "Periodic"];
 
                 frequencies.forEach(freq => {
                     const freqGroups = groups.filter(g => g.frequencyName === freq);
@@ -464,7 +480,7 @@
                                         <form action="/Groups/RequestToJoin" method="get">
                                             <input type="hidden" name="GroupId" value="${group.id}" />
                                             <input type="hidden" name="NationalId" value="${nationalId}" />
-                                            <button type="submit" class="btn btn-success w-100">Request To Join Group</button>
+                                            ${canJoin ? `<button type="submit" class="btn btn-success w-100">Request To Join Group</button>` : ""}
                                         </form>
                                     </div>
                                 </div>
@@ -480,6 +496,7 @@
                 document.getElementById('newGroupsContainer').innerHTML = '<p class="text-danger">Failed to load groups.</p>';
             }
         }
+
     });
 </script>
 
