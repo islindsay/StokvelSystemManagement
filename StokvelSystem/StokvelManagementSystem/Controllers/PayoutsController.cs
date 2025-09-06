@@ -107,17 +107,21 @@ namespace StokvelManagementSystem.Controllers
                     // ✅ 3. Get group balance from Contributions via MemberGroups
                     var balanceAndPayoutDateQuery = @"
                         SELECT 
-                            ISNULL(SUM(c.TotalAmount), 0) AS GroupBalance,
+                            ISNULL(SUM(CASE WHEN c.Status = 'Success' THEN c.TotalAmount ELSE 0 END), 0) AS GroupBalance,
 
-                            ISNULL(SUM(c.ContributionAmount), 0) 
-                            - ISNULL((
+                            ISNULL(SUM(CASE WHEN c.Status = 'Success' THEN c.ContributionAmount ELSE 0 END), 0)
+                            -
+                            ISNULL((
                                 SELECT SUM(p.Amount)
                                 FROM Payouts p
                                 JOIN MemberGroups mpg ON p.MemberGroupID = mpg.ID
-                                WHERE mpg.GroupID = g.ID AND p.PaidForCycle = g.Cycles
+                                WHERE mpg.GroupID = g.ID 
+                                AND p.PaidForCycle = g.Cycles
+                                AND p.Status = 'Success'
                             ), 0) AS TotalContributions,
 
-                            ISNULL(SUM(c.PenaltyAmount), 0) AS Penalties,
+
+                            ISNULL(SUM(CASE WHEN c.Status = 'Success' THEN c.PenaltyAmount ELSE 0 END), 0) AS Penalties
 
                             CASE 
                                 WHEN g.PayoutTypeID = 2 THEN g.PeriodicDate

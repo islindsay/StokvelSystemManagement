@@ -104,9 +104,11 @@
                             <th><i class="fas fa-money-bill-wave me-1"></i> Amount</th>
                              <th><i class="fas fa-coins me-1"></i> Payment Method</th>
                             <th><i class="fas fa-coins me-1"></i> Currency</th>
-                            <th><i class="fas fa-receipt me-1 no-print"></i> Proof</th>
+                            @* <th><i class="fas fa-receipt me-1 no-print"></i> Proof</th> *@
                             <th><i class="fas fa-check-circle me-1"></i> Status</th>
-                            @* <th><i class="fas fa-recycle me-1"></i> Cycle</th> *@
+                            <th><i class="fas fa-users me-1"></i> Group</th>
+                            <th><i class="fas fa-cycle me-1"></i> Cycle</th>
+
                         </tr>
                     </thead>
                     <tbody>
@@ -118,18 +120,19 @@
                                 <td>@c.PaymentMethod</td>
                                 @* <td>@c.Currency</td> *@
                                 <td>USD</td>
-                                <td>
+                                @* <td>
                                     <a href="/uploads/@c.ProofOfPayment" target="_blank" class="proof-link no-print">
                                         <i class="fas fa-eye me-1"></i> View
                                     </a>
-                                </td>
+                                </td> *@
                                 <td>
                                     <span class="status-@c.Status.ToLower()">
                                         <i class="@(c.Status == "Success" ? "fas fa-check-circle text-success" : "fas fa-times-circle text-danger") me-1"></i>
                                         @c.Status
                                     </span>
                                 </td>
-                                @* <td>@c.Cycle</td> *@
+                                <td>@c.GroupName</td>
+                                <td>@c.Cycle</td>
                             </tr>
                         }
                     </tbody>

@@ -56,6 +56,8 @@ public class GraphResult
         public string ProofOfPayment { get; set; }
         public string CycleOrMonth { get; set; }
         public string Status { get; set; } // "Paid" or "Missed"
+        public string GroupName { get; set; } // "Paid" or "Missed"
+        public string Cycle { get; set; } // "Paid" or "Missed"
     }
     public class GroupMemberSummary
     {

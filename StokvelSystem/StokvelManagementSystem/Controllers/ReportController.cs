@@ -141,18 +141,20 @@ namespace StokvelManagementSystem.Controllers
             {
                 // Base query
                 var sql = @"
-            SELECT 
-                c.TransactionDate AS Date, 
-                c.ContributionAmount AS Amount, 
-                pm.Method AS PaymentMethod, 
-                c.ProofOfPaymentPath AS ProofOfPayment, 
-                c.Status AS Status
-            FROM Contributions c
-            JOIN PaymentMethods pm ON c.PaymentMethodID = pm.ID
-            WHERE c.MemberGroupID IN (
-                SELECT GroupID FROM MemberGroups WHERE MemberID = @MemberId
-            )
-        ";
+                            SELECT 
+                                c.TransactionDate AS Date, 
+                                c.ContributionAmount AS Amount, 
+                                pm.Method AS PaymentMethod, 
+                                c.ProofOfPaymentPath AS ProofOfPayment, 
+                                c.Status AS Status,
+                                c.PaidForCycle AS Cycle,
+                                g.GroupName
+                            FROM Contributions c
+                            JOIN PaymentMethods pm ON c.PaymentMethodID = pm.ID
+                            JOIN MemberGroups mg ON c.MemberGroupID = mg.ID
+                            JOIN Groups g ON mg.GroupID = g.ID
+                            WHERE mg.MemberID = @MemberId
+                            ";
 
                 // Date filtering
                 if (dateFrom.HasValue && dateTo.HasValue)
@@ -187,7 +189,9 @@ namespace StokvelManagementSystem.Controllers
                                 Amount = Convert.ToDecimal(reader["Amount"]),
                                 PaymentMethod = reader["PaymentMethod"].ToString(),
                                 ProofOfPayment = reader["ProofOfPayment"].ToString(),
-                                Status = reader["Status"].ToString()
+                                Status = reader["Status"].ToString(),
+                                Cycle = reader["Cycle"].ToString(),
+                                GroupName = reader["GroupName"].ToString()  
                             });
                         }
                     }
