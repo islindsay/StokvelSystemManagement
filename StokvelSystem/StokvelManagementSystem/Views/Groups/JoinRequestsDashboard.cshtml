@@ -76,6 +76,7 @@
                             }
                             <a class="list-group-item"
                             asp-action="ContributionsIndex" 
+                            id="viewContributionsLink"
                             asp-controller="Contributions" 
                             asp-route-groupId="@Model.Group.ID">
                                 <i class="fas fa-hand-holding-usd me-2"></i> View Contributions
@@ -83,6 +84,7 @@
                         
                             <a class="list-group-item"
                             asp-action="PayoutIndex"
+                            id="viewPayoutsLink"
                             asp-controller="Payouts" 
                             asp-route-groupId="@Model.Group.ID">
                                 <i class="fas fa-money-check-alt me-2"></i> View Payouts
@@ -294,6 +296,13 @@
     </div>
     </div>
 
+    <style>
+        .readonly-checkbox {
+            pointer-events: none;  /* Prevent mouse clicks */
+            cursor: not-allowed;   /* Show disabled cursor */
+            opacity: 0.5;          /* Make it look disabled */
+        }
+    </style>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script>
@@ -358,6 +367,12 @@
 
             function updateFieldStates() {
                 const isActive = isActiveCheckbox.checked;
+
+                // 🔒 Make the checkbox itself readonly
+                isActiveCheckbox.addEventListener("click", e => e.preventDefault());
+                isActiveCheckbox.style.cursor = "not-allowed";
+                isActiveCheckbox.classList.add("readonly-checkbox");
+
 
                 form.querySelectorAll("input, select").forEach(el => {
                     if (el.name === "IsActive") return; // skip checkbox
@@ -451,25 +466,71 @@
             });
         }
 
-        function loadGroupStats(groupId) {
-            fetch(`/Invites/GroupStats/${groupId}`)
-                .then(res => res.ok ? res.json() : Promise.reject("Failed to load stats"))
-                .then(data => {
-                    const stats = document.getElementById('group-stats');
-                    const progressBar = document.getElementById('MemberLimit');
-                    if (stats && progressBar && data.memberCount !== undefined && data.memberLimit !== undefined) {
-                        const percent = Math.round((data.memberCount / data.memberLimit) * 100);
-                        stats.textContent = `Member Count ${data.memberCount}/${data.memberLimit}`;
-                        progressBar.style.width = percent + "%";
-                        progressBar.textContent = percent + "%";
-                    }
-                })
-                .catch(err => {
-                    console.error(err);
-                    const stats = document.getElementById('group-stats');
-                    if (stats) stats.textContent = "Error loading stats";
-                });
-        }
+            function loadGroupStats(groupId) {
+                fetch(`/Invites/GroupStats/${groupId}`)
+                    .then(res => res.ok ? res.json() : Promise.reject("Failed to load stats"))
+                    .then(data => {
+                        const stats = document.getElementById('group-stats');
+                        const progressBar = document.getElementById('MemberLimit');
+                        if (stats && progressBar && data.memberCount !== undefined && data.memberLimit !== undefined) {
+                            const percent = Math.round((data.memberCount / data.memberLimit) * 100);
+                            stats.textContent = `Member Count ${data.memberCount}/${data.memberLimit}`;
+                            progressBar.style.width = percent + "%";
+                            progressBar.textContent = percent + "%";
+
+                            // 🔔 Show notification when full
+                            if (data.memberCount >= data.memberLimit) {
+                                showGroupFullNotification();
+                            }
+                        }
+                    })
+                    .catch(err => {
+                        console.error(err);
+                        const stats = document.getElementById('group-stats');
+                        if (stats) stats.textContent = "Error loading stats";
+                    });
+            }
+
+            // Add this helper
+            function showGroupFullNotification() {
+                const container = document.getElementById("partial-content-container");
+
+                const groupStarted = @((ViewBag.GroupStarted ?? false).ToString().ToLower());
+                const canBePaused = @((ViewBag.CanBePaused ?? false).ToString().ToLower());
+
+                console.log("Group Started:", groupStarted);
+                console.log("Can Be Paused:", canBePaused);
+
+
+                // 🔔 Show full notification if group has not started
+                if (!document.getElementById("group-full-alert") && !groupStarted) {
+                    const alert = document.createElement("div");
+                    alert.id = "group-full-alert";
+                    alert.className = "alert alert-warning mt-3";
+                    alert.innerHTML = `
+                        <strong>Group is now full!</strong><br>
+                        Go to <b>Group Settings > Edit Group Settings</b> to start Contributions.
+                    `;
+                    container.prepend(alert); // show above partial content
+                }
+
+                // 🔒 Hide Pending tabs in Join Requests & Leave Requests
+                const joinPending = document.querySelector("#joinRequestsCollapse a.list-group-item[href*='status=Pending']");
+                const leavePending = document.querySelector("#leaveRequestsCollapse a.list-group-item[href*='status=Pending']");
+
+                if (joinPending) joinPending.style.display = "none";
+                if (leavePending) leavePending.style.display = "none";
+
+                // ❌ Hide "View Contributions" and "View Payouts" if group cannot be paused
+                const viewContributions = document.getElementById("viewContributionsLink");
+                const viewPayouts = document.getElementById("viewPayoutsLink");
+
+                if (!canBePaused) {
+                    if (viewContributions) viewContributions.style.display = "none";
+                    if (viewPayouts) viewPayouts.style.display = "none";
+                }
+
+            }
 
             // -------------------- Load Group Status --------------------
             function loadGroupStatus(groupId) {
@@ -536,12 +597,39 @@
                         .then(res => res.ok ? res.text() : Promise.reject("Failed to load partial"))
                         .then(html => {
                             container.innerHTML = html;
-                            container.style.display = 'block';
+
+                            // ----- Add checkbox readonly logic here -----
+                            const canBeActivated = "@(ViewBag.CanBeActivated ?? true)".toLowerCase() === "true";
+                            const checkbox = document.getElementById("isActiveCheckbox");
+
+                            if (checkbox && !canBeActivated) {
+                                const originalValue = checkbox.checked;
+
+                                // Prevent toggling
+                                checkbox.addEventListener("click", (e) => {
+                                    e.preventDefault();
+                                    checkbox.checked = originalValue;
+                                });
+
+                                checkbox.addEventListener("keydown", (e) => {
+                                    if (e.key === " " || e.key === "Enter") {
+                                        e.preventDefault();
+                                        checkbox.checked = originalValue;
+                                    }
+                                });
+
+                                // Add visual readonly style
+                                checkbox.classList.add("readonly-checkbox");
+                            }
+                            // ---------------------------------------------
                         })
-                        .catch(err => container.innerHTML = `<div class="alert alert-danger">Error: ${err}</div>`);
+                        .catch(err => {
+                            container.innerHTML = `<div class="alert alert-danger">Error: ${err}</div>`;
+                        });
                 });
             }
         }
+
 
         function setupPopupToggle() {
             const reportBtn = document.getElementById('reportToggleBtn');
@@ -599,5 +687,7 @@
         function rejectLeaveRequest(requestId, btn) { handleRequestAction(`/Leave/RejectLeaveRequest?requestId=`, requestId, btn); }
         function deleteLeaveRequest(requestId, btn) { handleRequestAction(`/Leave/DeleteLeaveRequest?requestId=`, requestId, btn, 'DELETE', "Delete this leave request?"); }
     </script>
+
+
 </body>
 </html>

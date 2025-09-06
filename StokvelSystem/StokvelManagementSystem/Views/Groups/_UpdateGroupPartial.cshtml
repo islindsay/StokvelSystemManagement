@@ -4,16 +4,19 @@
     <input type="hidden" asp-for="ID" />
 
     <div class="mb-3">
-        <label asp-for="Name" class="form-label"></label>
+        <label asp-for="Name" class="form-label"> Group Name</label>
         <input asp-for="Name" class="form-control" readonly="@Model.IsActive" />
         <span asp-validation-for="Name" class="text-danger"></span>
     </div>
 
+    <div class="mb-3">
+    <label asp-for="CurrencyID" class="form-label"> Preferred Currency</label>
     <select asp-for="CurrencyID"
             asp-items="Model.CurrencyOptions"
             class="form-select @(Model.IsActive ? "is-readonly" : "")"
         >
     </select>
+    </div>
 
     @if (Model.IsActive)
     {
@@ -24,7 +27,7 @@
 
 
     <div class="mb-3">
-        <label asp-for="FrequencyName" class="form-label"></label>
+        <label asp-for="FrequencyName" class="form-label">Cycle Frequency</label>
         <select asp-for="FrequencyName" asp-items="Model.FrequencyOptions"
                 class="form-select @(Model.IsActive ? "is-readonly" : "")">
         </select>
@@ -32,23 +35,23 @@
     </div>
 
     <div class="mb-3">
-        <label asp-for="CurrentMembers" class="form-label"></label>
+        <label asp-for="CurrentMembers" class="form-label">Currently available members </label>
         <input asp-for="CurrentMembers" class="form-control" type="number" readonly />
     </div>
 
     <div class="mb-3">
-        <label asp-for="MaxMembers" class="form-label"></label>
+        <label asp-for="MaxMembers" class="form-label">Maximum Allowed Members</label>
         <input asp-for="MaxMembers" class="form-control" type="number" readonly="@Model.IsActive" min="@Model.CurrentMembers" max="50" />
     </div>
 
     <div class="mb-3">
-        <label asp-for="StartDate" class="form-label"></label>
+        <label asp-for="StartDate" class="form-label">Group Started on</label>
         <input asp-for="StartDate" class="form-control is-readonly" type="date" readonly />
     </div>
 
     <div class="form-check mb-3">
-        <input asp-for="IsActive" class="form-check-input" type="checkbox" />
-        <label asp-for="IsActive" class="form-check-label"></label>
+        <input asp-for="IsActive" class="form-check-input" id="isActiveCheckbox" type="checkbox" />
+        <label asp-for="IsActive" class="form-check-label">Activate Group</label>
     </div>
 
     <button type="submit" class="btn btn-success">Save Changes</button>
@@ -69,5 +72,6 @@
         opacity: 0.7;
     }
 </style>
+
 
 

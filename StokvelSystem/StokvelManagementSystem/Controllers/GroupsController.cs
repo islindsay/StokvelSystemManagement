@@ -508,11 +508,12 @@ namespace StokvelManagementSystem.Controllers
                 // Get Group Info
                 var group = new GroupInfoDto();
                 using (var cmd = new SqlCommand(
-                    @"SELECT g.ID, g.GroupName, c.Currency, f.FrequencyName 
-              FROM Groups g
-              JOIN Currencies c ON g.CurrencyID = c.ID
-              JOIN Frequencies f ON g.FrequencyID = f.ID
-              WHERE g.ID = @groupId", conn))
+                    @"SELECT g.ID, g.GroupName, c.Currency, f.FrequencyName, g.MemberLimit, g.Status, g.StartDate,
+                            (SELECT COUNT(*) FROM MemberGroups mg WHERE mg.GroupID = g.ID) AS CurrentMembers
+                    FROM Groups g
+                    JOIN Currencies c ON g.CurrencyID = c.ID
+                    JOIN Frequencies f ON g.FrequencyID = f.ID
+                    WHERE g.ID = @groupId", conn))
                 {
                     cmd.Parameters.AddWithValue("@groupId", groupId);
                     using (var reader = cmd.ExecuteReader())
@@ -521,14 +522,56 @@ namespace StokvelManagementSystem.Controllers
                         {
                             group = new GroupInfoDto
                             {
-                                ID = reader.GetInt32(0),
-                                Name = reader.GetString(1),
-                                Currency = reader.GetString(2),
-                                FrequencyName = reader.GetString(3)
+                                ID = reader.GetInt32(reader.GetOrdinal("ID")),
+                                Name = reader.GetString(reader.GetOrdinal("GroupName")),
+                                Currency = reader.GetString(reader.GetOrdinal("Currency")),
+                                FrequencyName = reader.GetString(reader.GetOrdinal("FrequencyName"))
                             };
+
+                            // ✅ Add "started" flag (g.Status == 1 means started)
+                            int groupStatus = reader.GetInt32(reader.GetOrdinal("Status"));
+                            ViewBag.GroupStarted = (groupStatus == 1);
+
+                            // ✅ Set CanBePaused if StartDate is not null
+                            ViewBag.CanBePaused = !reader.IsDBNull(reader.GetOrdinal("StartDate"));
+
+                            // ✅ Check if group is already full
+                            int maxMembers = reader.GetInt32(reader.GetOrdinal("MemberLimit"));
+                            int currentMembers = reader.GetInt32(reader.GetOrdinal("CurrentMembers"));
+
+                            if (currentMembers < maxMembers && ViewBag.CanBePaused)
+                            {
+                                // Group has started and is not full → cannot activate
+                                ViewBag.CanBeActivated = false;
+                                Console.WriteLine("Case 1: currentMembers < maxMembers && CanBePaused → CanBeActivated = false");
+                            }
+                            else if (currentMembers >= maxMembers && !ViewBag.CanBePaused)
+                            {
+                                // Group has not started but is full → can activate
+                                ViewBag.CanBeActivated = true;
+                                Console.WriteLine("Case 2: currentMembers >= maxMembers && !CanBePaused → CanBeActivated = true");
+                            }
+                            else if (currentMembers < maxMembers && !ViewBag.CanBePaused)
+                            {
+                                // Group has not started and is not full → cannot activate
+                                ViewBag.CanBeActivated = false;
+                                Console.WriteLine("Case 3: currentMembers < maxMembers && !CanBePaused → CanBeActivated = false");
+                            }
+                            else if (currentMembers >= maxMembers && ViewBag.CanBePaused)
+                            {
+                                // Group has started and is full → cannot activate
+                                ViewBag.CanBeActivated = false;
+                                Console.WriteLine("Case 4: currentMembers >= maxMembers && CanBePaused → CanBeActivated = false");
+                            }
+
+                            if (status == "Pending" && currentMembers >= maxMembers)
+                            {
+                                return RedirectToAction("JoinRequestsDashboard", new { groupId, status = "Accepted" });
+                            }
                         }
                     }
                 }
+
 
                 // Get Requests
                 var requests = new List<JoinRequestView>();
@@ -1026,7 +1069,8 @@ namespace StokvelManagementSystem.Controllers
         public IActionResult UpdateGroup(GroupInfoDto model)
         {
             _logger.LogInformation("UpdateGroup called with model: ID={ID}, Name={Name}, CurrencyID={CurrencyID}, FrequencyName={FrequencyName}, MaxMembers={MaxMembers}, IsActive={IsActive}, StartDate={StartDate}",
-                                   model.ID, model.Name, model.CurrencyID, model.FrequencyName, model.MaxMembers, model.IsActive, model.StartDate);
+                                model.ID, model.Name, model.CurrencyID, model.FrequencyName, model.MaxMembers, model.IsActive, model.StartDate);
+
             if (!ModelState.IsValid)
             {
                 _logger.LogWarning("Model state is invalid for UpdateGroup. Errors: {Errors}",
@@ -1038,6 +1082,12 @@ namespace StokvelManagementSystem.Controllers
 
             try
             {
+                // ✅ If IsActive is true, set StartDate to today
+                if (model.IsActive)
+                {
+                    model.StartDate = DateTime.Now;
+                }
+
                 using (var conn = new SqlConnection(_configuration.GetConnectionString("DefaultConnection")))
                 {
                     conn.Open();
@@ -1055,8 +1105,8 @@ namespace StokvelManagementSystem.Controllers
                     using (var cmd = new SqlCommand(query, conn))
                     {
                         cmd.Parameters.AddWithValue("@Name", model.Name);
-                        cmd.Parameters.AddWithValue("@CurrencyID", model.CurrencyID); // <-- int ID
-                        cmd.Parameters.AddWithValue("@FrequencyName", model.FrequencyName); // <-- still string
+                        cmd.Parameters.AddWithValue("@CurrencyID", model.CurrencyID); 
+                        cmd.Parameters.AddWithValue("@FrequencyName", model.FrequencyName); 
                         cmd.Parameters.AddWithValue("@MaxMembers", model.MaxMembers); 
                         cmd.Parameters.AddWithValue("@IsActive", model.IsActive ? 1 : 0); 
                         cmd.Parameters.AddWithValue("@StartDate", (object)model.StartDate ?? DBNull.Value);
@@ -1065,6 +1115,10 @@ namespace StokvelManagementSystem.Controllers
                         cmd.ExecuteNonQuery();
                     }
                 }
+
+                // ✅ Only after successful DB update, set the ViewBag values
+                ViewBag.CanBeActivated = false;
+                ViewBag.GroupStarted = model.IsActive;
 
                 return Json(new { success = true });
             }
