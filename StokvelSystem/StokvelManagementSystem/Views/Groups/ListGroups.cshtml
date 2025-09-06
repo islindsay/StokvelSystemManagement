@@ -454,6 +454,7 @@
 
                 const frequencies = ["Daily", "Monthly", "Annually", "Weekly", "Periodic"];
 
+
                 frequencies.forEach(freq => {
                     const freqGroups = groups.filter(g => g.frequencyName === freq);
                     if (freqGroups.length > 0) {
@@ -463,7 +464,7 @@
 
                         freqGroups.forEach(group => {
                             const nationalId = document.getElementById('nationalId')?.value || '';
-
+                             console.log(group.closed +"this is closed")
                             html += `
                             <div class="col-md-4">
                                 <div class="card shadow-sm mb-4">
@@ -478,11 +479,18 @@
                                         <p class="card-text"><strong>Start Date:</strong> ${group.startDate ? new Date(group.startDate).toLocaleDateString() : 'Not Set'}</p>
                                         <p class="card-text"><strong>Penalty:</strong> ${(group.currency ?? "R")} ${parseFloat(group.penaltyAmount).toFixed(2)} after ${group.penaltyGraceDays} days</p>
                                         <p class="card-text"><strong>Deferrals:</strong> ${group.allowDeferrals ? 'Allowed' : 'Not Allowed'}</p>
+                                        <p class="card-text"><strong>Status:</strong> ${group.status === "1" ? 'Active' : 'Inactive' }</p>
+                                        <p class="card-text">
+                                            <strong>Applications:</strong> 
+                                                <span class="badge ${group.closed ? 'bg-danger' : 'bg-success'}">
+                                                ${group.closed ? 'Closed' : 'Open'}
+                                            </span>
+                                        </p>
 
                                         <form action="/Groups/RequestToJoin" method="get">
                                             <input type="hidden" name="GroupId" value="${group.id}" />
                                             <input type="hidden" name="NationalId" value="${nationalId}" />
-                                            ${canJoin ? `<button type="submit" class="btn btn-success w-100">Request To Join Group</button>` : ""}
+                                            ${canJoin && group.status === "1" && group.closed === false ? `<button type="submit" class="btn btn-success w-100">Request To Join Group</button>` : ""}
                                         </form>
                                     </div>
                                 </div>

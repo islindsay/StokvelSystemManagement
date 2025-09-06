@@ -202,7 +202,8 @@ namespace StokvelManagementSystem.Controllers
 
             using (var conn = new SqlConnection(_configuration.GetConnectionString("DefaultConnection")))
             {
-                string query = @"SELECT g.*, pt.PayoutType AS PayoutType, f.FrequencyName, c.Currency, gs.PenaltyAmount, gs.PenaltyGraceDays, gs.AllowDeferrals, g.Duration
+                string query = @"SELECT g.*, pt.PayoutType AS PayoutType, f.FrequencyName, c.Currency, gs.PenaltyAmount, gs.PenaltyGraceDays, gs.AllowDeferrals, g.Duration,
+                g.Status, g.Closed
                                  FROM Groups g
                                  JOIN PayoutTypes pt ON g.PayoutTypeID = pt.ID
                                  JOIN Currencies c ON g.CurrencyID = c.ID
@@ -223,6 +224,8 @@ namespace StokvelManagementSystem.Controllers
                             {
                                 ID = Convert.ToInt32(reader["ID"]),
                                 GroupName = reader["GroupName"].ToString(),
+                                Status = reader["Status"].ToString(),
+                                Closed = Convert.ToBoolean(reader["Closed"]),
                                 ContributionAmount = reader["ContributionAmount"] != DBNull.Value ? Convert.ToDecimal(reader["ContributionAmount"]) : 0,
                                 MemberLimit = reader["MemberLimit"] != DBNull.Value ? Convert.ToInt32(reader["MemberLimit"]) : 0,
                                 PayoutType = reader["PayoutType"]?.ToString(),
@@ -234,7 +237,6 @@ namespace StokvelManagementSystem.Controllers
                                 PenaltyGraceDays = reader["PenaltyGraceDays"] != DBNull.Value ? Convert.ToInt32(reader["PenaltyGraceDays"]) : 0,
                                 AllowDeferrals = reader["AllowDeferrals"] != DBNull.Value && Convert.ToBoolean(reader["AllowDeferrals"])
                             });
-
                         }
                     }
                 }
