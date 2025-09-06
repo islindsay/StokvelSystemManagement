@@ -62,7 +62,7 @@ namespace StokvelManagementSystem.Controllers
             if (string.IsNullOrEmpty(jwtCookie))
             {
                 // Guest, redirect to login
-                return RedirectToAction("Login", "Account"); // replace "Account" with your login controller if different
+                return RedirectToAction("Login", "Account");
             }
 
             var handler = new JwtSecurityTokenHandler();
@@ -80,11 +80,10 @@ namespace StokvelManagementSystem.Controllers
             var uniqueNameClaim = token.Claims.FirstOrDefault(c => c.Type == ClaimTypes.Name || c.Type == "unique_name");
             if (uniqueNameClaim == null)
             {
-                // No username claim, redirect
                 return RedirectToAction("Login", "Account");
             }
 
-            int userId = GetLoggedInUserId(); // your existing method
+            int userId = GetLoggedInUserId(); 
             LoadGenderDropdown();
 
             Member model;
@@ -103,6 +102,12 @@ namespace StokvelManagementSystem.Controllers
                 using var reader = cmd.ExecuteReader();
                 if (reader.Read())
                 {
+                    // ✅ Check status
+                    int status = reader["Status"] != DBNull.Value ? Convert.ToInt32(reader["Status"]) : 1;
+
+                    ViewBag.AccountPaused = (status == 0);
+                    ViewBag.AccountDeactivated = (status == 3);
+
                     model = new Member
                     {
                         FirstName = reader["FirstName"].ToString(),
@@ -131,6 +136,7 @@ namespace StokvelManagementSystem.Controllers
 
             return View(model);
         }
+
 
         [HttpPost]
         public IActionResult Index(Member model)
@@ -164,7 +170,7 @@ namespace StokvelManagementSystem.Controllers
                             CVC=@CVC,
                             Expiry=@Expiry
                         WHERE ID = (SELECT MemberID FROM Logins WHERE ID=@UserId)";
-                    
+
                     using var cmd = new SqlCommand(updateMemberSql, conn, transaction);
                     cmd.Parameters.AddWithValue("@FirstName", model.FirstName);
                     cmd.Parameters.AddWithValue("@MiddleName", (object)model.MiddleName ?? DBNull.Value);
@@ -187,7 +193,7 @@ namespace StokvelManagementSystem.Controllers
                         SET Username=@Username,
                             NationalID=@NationalID
                         WHERE ID=@UserId";
-                    
+
                     using var cmdUpdateLogin = new SqlCommand(updateLoginSql, conn, transaction);
                     cmdUpdateLogin.Parameters.AddWithValue("@Username", model.Username);
                     cmdUpdateLogin.Parameters.AddWithValue("@NationalID", model.NationalID);
@@ -208,7 +214,7 @@ namespace StokvelManagementSystem.Controllers
                             SET PasswordHash=@PasswordHash,
                                 PasswordSalt=@PasswordSalt
                             WHERE ID=@UserId";
-                        
+
                         using var cmdPass = new SqlCommand(updatePasswordSql, conn, transaction);
                         cmdPass.Parameters.AddWithValue("@PasswordHash", hashedPassword);
                         cmdPass.Parameters.AddWithValue("@PasswordSalt", salt);
@@ -252,5 +258,140 @@ namespace StokvelManagementSystem.Controllers
             var hash = sha.ComputeHash(combined);
             return Convert.ToBase64String(hash);
         }
+        
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public IActionResult TogglePauseAccount()
+        {
+            var memberIdClaim = User.Claims.FirstOrDefault(c => c.Type == "member_id");
+            if (memberIdClaim == null || !int.TryParse(memberIdClaim.Value, out int memberId))
+            {
+                TempData["ErrorMessage"] = "Unable to determine your member identity.";
+                return RedirectToAction("Index");
+            }
+
+            using (var conn = new SqlConnection(_connectionString))
+            {
+                conn.Open();
+
+                // ✅ Check if member is part of any active groups
+                string checkGroupsSql = @"
+                    SELECT COUNT(*)
+                    FROM MemberGroups mg
+                    JOIN Groups g ON g.ID = mg.GroupID
+                    WHERE mg.MemberID = @MemberID
+                    AND g.Closed = 0";
+
+                using (var cmd = new SqlCommand(checkGroupsSql, conn))
+                {
+                    cmd.Parameters.AddWithValue("@MemberID", memberId);
+                    int activeGroups = (int)cmd.ExecuteScalar();
+
+                    if (activeGroups > 0)
+                    {
+                        TempData["ErrorMessage"] = "You cannot pause your account while you are part of an active group.";
+                        return RedirectToAction("Index");
+                    }
+                }
+
+                // ✅ Get current status
+                int currentStatus;
+                string getStatusSql = "SELECT Status FROM Members WHERE ID = @MemberID";
+                using (var cmd = new SqlCommand(getStatusSql, conn))
+                {
+                    cmd.Parameters.AddWithValue("@MemberID", memberId);
+                    currentStatus = (int)cmd.ExecuteScalar();
+                }
+
+                // ✅ Determine new status
+                int newStatus;
+                string successMessage;
+
+                if (currentStatus == 0) // currently paused -> resume
+                {
+                    newStatus = 1;
+                    successMessage = "Your account has been resumed.";
+                }
+                else // active or anything else -> pause
+                {
+                    newStatus = 0;
+                    successMessage = "Your account has been paused. You can log back in to resume anytime.";
+                }
+
+                // ✅ Update status
+                string updateSql = "UPDATE Members SET Status = @NewStatus WHERE ID = @MemberID";
+                using (var cmd = new SqlCommand(updateSql, conn))
+                {
+                    cmd.Parameters.AddWithValue("@NewStatus", newStatus);
+                    cmd.Parameters.AddWithValue("@MemberID", memberId);
+                    cmd.ExecuteNonQuery();
+                }
+
+                // ✅ Update ViewBag
+                ViewBag.AccountPaused = (newStatus == 0);
+                ViewBag.AccountDeactivated = (newStatus == 3); // stays same
+                TempData["SuccessMessage"] = successMessage;
+            }
+
+            return RedirectToAction("Index");
+        }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public IActionResult DeactivateAccount()
+        {
+            var memberIdClaim = User.Claims.FirstOrDefault(c => c.Type == "member_id");
+            if (memberIdClaim == null || !int.TryParse(memberIdClaim.Value, out int memberId))
+            {
+                TempData["ErrorMessage"] = "Unable to determine your member identity.";
+                return RedirectToAction("Index");
+            }
+
+            using (var conn = new SqlConnection(_connectionString))
+            {
+                conn.Open();
+
+                // ✅ Check if member is part of any active groups
+                string checkGroupsSql = @"
+                    SELECT COUNT(*)
+                    FROM MemberGroups mg
+                    JOIN Groups g ON g.ID = mg.GroupID
+                    WHERE mg.MemberID = @MemberID
+                    AND g.Closed = 0";
+
+                using (var cmd = new SqlCommand(checkGroupsSql, conn))
+                {
+                    cmd.Parameters.AddWithValue("@MemberID", memberId);
+                    int activeGroups = (int)cmd.ExecuteScalar();
+
+                    if (activeGroups > 0)
+                    {
+                        TempData["ErrorMessage"] = "You cannot deactivate your account while you are part of an active group.";
+                        return RedirectToAction("Index");
+                    }
+                }
+
+                // ✅ Update member status to 3 (Deactivated)
+                string updateSql = @"
+                    UPDATE Members
+                    SET Status = 3
+                    WHERE ID = @MemberID";
+
+                using (var cmd = new SqlCommand(updateSql, conn))
+                {
+                    cmd.Parameters.AddWithValue("@MemberID", memberId);
+                    cmd.ExecuteNonQuery();
+                }
+            }
+
+            ViewBag.AccountDeactivated  = true;
+            ViewBag.AccountPaused = false;
+            //Response.Cookies.Delete("jwt");
+            //Response.Cookies.Delete("HasBankDetails");
+            TempData["SuccessMessage"] = "Your account has been permanently deactivated.";
+            return RedirectToAction("Index");
+        }
+
+
     }
 }
