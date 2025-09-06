@@ -1105,10 +1105,10 @@ namespace StokvelManagementSystem.Controllers
                     using (var cmd = new SqlCommand(query, conn))
                     {
                         cmd.Parameters.AddWithValue("@Name", model.Name);
-                        cmd.Parameters.AddWithValue("@CurrencyID", model.CurrencyID); 
-                        cmd.Parameters.AddWithValue("@FrequencyName", model.FrequencyName); 
-                        cmd.Parameters.AddWithValue("@MaxMembers", model.MaxMembers); 
-                        cmd.Parameters.AddWithValue("@IsActive", model.IsActive ? 1 : 0); 
+                        cmd.Parameters.AddWithValue("@CurrencyID", model.CurrencyID);
+                        cmd.Parameters.AddWithValue("@FrequencyName", model.FrequencyName);
+                        cmd.Parameters.AddWithValue("@MaxMembers", model.MaxMembers);
+                        cmd.Parameters.AddWithValue("@IsActive", model.IsActive ? 1 : 0);
                         cmd.Parameters.AddWithValue("@StartDate", (object)model.StartDate ?? DBNull.Value);
                         cmd.Parameters.AddWithValue("@ID", model.ID);
 
@@ -1129,7 +1129,7 @@ namespace StokvelManagementSystem.Controllers
             }
         }
 
-       [HttpGet]
+        [HttpGet]
         [Route("Groups/GroupStatus/{groupId}")]
         public IActionResult GroupStatus(int groupId)
         {
@@ -1166,6 +1166,49 @@ namespace StokvelManagementSystem.Controllers
             {
                 _logger.LogError(ex, "Error fetching group status for GroupID {GroupID}", groupId);
                 return StatusCode(500, new { message = "Internal server error." });
+            }
+        }
+
+        [HttpPost]
+        public IActionResult DeleteMemberFromGroup(int memberId, int groupId)
+        {
+            Console.WriteLine($"Deleting member {memberId} from group {groupId}");
+
+            using (var conn = new SqlConnection(_configuration.GetConnectionString("DefaultConnection")))
+            {
+                conn.Open();
+                using (var transaction = conn.BeginTransaction())
+                {
+                    try
+                    {
+                        // 1️⃣ Delete from MemberGroups
+                        string deleteMemberSql = "DELETE FROM MemberGroups WHERE MemberID = @MemberID AND GroupID = @GroupID";
+                        using (var cmd = new SqlCommand(deleteMemberSql, conn, transaction))
+                        {
+                            cmd.Parameters.AddWithValue("@MemberID", memberId);
+                            cmd.Parameters.AddWithValue("@GroupID", groupId);
+                            cmd.ExecuteNonQuery();
+                        }
+
+                        // 2️⃣ Delete any associated leave requests
+                        string deleteLeaveSql = "DELETE FROM JoinRequests WHERE MemberID = @MemberID AND GroupID = @GroupID";
+                        using (var cmd = new SqlCommand(deleteLeaveSql, conn, transaction))
+                        {
+                            cmd.Parameters.AddWithValue("@MemberID", memberId);
+                            cmd.Parameters.AddWithValue("@GroupID", groupId);
+                            cmd.ExecuteNonQuery();
+                        }
+
+                        transaction.Commit();
+                        return Json(new { success = true });
+                    }
+                    catch (Exception ex)
+                    {
+                        transaction.Rollback();
+                        Console.WriteLine($"Error deleting member {memberId} from group {groupId}: {ex.Message}");
+                        return Json(new { success = false, message = "Error deleting member." });
+                    }
+                }
             }
         }
 
