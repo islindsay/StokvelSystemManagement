@@ -312,14 +312,15 @@ namespace StokvelManagementSystem.Controllers
                     var insertGroupQuery = @"
                         INSERT INTO Groups (
                             GroupName, PayoutTypeID, Duration, ContributionAmount, MemberLimit, Status,
-                            CreatedDate, StartDate, CurrencyID, FrequencyID, Cycles
+                            CreatedDate, StartDate, CurrencyID, FrequencyID, Cycles, Closed
                         )
                         VALUES (
                             @GroupName, @PayoutTypeID, @Duration, @ContributionAmount, @MemberLimit, 1,
-                            @CreatedDate, @StartDate, @CurrencyID, @FrequencyID, @Cycles
+                            @CreatedDate, @StartDate, @CurrencyID, @FrequencyID, @Cycles, @Closed
                         );
                         SELECT CAST(SCOPE_IDENTITY() AS INT);
                     ";
+
 
                     using (var cmd = new SqlCommand(insertGroupQuery, conn))
                     {
@@ -332,10 +333,11 @@ namespace StokvelManagementSystem.Controllers
                         cmd.Parameters.AddWithValue("@StartDate", (object?)model.StartDate ?? DBNull.Value);
                         cmd.Parameters.AddWithValue("@CurrencyID", model.CurrencyID);
                         cmd.Parameters.AddWithValue("@FrequencyID", model.FrequencyID);
-                        cmd.Parameters.AddWithValue("@Cycles", 0); // ✅ Always start with zero cycles
+                        cmd.Parameters.AddWithValue("@Cycles", 0); // Always start with zero cycles
+                        cmd.Parameters.AddWithValue("@Closed", false); // ✅ Set Closed = false
+
                         groupId = Convert.ToInt32(cmd.ExecuteScalar());
                     }
-
 
                     var settingsQuery = @"INSERT INTO GroupSettings (GroupID, PenaltyAmount, PenaltyGraceDays, AllowDeferrals)
                                           VALUES (@GroupID, @PenaltyAmount, @PenaltyGraceDays, @AllowDeferrals);";
@@ -816,7 +818,6 @@ namespace StokvelManagementSystem.Controllers
                 return View("JoinRequestsDashboard", model); // ✅ Explicitly render the desired view
             }
         }
-
 
         private void LogModelStateErrors()
         {

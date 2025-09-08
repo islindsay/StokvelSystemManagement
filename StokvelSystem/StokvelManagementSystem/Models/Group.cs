@@ -8,8 +8,8 @@ namespace StokvelManagementSystem.Models
     {
         public int ID { get; set; }
         public string GroupName { get; set; }
-        public string Status { get; set; }
-        public bool Closed { get; set; }
+        public string? Status { get; set; }
+        public bool? Closed { get; set; }
         public decimal? ContributionAmount { get; set; }
         public int MemberLimit { get; set; }
     
