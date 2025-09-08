@@ -82,6 +82,7 @@ namespace StokvelManagementSystem.Models
         public string? FullName { get; set; }
         public string? Status { get; set; }
         public string? PaidForCycle { get; set; }
+        
     }
 
     public class PaymentMethod

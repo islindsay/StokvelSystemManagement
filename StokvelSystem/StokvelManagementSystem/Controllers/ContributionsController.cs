@@ -364,11 +364,69 @@ public IActionResult GetGroupDetails(int memberId)
                         }
                     }
                 }
-            }
 
-            // 4️⃣ Pass values to ViewBag
-            ViewBag.CurrentCycle = currentCycle;
-            ViewBag.HasContributedThisCycle = hasContributedThisCycle;
+                // 4️⃣ Get Group Info (includes Closed)
+                bool groupClosed = false;
+                using (var cmd = new SqlCommand(
+                    @"SELECT Closed FROM Groups WHERE ID = @groupId", connection))
+                {
+                    cmd.Parameters.AddWithValue("@groupId", groupId);
+                    var closedObj = cmd.ExecuteScalar();
+                    if (closedObj != null && bool.TryParse(closedObj.ToString(), out bool closed))
+                    {
+                        groupClosed = closed;
+                    }
+                }
+
+                // 5️⃣ Determine if current user is admin (RoleID)
+                bool isMemberNotAdmin = true;
+                int memberId = int.Parse(User.FindFirst("member_id")?.Value ?? "0"); // adjust based on auth
+                if (memberId > 0)
+                {
+                    using (var cmd = new SqlCommand(@"
+                        SELECT RoleID FROM MemberGroups 
+                        WHERE MemberID = @memberId AND GroupID = @groupId", connection))
+                    {
+                        cmd.Parameters.AddWithValue("@memberId", memberId);
+                        cmd.Parameters.AddWithValue("@groupId", groupId);
+                        var roleIdObj = cmd.ExecuteScalar();
+
+                        if (roleIdObj != null && int.TryParse(roleIdObj.ToString(), out int roleId))
+                        {
+                            _logger.LogInformation("MemberID: {MemberID}, GroupID: {GroupID}, RoleID: {RoleID}", memberId, groupId, roleId);
+                            isMemberNotAdmin = (roleId == 2);
+                        }
+                        else
+                        {
+                            _logger.LogWarning("Could not determine RoleID for MemberID: {MemberID}, GroupID: {GroupID}", memberId, groupId);
+                        }
+                    }
+
+                    // 6️⃣ Get account status
+                    using var statusCmd = new SqlCommand(@"
+                        SELECT m.Status
+                        FROM Members m
+                        JOIN Logins l ON l.MemberID = m.ID
+                        WHERE l.ID = @UserId", connection);
+                    statusCmd.Parameters.AddWithValue("@UserId", memberId);
+                    var reader = statusCmd.ExecuteReader();
+                    if (reader.Read())
+                    {
+                        int status = reader["Status"] != DBNull.Value ? Convert.ToInt32(reader["Status"]) : 1;
+                        ViewBag.AccountPaused = (status == 0);
+                        ViewBag.AccountDeactivated = (status == 3);
+
+                    }
+                    reader.Close();
+                }
+
+                // 7️⃣ Pass values to ViewBag
+                ViewBag.CurrentCycle = currentCycle;
+                ViewBag.HasContributedThisCycle = hasContributedThisCycle;
+                ViewBag.IsMemberNotAdmin = isMemberNotAdmin;
+                ViewBag.GroupClosed = groupClosed;
+
+            }
 
             return View("~/Views/Transactions/ContributionsIndex.cshtml", contributions);
         }

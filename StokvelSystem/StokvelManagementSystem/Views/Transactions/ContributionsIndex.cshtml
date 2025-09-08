@@ -19,7 +19,7 @@
             var isAdminCookie = Context.Request.Cookies["isAdmin"];
             var isAdmin = !string.IsNullOrEmpty(isAdminCookie) && isAdminCookie == "true";
         }
-        @if (isAdmin)
+        @if (!ViewBag.GroupClosed && !ViewBag.AccountPaused && !ViewBag.AccountDeactivated)
         {
             <a asp-action="CreateContributionForm" 
             asp-route-groupId="@groupId" 

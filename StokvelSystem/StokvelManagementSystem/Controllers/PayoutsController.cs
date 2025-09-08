@@ -633,7 +633,63 @@ namespace StokvelManagementSystem.Controllers
                             }
                         }
                     }
+
+                    bool isMemberNotAdmin = true;
+                    int memberId = int.Parse(User.FindFirst("member_id")?.Value ?? "0"); // adjust based on auth
+                    if (memberId > 0)
+                    {
+                        using (var cmd = new SqlCommand(@"
+                        SELECT RoleID FROM MemberGroups 
+                        WHERE MemberID = @memberId AND GroupID = @groupId", connection))
+                        {
+                            cmd.Parameters.AddWithValue("@memberId", memberId);
+                            cmd.Parameters.AddWithValue("@groupId", groupId);
+                            var roleIdObj = cmd.ExecuteScalar();
+
+                            if (roleIdObj != null && int.TryParse(roleIdObj.ToString(), out int roleId))
+                            {
+                                _logger.LogInformation("MemberID: {MemberID}, GroupID: {GroupID}, RoleID: {RoleID}", memberId, groupId, roleId);
+                                isMemberNotAdmin = (roleId == 2);
+                            }
+                            else
+                            {
+                                _logger.LogWarning("Could not determine RoleID for MemberID: {MemberID}, GroupID: {GroupID}", memberId, groupId);
+                            }
+                        }
+                    }
+
+
+                    // 6️⃣ Get account status
+                    using var statusCmd = new SqlCommand(@"
+                        SELECT m.Status
+                        FROM Members m
+                        JOIN Logins l ON l.MemberID = m.ID
+                        WHERE l.ID = @UserId", connection);
+                    statusCmd.Parameters.AddWithValue("@UserId", memberId);
+                    var reader2 = statusCmd.ExecuteReader();
+                    if (reader2.Read())
+                    {
+                        int status = reader2["Status"] != DBNull.Value ? Convert.ToInt32(reader2["Status"]) : 1;
+                        ViewBag.AccountPaused = (status == 0);
+                        ViewBag.AccountDeactivated = (status == 3);
+
+                    }
+                    reader2.Close();
+
+                    // 7️⃣ Get group closed status
+                    using (var closedCmd = new SqlCommand("SELECT Closed FROM Groups WHERE ID = @GroupId", connection))
+                    {
+                        closedCmd.Parameters.AddWithValue("@GroupId", groupId);
+                        var closedResult = closedCmd.ExecuteScalar();
+                        bool groupClosed = (closedResult != null && closedResult != DBNull.Value) && Convert.ToBoolean(closedResult);
+
+                        ViewBag.GroupClosed = groupClosed;
+                        _logger.LogInformation("Group {GroupId} closed status: {GroupClosed}", groupId, groupClosed);
+                    }
+
+                    ViewBag.IsMemberNotAdmin = isMemberNotAdmin;
                 }
+                
 
                 return View("~/Views/Transactions/PayoutIndex.cshtml", payouts);
             }
