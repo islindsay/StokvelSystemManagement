@@ -431,7 +431,6 @@ namespace StokvelManagementSystem.Controllers
             return RedirectToAction("ListGroups", new { memberId });
         }
 
-
         [HttpGet]
         public IActionResult RequestToJoin(int groupId, string nationalId)
         {
@@ -510,12 +509,13 @@ namespace StokvelManagementSystem.Controllers
                 // Get Group Info
                 var group = new GroupInfoDto();
                 using (var cmd = new SqlCommand(
-                    @"SELECT g.ID, g.GroupName, c.Currency, f.FrequencyName, g.MemberLimit, g.Status, g.StartDate,
+                    @"SELECT g.ID, g.GroupName, c.Currency, f.FrequencyName, g.MemberLimit, g.Status, g.StartDate, g.Closed,
                             (SELECT COUNT(*) FROM MemberGroups mg WHERE mg.GroupID = g.ID) AS CurrentMembers
                     FROM Groups g
                     JOIN Currencies c ON g.CurrencyID = c.ID
                     JOIN Frequencies f ON g.FrequencyID = f.ID
                     WHERE g.ID = @groupId", conn))
+
                 {
                     cmd.Parameters.AddWithValue("@groupId", groupId);
                     using (var reader = cmd.ExecuteReader())
@@ -527,7 +527,8 @@ namespace StokvelManagementSystem.Controllers
                                 ID = reader.GetInt32(reader.GetOrdinal("ID")),
                                 Name = reader.GetString(reader.GetOrdinal("GroupName")),
                                 Currency = reader.GetString(reader.GetOrdinal("Currency")),
-                                FrequencyName = reader.GetString(reader.GetOrdinal("FrequencyName"))
+                                FrequencyName = reader.GetString(reader.GetOrdinal("FrequencyName")),
+                                Closed = !reader.IsDBNull(reader.GetOrdinal("Closed")) && reader.GetBoolean(reader.GetOrdinal("Closed"))
                             };
 
                             // ✅ Add "started" flag (g.Status == 1 means started)
@@ -694,7 +695,6 @@ namespace StokvelManagementSystem.Controllers
             var userId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)?.Value);
             var isAdmin = User.IsInRole("Admin");
             var memberIdStr = User.Claims.FirstOrDefault(c => c.Type == "member_id")?.Value;
-
             int memberId = int.TryParse(memberIdStr, out var id) ? id : 0;
 
             _logger.LogInformation("The leave request status is: {status}", status);
@@ -715,10 +715,10 @@ namespace StokvelManagementSystem.Controllers
                     }
                 }
 
-                // Get Group Info
+                // Get Group Info (now includes Closed)
                 var group = new GroupInfoDto();
                 using (var cmd = new SqlCommand(
-                    @"SELECT g.ID, g.GroupName, c.Currency, f.FrequencyName 
+                    @"SELECT g.ID, g.GroupName, g.Closed, c.Currency, f.FrequencyName 
                     FROM Groups g
                     JOIN Currencies c ON g.CurrencyID = c.ID
                     JOIN Frequencies f ON g.FrequencyID = f.ID
@@ -731,10 +731,11 @@ namespace StokvelManagementSystem.Controllers
                         {
                             group = new GroupInfoDto
                             {
-                                ID = reader.GetInt32(0),
-                                Name = reader.GetString(1),
-                                Currency = reader.GetString(2),
-                                FrequencyName = reader.GetString(3)
+                                ID = reader.GetInt32(reader.GetOrdinal("ID")),
+                                Name = reader.GetString(reader.GetOrdinal("GroupName")),
+                                Closed = reader.GetBoolean(reader.GetOrdinal("Closed")), // ✅ Include Closed
+                                Currency = reader.GetString(reader.GetOrdinal("Currency")),
+                                FrequencyName = reader.GetString(reader.GetOrdinal("FrequencyName"))
                             };
                         }
                     }
@@ -1211,6 +1212,38 @@ namespace StokvelManagementSystem.Controllers
                         return Json(new { success = false, message = "Error deleting member." });
                     }
                 }
+            }
+        }
+
+        [HttpPost]
+        public IActionResult DeactivateGroup(int groupId)
+        {
+            try
+            {
+                using (var connection = new SqlConnection(_configuration.GetConnectionString("DefaultConnection")))
+                {
+                    connection.Open();
+
+                    var sql = "UPDATE Groups SET Closed = 1 WHERE ID = @GroupId";
+                    using (var command = new SqlCommand(sql, connection))
+                    {
+                        command.Parameters.AddWithValue("@GroupId", groupId);
+                        var rowsAffected = command.ExecuteNonQuery();
+
+                        if (rowsAffected > 0)
+                        {
+                            return Json(new { success = true, message = "Group deactivated successfully." });
+                        }
+                        else
+                        {
+                            return Json(new { success = false, message = "Group not found." });
+                        }
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                return Json(new { success = false, message = "Error: " + ex.Message });
             }
         }
 

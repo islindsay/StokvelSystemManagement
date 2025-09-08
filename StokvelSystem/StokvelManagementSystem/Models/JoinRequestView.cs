@@ -35,6 +35,7 @@ namespace StokvelManagementSystem.Models
         public int MaxMembers { get; set; } = 1;
         public bool IsActive { get; set; }
         public DateTime? StartDate { get; set; }
+        public bool Closed { get; set; }   // ✅ Add this
 
 
     }

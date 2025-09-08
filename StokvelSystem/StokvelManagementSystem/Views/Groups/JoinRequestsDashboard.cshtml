@@ -33,18 +33,21 @@
                     </button>
                     <div class="collapse mt-1" id="joinRequestsCollapse">
                         <div class="list-group list-group-flush">
-                           <a class="list-group-item @(Model.SelectedStatus == "Pending" && Model.RequestType == "Join" ? "active" : "")"
+
+                            <a class="list-group-item @(Model.SelectedStatus == "Pending" && Model.RequestType == "Join" ? "active" : "")"
                                asp-action="JoinRequestsDashboard"
                                asp-route-status="Pending"
                                asp-route-groupId="@Model.Group.ID">
                                <i class="fas fa-clock me-2"></i> Pending
                             </a>
+                          
                             <a class="list-group-item @(Model.SelectedStatus == "Accepted" && Model.RequestType == "Join" ? "active" : "")"
                                asp-action="JoinRequestsDashboard"
                                asp-route-status="Accepted"
                                asp-route-groupId="@Model.Group.ID">
                                 <i class="fas fa-check-circle me-2"></i> Accepted
                             </a>
+
                             <a class="list-group-item @(Model.SelectedStatus == "Rejected" && Model.RequestType == "Join" ? "active" : "")"
                                asp-action="JoinRequestsDashboard"
                                asp-route-status="Rejected"
@@ -159,19 +162,18 @@
                     </div>
                 </div>
                 
-              @if (isAdmin)
-                {
-                    <button type="button" 
-                            class="list-group-item list-group-item-action text-danger fw-semibold d-flex align-items-center d-none" 
-                            id="closeGroupBtn" 
-                            data-group-id="@Model.Group.ID">
-                        <i class="fas fa-lock me-2"></i>
-                        Close Group @Model.Closed
-                    </button>
-                }
-            
-                
-                <p  class="list-group-item list-group-item-action text-danger fw-semibold d-flex align-items-center d-none" id="group-closed-status">This group is closed</p>
+                @if (!Model.IsMemberNotAdmin)
+                    {
+                        <button type="button" 
+                        class="list-group-item list-group-item-action text-danger fw-semibold d-flex align-items-center d-none" 
+                        id="closeGroupBtn" 
+                        data-group-id="@Model.Group.ID">
+                            <i class="fas fa-lock me-2"></i>
+                            Close Group 
+                        </button>  
+                    }
+                         
+                <p  class="list-group-item list-group-item-action text-danger fw-semibold d-flex align-items-center d-none" id="group-closed-status">This group is closed </p>
                 
             </div>
           
@@ -218,7 +220,7 @@
                                         }
                                         <th>Date</th>
 
-                                        @if (Model.SelectedStatus == "Pending" && Model.AdminTools && !Model.IsMemberNotAdmin || Model.SelectedStatus == "Accepted" && Model.AdminTools && !Model.IsMemberNotAdmin)
+                                        @if (Model.SelectedStatus == "Pending" && Model.AdminTools && !Model.IsMemberNotAdmin &&  !Model.Group.Closed || Model.SelectedStatus == "Accepted" && Model.AdminTools && !Model.IsMemberNotAdmin && !Model.Group.Closed)
                                         {
                                             <th>Actions</th>
                                         }
@@ -237,7 +239,7 @@
                                                 <td>@request.Email</td>
                                                 <td>@request.RequestedDate.ToString("dd MMM yyyy")</td>
 
-                                                @if (Model.SelectedStatus == "Accepted" && Model.AdminTools && !Model.IsMemberNotAdmin)
+                                                @if (Model.SelectedStatus == "Accepted" && Model.AdminTools && !Model.IsMemberNotAdmin && !Model.Group.Closed)
                                                 {
                                                     <td>
                                                         <button type="button"
@@ -251,7 +253,7 @@
                                                     </td>
                                                 }
 
-                                                @if (Model.SelectedStatus == "Pending" && Model.AdminTools && !Model.IsMemberNotAdmin)
+                                                @if (Model.SelectedStatus == "Pending" && Model.AdminTools && !Model.IsMemberNotAdmin && !Model.Group.Closed)
                                                 {
                                                     <td>
                                                         <form asp-controller="Invites" method="post">
@@ -271,8 +273,8 @@
                                             <tr>
                                                 <td>@request.FirstName @request.LastName</td>
                                                 <td>@request.RequestedDate.ToString("dd MMM yyyy")</td>
-                                                <td><button type="button" class="btn btn-sm btn-warning ms-1" onclick="rejectLeaveRequest(@request.RequestId, this)">Delete Member</button></td>
-                                                @if (Model.SelectedStatus == "Pending" && Model.AdminTools && !Model.IsMemberNotAdmin)
+
+                                                @if (Model.SelectedStatus == "Pending" && Model.AdminTools && !Model.IsMemberNotAdmin && !Model.Group.Closed)
                                                 {
                                                     <td>
                                                         <form asp-controller="Leave" method="post">
@@ -390,7 +392,7 @@
                 .catch(err => {
                     closeModal.hide();
                     console.error(err);
-                    alert("Unexpected error while closing group.");
+                    alert(err.message || "Unexpected error while closing group.");
                 });
             });
         }
@@ -599,7 +601,7 @@
 
 
                 // 🔔 Show full notification if group has not started
-                if (!document.getElementById("group-full-alert") && !groupStarted) {
+                if (!document.getElementById("group-full-alert") && !groupStarted && !@Model.Group.Closed) {
                     const alert = document.createElement("div");
                     alert.id = "group-full-alert";
                     alert.className = "alert alert-warning mt-3";
@@ -635,6 +637,8 @@
                     .then(data => {
                         const statusElement = document.getElementById('group-closed-status');
                         const closeBtn = document.getElementById('closeGroupBtn');
+
+                        console.log("Group Closed:", data.closed);
 
                         if (data.closed) {
                             // Show the "closed" paragraph

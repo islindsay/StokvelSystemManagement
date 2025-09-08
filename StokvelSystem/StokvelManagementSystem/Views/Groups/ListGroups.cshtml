@@ -438,6 +438,12 @@
             newTabBtn.addEventListener('shown.bs.tab', loadNewGroups);
         }
 
+        function isValidDate(value) {
+            const d = new Date(value);
+            return value && !isNaN(d.getTime());
+        }
+
+
         async function loadNewGroups() {
             try {
                 const response = await fetch('/Groups/GetNewGroups');
@@ -481,10 +487,10 @@
                                         <p class="card-text"><strong>Deferrals:</strong> ${group.allowDeferrals ? 'Allowed' : 'Not Allowed'}</p>
                                         <p class="card-text"><strong>Status:</strong> ${group.status === "1" ? 'Active' : 'Inactive' }</p>
                                         <p class="card-text">
-                                            <strong>Applications:</strong> 
-                                                <span class="badge ${group.closed ? 'bg-danger' : 'bg-success'}">
-                                                ${group.closed ? 'Closed' : 'Open'}
-                                            </span>
+                                        <strong>Applications:</strong> 
+                                        <span class="badge ${(group.closed === true && isValidDate(group.startDate)) ? 'bg-danger' : 'bg-success'}">
+                                            ${(group.closed === true && isValidDate(group.startDate)) ? 'Closed' : 'Open'}
+                                        </span>
                                         </p>
 
                                         <form action="/Groups/RequestToJoin" method="get">
