@@ -14,7 +14,14 @@
         <div class="row">
             <!-- Sidebar -->
             <div class="sidebar col-4">
-                <div class="sidebar-header mb-4">
+                    <!-- Back to Groups Link -->
+            <div class="mb-3">
+                <a asp-controller="Groups" asp-action="ListGroups" asp-route-showCreate="False" 
+                class="btn btn-link text-primary text-decoration-none d-flex align-items-center">
+                    <i class="fas fa-arrow-left me-2"></i> Back to Groups
+                </a>
+            </div>
+            <div class="sidebar-header mb-4">
                     <h4>INFORMATION DASHBOARD</h4>
                 </div>
 
@@ -190,6 +197,7 @@
                 <div id="partial-content-container" class="mb-3"></div>
 
                 <div id="main-request-content">
+                    
                     <div class="d-flex justify-content-between align-items-center mb-3">
                         <h2>
                             <i class="fas fa-user-friends"></i>
