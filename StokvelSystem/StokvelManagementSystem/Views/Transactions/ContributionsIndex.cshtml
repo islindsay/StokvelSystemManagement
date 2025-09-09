@@ -162,7 +162,7 @@
         
 
         <div class="modal-footer d-flex justify-content-between" >
-            @if(ViewBag.HasContributedThisCycle){
+            @if(ViewBag.HasContributedThisCycle && !ViewBag.IsMemberNotAdmin){
                  <button type="button" class="btn btn-danger" id="refundBtn" onclick="refundContribution()">Refund</button>
             }
             <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>

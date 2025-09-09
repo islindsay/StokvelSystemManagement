@@ -488,8 +488,8 @@
                                         <p class="card-text"><strong>Status:</strong> ${group.status === "1" ? 'Active' : 'Inactive' }</p>
                                         <p class="card-text">
                                         <strong>Applications:</strong> 
-                                        <span class="badge ${(group.closed === true && isValidDate(group.startDate)) ? 'bg-danger' : 'bg-success'}">
-                                            ${(group.closed === true && isValidDate(group.startDate)) ? 'Closed' : 'Open'}
+                                        <span class="badge ${(group.closed === true || isValidDate(group.startDate)) ? 'bg-danger' : 'bg-success'}">
+                                            ${(group.closed === true || isValidDate(group.startDate)) ? 'Closed' : 'Open'}
                                         </span>
                                         </p>
 
