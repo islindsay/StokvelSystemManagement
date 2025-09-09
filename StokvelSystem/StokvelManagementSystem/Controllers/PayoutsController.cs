@@ -121,7 +121,7 @@ namespace StokvelManagementSystem.Controllers
                             ), 0) AS TotalContributions,
 
 
-                            ISNULL(SUM(CASE WHEN c.Status = 'Success' THEN c.PenaltyAmount ELSE 0 END), 0) AS Penalties
+                            ISNULL(SUM(CASE WHEN c.Status = 'Success' THEN c.PenaltyAmount ELSE 0 END), 0) AS Penalties,
 
                             CASE 
                                 WHEN g.PayoutTypeID = 2 THEN g.PeriodicDate
