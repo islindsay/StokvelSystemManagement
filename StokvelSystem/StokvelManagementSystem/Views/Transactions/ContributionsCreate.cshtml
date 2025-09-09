@@ -58,7 +58,9 @@
                                 type="text" 
                                 pattern="\d{13,19}" 
                                 title="Enter a valid account number (13–19 digits)" 
-                                required>
+                                value="@Model.AccountNumber" 
+                                readonly
+                                >
                             <div id="accountError" class="text-danger mt-1"></div>
                         </div>
 
@@ -72,7 +74,8 @@
                                 type="text" 
                                 pattern="\d{3}" 
                                 title="Enter a valid CVC (3 digits)" 
-                                required>
+                                value="@Model.CVC" 
+                                readonly>
                             <div id="cvcError" class="text-danger mt-1"></div>
                         </div>
 
@@ -86,7 +89,8 @@
                                 type="text" 
                                 pattern="\d{2}/\d{2}" 
                                 title="Enter a valid Expiry date" 
-                                required>
+                                value="@Model.Expiry" 
+                                readonly>
                             <div id="expiryError" class="text-danger mt-1"></div>
                         </div>
                     </div>

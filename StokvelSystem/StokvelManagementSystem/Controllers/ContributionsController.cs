@@ -651,7 +651,7 @@ public IActionResult GetGroupDetails(int memberId)
                 int memberId = memberIdClaim != null ? Convert.ToInt32(memberIdClaim.Value) : 0;
 
                     string memberQuery = @"
-                        SELECT mg.ID, CONCAT(m.FirstName, ' ', m.LastName) AS FullName, m.Email, m.Phone
+                        SELECT mg.ID, CONCAT(m.FirstName, ' ', m.LastName) AS FullName, m.Email, m.Phone, m.AccountNumber, m.CVC, m.Expiry
                         FROM MemberGroups mg
                         JOIN Members m ON mg.MemberID = m.ID
                         WHERE mg.GroupID = @GroupId AND m.ID = @MemberId";
@@ -669,6 +669,10 @@ public IActionResult GetGroupDetails(int memberId)
                                     model.FullName = reader["FullName"].ToString();
                                     model.Email = reader["Email"].ToString();
                                     model.Phone = reader["Phone"].ToString();
+                                    model.AccountNumber = reader["AccountNumber"].ToString();
+                                    model.CVC = reader["CVC"].ToString();
+                                    model.Expiry = reader["Expiry"].ToString();
+
 
                                     _logger.LogInformation("Found MemberGroupID: {MemberGroupID}", model.MemberGroupID);
                                 }
