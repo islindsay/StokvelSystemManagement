@@ -315,7 +315,7 @@ namespace StokvelManagementSystem.Controllers
                             CreatedDate, StartDate, CurrencyID, FrequencyID, Cycles, Closed
                         )
                         VALUES (
-                            @GroupName, @PayoutTypeID, @Duration, @ContributionAmount, @MemberLimit, 1,
+                            @GroupName, @PayoutTypeID, @Duration, @ContributionAmount, @MemberLimit, 0,
                             @CreatedDate, @StartDate, @CurrencyID, @FrequencyID, @Cycles, @Closed
                         );
                         SELECT CAST(SCOPE_IDENTITY() AS INT);
