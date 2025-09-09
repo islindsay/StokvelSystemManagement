@@ -3,7 +3,7 @@
     ViewData["Title"] = "Payouts";
 }
 
-<div class="container mt-4 mb-4">
+<div class="container mt-4">
     <div class="d-flex justify-content-between align-items-center mb-4">
         <h2 class="mb-0">
             <i class="bi bi-cash-coin me-2"></i>@ViewData["Title"]
@@ -22,7 +22,7 @@
 
     </div>
     <span class="no-print"> Reference </span> 
-    <div class="input-group input-group-sm no-print mb-6" style="max-width: 220px;">
+    <div class="input-group input-group-sm no-print" style="max-width: 220px;">
         <span class="input-group-text"><i class="fas fa-filter"></i></span>
         <input type="text" id="statusFilter" name="statusFilter" class="form-control"
             placeholder="Enter reference"
@@ -38,7 +38,7 @@
         </div>
     }
 
-    <div class="card shadow">
+    <div class="card shadow mt-4">
         <div class="card-body">
             @if (!Model.Any())
             {

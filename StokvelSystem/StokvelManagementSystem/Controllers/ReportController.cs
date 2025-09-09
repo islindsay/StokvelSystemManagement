@@ -333,16 +333,12 @@ namespace StokvelManagementSystem.Controllers
             {
                 // Base SQL
                 var sql = @"
-                SELECT ISNULL(SUM(
-                    CASE 
-                        WHEN Status = 'Success' THEN ContributionAmount
-                        ELSE 0
-                    END
-                ), 0)
-                FROM Contributions
-                WHERE MemberGroupID IN (
-                    SELECT GroupID FROM MemberGroups WHERE MemberID = @MemberId
-                )
+                        SELECT ISNULL(SUM(ContributionAmount), 0)
+                        FROM Contributions
+                        WHERE Status = 'Success'
+                        AND MemberGroupID IN (
+                            SELECT ID FROM MemberGroups WHERE MemberID = @MemberId
+                        )
             ";
 
 
