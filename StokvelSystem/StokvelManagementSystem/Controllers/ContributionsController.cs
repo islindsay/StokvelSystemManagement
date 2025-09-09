@@ -291,17 +291,23 @@ public IActionResult GetGroupDetails(int memberId)
                     currentCycle = (int)cycleCmd.ExecuteScalar();
                 }
 
+                int memberId2 = int.Parse(User.FindFirst("member_id")?.Value ?? "0");
                 // 2️⃣ Check if PaidForCycle = currentCycle for any member
                 using (var checkCmd = new SqlCommand(@"
                     SELECT CASE WHEN COUNT(*) > 0 THEN 1 ELSE 0 END
                     FROM Contributions c
                     JOIN MemberGroups mg ON mg.ID = c.MemberGroupID
-                    WHERE mg.GroupID = @GroupId AND c.PaidForCycle = @CurrentCycle", connection))
+                    WHERE mg.GroupID = @GroupId 
+                    AND mg.MemberID = @MemberId
+                    AND c.PaidForCycle = @CurrentCycle", connection))
                 {
                     checkCmd.Parameters.AddWithValue("@GroupId", groupId);
+                    checkCmd.Parameters.AddWithValue("@MemberId", memberId2);
                     checkCmd.Parameters.AddWithValue("@CurrentCycle", currentCycle);
+
                     hasContributedThisCycle = (int)checkCmd.ExecuteScalar() == 1;
                 }
+
 
                 // 3️⃣ Load contributions
                 var query = @"
