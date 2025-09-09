@@ -53,6 +53,9 @@ namespace StokvelManagementSystem.Controllers
                                         CONCAT(m.FirstName, ' ', m.LastName) AS FullName,
                                         m.Email,
                                         m.Phone,
+                                        m.AccountNumber,
+                                        m.CVC,
+                                        m.Expiry,
                                         mg.ID AS MemberGroupID
                                     FROM MemberGroups mg
                                     JOIN Members m ON mg.MemberID = m.ID
@@ -84,7 +87,11 @@ namespace StokvelManagementSystem.Controllers
                                     MemberId = Convert.ToInt32(reader["MemberID"]),
                                     FullName = reader["FullName"].ToString(),
                                     Email = reader["Email"].ToString(),
-                                    Phone = reader["Phone"].ToString()
+                                    Phone = reader["Phone"].ToString(),
+                                    AccountNumber = reader["AccountNumber"].ToString(),
+                                    CVC = reader["CVC"].ToString(),
+                                    Expiry = reader["Expiry"].ToString(),
+
                                 };
 
                                 if (count == 0)

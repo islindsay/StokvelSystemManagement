@@ -98,6 +98,9 @@ namespace StokvelManagementSystem.Models
         public string FullName { get; set; }
         public string Email { get; set; }
         public string Phone { get; set; }
+        public string? AccountNumber { get; set; }
+        public string? CVC { get; set; }
+        public string? Expiry { get; set; }
     }
 
     public class GroupDetailsResponse
