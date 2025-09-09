@@ -224,7 +224,7 @@ namespace StokvelManagementSystem.Controllers
                                 SUM(c.ContributionAmount) AS [Amount]
                             FROM Contributions c
                             WHERE c.MemberGroupID IN (
-                                SELECT GroupID FROM MemberGroups WHERE MemberID = @MemberId
+                                SELECT ID FROM MemberGroups WHERE MemberID = @MemberId
                             )
                             AND (@Status = '' OR c.Status = @Status)
                             AND (@DateFrom IS NULL OR c.TransactionDate >= @DateFrom)
@@ -239,7 +239,7 @@ namespace StokvelManagementSystem.Controllers
                                 SUM(p.Amount) AS [Amount]
                             FROM Payouts p
                             WHERE p.MemberGroupID IN (
-                                SELECT GroupID FROM MemberGroups WHERE MemberID = @MemberId
+                                SELECT ID FROM MemberGroups WHERE MemberID = @MemberId
                             )
                             AND p.Status = 'Success'  -- only include successful payouts
                             AND (@DateFrom IS NULL OR p.TransactionDate >= @DateFrom)
