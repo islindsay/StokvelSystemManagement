@@ -6,6 +6,15 @@
 }
 
 <div class="container mt-4">
+
+    <!-- Back Arrow -->
+    <div class="mb-3">
+        <a href="@Url.Action("JoinRequestsDashboard", "Groups", new { groupId = groupId, status = "Accepted" })" 
+        class="btn btn-link text-primary d-flex align-items-center">
+            <i class="bi bi-arrow-left me-2"></i> Back to Dashboard
+        </a>
+    </div>
+
     <!-- Header with Create Button -->
     <div class="d-flex justify-content-between align-items-center mb-4">
         <h2 class="mb-0">
@@ -23,7 +32,7 @@
         {
             <a asp-action="CreateContributionForm" 
             asp-route-groupId="@groupId" 
-            class="btn btn-primary @(ViewBag.HasContributedThisCycle ? "disabled" : "")">
+            class="btn btn-primary @(ViewBag.HasContributedThisCycle && ViewBag.Refunded == false ? "disabled" : "")">
                 <i class="bi bi-plus-circle me-1"></i>New Contribution
             </a>
         }
@@ -82,6 +91,7 @@
                                      <td>@item.PaidForCycle</td>
                                     <td>
                                         <button type="button" class="btn btn-sm btn-outline-primary view-details-btn"
+                                            data-id="@item.ID"
                                             data-group="@item.GroupName"
                                             data-member="@item.FirstName"
                                             data-contribution="@item.ContributionAmount"
@@ -113,7 +123,7 @@
                                         }
                                         else
                                         {
-                                            <span>@item.Status</span>
+                                             <span class="badge bg-secondary">@item.Status</span>
                                         }
                                     </td>
                                 </tr>
@@ -149,10 +159,15 @@
             <p><strong>CVC:</strong> <span id="modalCVC"></span></p>
             <p><strong>Expiry:</strong> <span id="modalExpiry"></span></p>
         </div>
+        
 
-      <div class="modal-footer">
-        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
-      </div>
+        <div class="modal-footer d-flex justify-content-between" >
+            @if(ViewBag.HasContributedThisCycle){
+                 <button type="button" class="btn btn-danger" id="refundBtn" onclick="refundContribution()">Refund</button>
+            }
+            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+        </div>
+
     </div>
   </div>
 </div>
@@ -162,6 +177,10 @@
     <script>
             document.querySelectorAll(".view-details-btn").forEach(button => {
                 button.addEventListener("click", function () {
+
+                            // store ID on modal itself
+                    const modalElement = document.getElementById('contributionModal');
+                    modalElement.dataset.contributionId = this.dataset.id;
                     
                     document.getElementById("modalGroupName").textContent = this.dataset.group;
                     document.getElementById("modalMemberName").textContent = this.dataset.member;
@@ -180,6 +199,18 @@
 
                     document.getElementById("modalCVC").textContent = this.dataset.cvc;
                     document.getElementById("modalExpiry").textContent = this.dataset.expiry;
+
+                    // Show/hide Refund button if status is already refunded
+                    const refundBtn = document.getElementById("refundBtn");
+
+                    if (refundBtn){
+                         if (this.dataset.status === "Refunded") {
+                        refundBtn.classList.add("d-none");
+                        } else if (this.dataset.status === "Success") {
+                            refundBtn.classList.remove("d-none");
+                        }
+                    }
+                   
 
                     var modal = new bootstrap.Modal(document.getElementById('contributionModal'));
                     modal.show();
@@ -213,5 +244,30 @@
                 });
             })();
         });
+
+        function refundContribution() {
+            const modal = document.getElementById('contributionModal');
+            const contributionId = modal.dataset.contributionId;
+
+            console.log('Refunding contribution with ID:', contributionId);
+
+            if (!contributionId) return;
+            if (!confirm("Are you sure you want to refund this contribution?")) return;
+
+            // Send contributionId as query string
+            fetch(`/Contributions/RefundContribution?contributionId=${contributionId}`, {
+                method: 'POST',
+                headers: {
+                    'RequestVerificationToken': $('input[name="__RequestVerificationToken"]').val() // if using anti-forgery
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                alert(data.message);
+                if (data.success) location.reload();
+            })
+            .catch(err => console.error(err));
+        }
+
     </script>
 }

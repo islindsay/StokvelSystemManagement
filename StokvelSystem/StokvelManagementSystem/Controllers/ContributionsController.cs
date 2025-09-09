@@ -15,11 +15,11 @@ namespace StokvelManagementSystem.Controllers
 {
     [Authorize]
     public class ContributionsController : Controller
-    { 
+    {
         private readonly IConfiguration _configuration;
         private readonly ILogger<ContributionsController> _logger; // ✅ Add this
 
-       public ContributionsController(IConfiguration configuration, ILogger<ContributionsController> logger)
+        public ContributionsController(IConfiguration configuration, ILogger<ContributionsController> logger)
         {
             _configuration = configuration;
             _logger = logger;
@@ -35,21 +35,21 @@ namespace StokvelManagementSystem.Controllers
                 TransactionDate = DateTime.Now,
                 PaymentMethodID = 1,
                 PenaltyAmount = 0,
-                ContributionAmount = 0, 
+                ContributionAmount = 0,
                 TotalAmount = 0
             };
             model.PaymentMethods = GetPaymentMethodsFromDatabase();
             return View("~/Views/Transactions/ContributionsCreate.cshtml", model);
         }
 
-[HttpGet]
-public IActionResult GetGroupDetails(int memberId)
-{
-    var groupDetails = new GroupDetailsResponse();
-    
-    _logger.LogInformation($"The endpoint has been hit {memberId}");
+        [HttpGet]
+        public IActionResult GetGroupDetails(int memberId)
+        {
+            var groupDetails = new GroupDetailsResponse();
 
-    using (var connection = new SqlConnection(_configuration.GetConnectionString("DefaultConnection")))
+            _logger.LogInformation($"The endpoint has been hit {memberId}");
+
+            using (var connection = new SqlConnection(_configuration.GetConnectionString("DefaultConnection")))
             {
                 var query = @"
             SELECT 
@@ -91,19 +91,19 @@ public IActionResult GetGroupDetails(int memberId)
                     }
                 }
             }
-    
-    return Json(groupDetails);
-}
+
+            return Json(groupDetails);
+        }
 
         [HttpGet]
         public IActionResult GetPenaltySettings(string groupName)
         {
             var penaltySettings = new PenaltySettingsResponse();
-            
+
             using (var connection = new SqlConnection(_configuration.GetConnectionString("DefaultConnection")))
             {
                 var query = "SELECT PenaltyAmount FROM GroupSettings WHERE GroupId = @GroupId";
-                
+
                 using (var command = new SqlCommand(query, connection))
                 {
                     command.Parameters.AddWithValue("@GroupName", groupName);
@@ -117,7 +117,7 @@ public IActionResult GetGroupDetails(int memberId)
                     }
                 }
             }
-            
+
             return Json(penaltySettings);
         }
 
@@ -126,10 +126,10 @@ public IActionResult GetGroupDetails(int memberId)
         // [ValidateAntiForgeryToken]
         public IActionResult ContributionsCreate(Contribution model, int groupId)
         {
-            _logger.LogInformation($"Creating contribution for group ID: {groupId}");  
+            _logger.LogInformation($"Creating contribution for group ID: {groupId}");
 
             string status = "Success"; // default
-                            
+
             // Example test account numbers
             // 4111111111111111 → Fail
             // 4000000000009995 → Pending
@@ -308,6 +308,22 @@ public IActionResult GetGroupDetails(int memberId)
                     hasContributedThisCycle = (int)checkCmd.ExecuteScalar() == 1;
                 }
 
+                // 6️⃣ Check if latest contribution for this user is Refunded
+                using (var latestCmd = new SqlCommand(@"
+                    SELECT TOP 1 c.Status
+                    FROM Contributions c
+                    JOIN MemberGroups mg ON mg.ID = c.MemberGroupID
+                    WHERE mg.GroupID = @GroupId 
+                    AND mg.MemberID = @MemberId
+                    ORDER BY c.TransactionDate DESC", connection))
+                {
+                    latestCmd.Parameters.AddWithValue("@GroupId", groupId);
+                    latestCmd.Parameters.AddWithValue("@MemberId", memberId2);
+
+                    var latestStatus = latestCmd.ExecuteScalar()?.ToString();
+                    ViewBag.Refunded = (latestStatus == "Refunded");
+                }
+
 
                 // 3️⃣ Load contributions
                 var query = @"
@@ -466,30 +482,30 @@ public IActionResult GetGroupDetails(int memberId)
             return paymentMethods;
         }
 
-            [HttpGet]
-            [Authorize(Roles = "Admin")]
-            public IActionResult CreateContributionForm(int groupId)
+        [HttpGet]
+        [Authorize(Roles = "Admin")]
+        public IActionResult CreateContributionForm(int groupId)
+        {
+            var model = new Contribution
             {
-                var model = new Contribution
-                {
-                    TransactionDate = DateTime.Now,
-                    PaymentMethodID = 1,
-                    PenaltyAmount = 0,
-                    GroupId = groupId,
-                    ContributionAmount = 0,
-                    TotalAmount = 0,
-                    MemberOptions = new List<MemberOption>()
-                };
+                TransactionDate = DateTime.Now,
+                PaymentMethodID = 1,
+                PenaltyAmount = 0,
+                GroupId = groupId,
+                ContributionAmount = 0,
+                TotalAmount = 0,
+                MemberOptions = new List<MemberOption>()
+            };
 
-                // Load payment methods
-                model.PaymentMethods = GetPaymentMethodsFromDatabase();
+            // Load payment methods
+            model.PaymentMethods = GetPaymentMethodsFromDatabase();
 
-                using (var connection = new SqlConnection(_configuration.GetConnectionString("DefaultConnection")))
-                {
-                    connection.Open();
+            using (var connection = new SqlConnection(_configuration.GetConnectionString("DefaultConnection")))
+            {
+                connection.Open();
 
-                    // STEP 1: Get Group Info with Frequency details + contribution info
-                    string groupQuery = @"
+                // STEP 1: Get Group Info with Frequency details + contribution info
+                string groupQuery = @"
                         SELECT 
                             g.GroupName AS GroupName, 
                             g.StartDate, 
@@ -505,70 +521,70 @@ public IActionResult GetGroupDetails(int memberId)
                         WHERE g.ID = @GroupId";
 
 
-                    string groupName = "";
-                    DateTime dueDate = DateTime.Now;
+                string groupName = "";
+                DateTime dueDate = DateTime.Now;
 
-                    using (var command = new SqlCommand(groupQuery, connection))
+                using (var command = new SqlCommand(groupQuery, connection))
+                {
+                    command.Parameters.AddWithValue("@GroupId", groupId);
+                    using (var reader = command.ExecuteReader())
                     {
-                        command.Parameters.AddWithValue("@GroupId", groupId);
-                        using (var reader = command.ExecuteReader())
+                        if (reader.Read())
                         {
-                          if (reader.Read())
-                                {
-                                    groupName = reader["GroupName"].ToString();
-                                    DateTime startDate = reader["StartDate"] != DBNull.Value
-                                        ? Convert.ToDateTime(reader["StartDate"])
-                                        : DateTime.Now;
+                            groupName = reader["GroupName"].ToString();
+                            DateTime startDate = reader["StartDate"] != DBNull.Value
+                                ? Convert.ToDateTime(reader["StartDate"])
+                                : DateTime.Now;
 
-                                    int cycles = reader["Cycles"] != DBNull.Value ? Convert.ToInt32(reader["Cycles"]) : 0;
-                                    model.CurrencySymbol = reader["Currency"].ToString(); 
-                                    string frequency = reader["FrequencyName"].ToString().ToLower();
-                                    decimal groupPenalty = reader["Penalty"] != DBNull.Value ? Convert.ToDecimal(reader["Penalty"]) : 0;
+                            int cycles = reader["Cycles"] != DBNull.Value ? Convert.ToInt32(reader["Cycles"]) : 0;
+                            model.CurrencySymbol = reader["Currency"].ToString();
+                            string frequency = reader["FrequencyName"].ToString().ToLower();
+                            decimal groupPenalty = reader["Penalty"] != DBNull.Value ? Convert.ToDecimal(reader["Penalty"]) : 0;
 
-                                    // ✅ new: contribution + memberLimit
-                                    decimal groupContributionAmount = reader["GroupContributionAmount"] != DBNull.Value ? Convert.ToDecimal(reader["GroupContributionAmount"]) : 0;
-                                    int memberLimit = reader["MemberLimit"] != DBNull.Value ? Convert.ToInt32(reader["MemberLimit"]) : 0;
+                            // ✅ new: contribution + memberLimit
+                            decimal groupContributionAmount = reader["GroupContributionAmount"] != DBNull.Value ? Convert.ToDecimal(reader["GroupContributionAmount"]) : 0;
+                            int memberLimit = reader["MemberLimit"] != DBNull.Value ? Convert.ToInt32(reader["MemberLimit"]) : 0;
 
-                                    // frequency → days logic (same as before)
-                                    int frequencyDays = frequency switch
-                                    {
-                                        "weekly" => 7,
-                                        "monthly" => 30,
-                                        "daily" => 1,
-                                        "annually" => 365,
-                                        _ => 0
-                                    };
+                            // frequency → days logic (same as before)
+                            int frequencyDays = frequency switch
+                            {
+                                "weekly" => 7,
+                                "monthly" => 30,
+                                "daily" => 1,
+                                "annually" => 365,
+                                _ => 0
+                            };
 
-                                    int totalDaysToAdd = (cycles * frequencyDays) + frequencyDays;
-                                    dueDate = startDate.AddDays(totalDaysToAdd);
+                            int totalDaysToAdd = (cycles * frequencyDays) + frequencyDays;
+                            dueDate = startDate.AddDays(totalDaysToAdd);
 
-                                    if (DateTime.Now > dueDate)
-                                    {
-                                        model.PenaltyAmount = groupPenalty;
-                                    }
+                            if (DateTime.Now > dueDate)
+                            {
+                                model.PenaltyAmount = groupPenalty;
+                            }
 
-                                    // ✅ pre-fill contribution amount
-                                    if (memberLimit > 0)
-                                    {
-                                        decimal rawAmount = groupContributionAmount ;
+                            // ✅ pre-fill contribution amount
+                            if (memberLimit > 0)
+                            {
+                                decimal rawAmount = groupContributionAmount;
 
-                                        // Round up to the nearest 0.10
-                                        model.ContributionAmount = Math.Ceiling(rawAmount * 10) / 10;
-                                        model.TotalAmount = model.ContributionAmount + model.PenaltyAmount;
+                                // Round up to the nearest 0.10
+                                model.ContributionAmount = Math.Ceiling(rawAmount * 10) / 10;
+                                model.TotalAmount = model.ContributionAmount + model.PenaltyAmount;
 
-                                        _logger.LogInformation($"[CreateContributionForm] Pre-filled ContributionAmount = {model.ContributionAmount}");
-                                    }
-                                }
-
+                                _logger.LogInformation($"[CreateContributionForm] Pre-filled ContributionAmount = {model.ContributionAmount}");
+                            }
                         }
-                    }
 
-                    // Save values to model
-                    model.GroupName = groupName;
-                    model.DueDate = dueDate;
-                    
-                            // Step 2: Run your balance and payout date query
-                    string balanceAndPayoutDateQuery = @"
+                    }
+                }
+
+                // Save values to model
+                model.GroupName = groupName;
+                model.DueDate = dueDate;
+
+                // Step 2: Run your balance and payout date query
+                string balanceAndPayoutDateQuery = @"
                         SELECT 
                             ISNULL(SUM(c.TotalAmount), 0) AS GroupBalance,
                             ISNULL(SUM(c.ContributionAmount), 0) 
@@ -601,23 +617,23 @@ public IActionResult GetGroupDetails(int memberId)
                         GROUP BY g.ID, g.Cycles, f.FrequencyName, g.StartDate, g.PeriodicDate, g.PayoutTypeID;
                     ";
 
-                    using (var command = new SqlCommand(balanceAndPayoutDateQuery, connection))
+                using (var command = new SqlCommand(balanceAndPayoutDateQuery, connection))
+                {
+                    command.Parameters.AddWithValue("@GroupId", groupId);
+                    using (var reader = command.ExecuteReader())
                     {
-                        command.Parameters.AddWithValue("@GroupId", groupId);
-                        using (var reader = command.ExecuteReader())
+                        if (reader.Read())
                         {
-                            if (reader.Read())
-                            {
-                                model.GroupBalance = reader["GroupBalance"] != DBNull.Value ? Convert.ToDecimal(reader["GroupBalance"]) : 0;
-                                model.TotalContributions = reader["TotalContributions"] != DBNull.Value ? Convert.ToDecimal(reader["TotalContributions"]) : 0;
-                                model.Penalties = reader["Penalties"] != DBNull.Value ? Convert.ToDecimal(reader["Penalties"]) : 0;
-                                model.NextPayoutDate = reader["NextPayoutDate"] != DBNull.Value ? Convert.ToDateTime(reader["NextPayoutDate"]) : (DateTime?)null;
-                            }
+                            model.GroupBalance = reader["GroupBalance"] != DBNull.Value ? Convert.ToDecimal(reader["GroupBalance"]) : 0;
+                            model.TotalContributions = reader["TotalContributions"] != DBNull.Value ? Convert.ToDecimal(reader["TotalContributions"]) : 0;
+                            model.Penalties = reader["Penalties"] != DBNull.Value ? Convert.ToDecimal(reader["Penalties"]) : 0;
+                            model.NextPayoutDate = reader["NextPayoutDate"] != DBNull.Value ? Convert.ToDateTime(reader["NextPayoutDate"]) : (DateTime?)null;
                         }
                     }
+                }
 
-                    // Step 3: Run enable payout query
-                    string enablePayoutQuery = @"
+                // Step 3: Run enable payout query
+                string enablePayoutQuery = @"
                         SELECT 
                             CASE 
                                 WHEN ISNULL(SUM(c.ContributionAmount), 0) = g.ContributionAmount * COUNT(DISTINCT mg.ID) THEN 1
@@ -634,21 +650,21 @@ public IActionResult GetGroupDetails(int memberId)
                         GROUP BY g.ContributionAmount, g.FrequencyID, g.PayoutTypeID;
                     ";
 
-                    using (var command = new SqlCommand(enablePayoutQuery, connection))
+                using (var command = new SqlCommand(enablePayoutQuery, connection))
+                {
+                    command.Parameters.AddWithValue("@GroupId", groupId);
+                    using (var reader = command.ExecuteReader())
                     {
-                        command.Parameters.AddWithValue("@GroupId", groupId);
-                        using (var reader = command.ExecuteReader())
+                        if (reader.Read())
                         {
-                            if (reader.Read())
-                            {
-                                model.EnablePayout = reader["EnablePayout"] != DBNull.Value ? Convert.ToInt32(reader["EnablePayout"]) == 1 : false;
-                                model.MemberCount = reader["MemberCount"] != DBNull.Value ? Convert.ToInt32(reader["MemberCount"]) : 0;
-                                model.ExpectedPayment = reader["ExpectedPayment"] != DBNull.Value ? Convert.ToDecimal(reader["ExpectedPayment"]) : 0;
-                                model.FrequencyID = reader["FrequencyID"] != DBNull.Value ? Convert.ToInt32(reader["FrequencyID"]) : 0;
-                                model.PayoutTypeID = reader["PayoutTypeID"] != DBNull.Value ? Convert.ToInt32(reader["PayoutTypeID"]) : 0;
-                            }
+                            model.EnablePayout = reader["EnablePayout"] != DBNull.Value ? Convert.ToInt32(reader["EnablePayout"]) == 1 : false;
+                            model.MemberCount = reader["MemberCount"] != DBNull.Value ? Convert.ToInt32(reader["MemberCount"]) : 0;
+                            model.ExpectedPayment = reader["ExpectedPayment"] != DBNull.Value ? Convert.ToDecimal(reader["ExpectedPayment"]) : 0;
+                            model.FrequencyID = reader["FrequencyID"] != DBNull.Value ? Convert.ToInt32(reader["FrequencyID"]) : 0;
+                            model.PayoutTypeID = reader["PayoutTypeID"] != DBNull.Value ? Convert.ToInt32(reader["PayoutTypeID"]) : 0;
                         }
                     }
+                }
 
 
 
@@ -656,45 +672,84 @@ public IActionResult GetGroupDetails(int memberId)
                 var memberIdClaim = User.Claims.FirstOrDefault(c => c.Type == "member_id");
                 int memberId = memberIdClaim != null ? Convert.ToInt32(memberIdClaim.Value) : 0;
 
-                    string memberQuery = @"
+                string memberQuery = @"
                         SELECT mg.ID, CONCAT(m.FirstName, ' ', m.LastName) AS FullName, m.Email, m.Phone, m.AccountNumber, m.CVC, m.Expiry
                         FROM MemberGroups mg
                         JOIN Members m ON mg.MemberID = m.ID
                         WHERE mg.GroupID = @GroupId AND m.ID = @MemberId";
 
-                   using (var command = new SqlCommand(memberQuery, connection))
+                using (var command = new SqlCommand(memberQuery, connection))
+                {
+                    command.Parameters.AddWithValue("@GroupId", groupId);
+                    command.Parameters.AddWithValue("@MemberId", memberId);
+
+                    using (var reader = command.ExecuteReader())
                     {
-                        command.Parameters.AddWithValue("@GroupId", groupId);
-                        command.Parameters.AddWithValue("@MemberId", memberId);
-
-                        using (var reader = command.ExecuteReader())
+                        if (reader.Read())
                         {
-                           if (reader.Read())
-                                {
-                                    model.MemberGroupID = Convert.ToInt32(reader["ID"]);
-                                    model.FullName = reader["FullName"].ToString();
-                                    model.Email = reader["Email"].ToString();
-                                    model.Phone = reader["Phone"].ToString();
-                                    model.AccountNumber = reader["AccountNumber"].ToString();
-                                    model.CVC = reader["CVC"].ToString();
-                                    model.Expiry = reader["Expiry"].ToString();
+                            model.MemberGroupID = Convert.ToInt32(reader["ID"]);
+                            model.FullName = reader["FullName"].ToString();
+                            model.Email = reader["Email"].ToString();
+                            model.Phone = reader["Phone"].ToString();
+                            model.AccountNumber = reader["AccountNumber"].ToString();
+                            model.CVC = reader["CVC"].ToString();
+                            model.Expiry = reader["Expiry"].ToString();
 
 
-                                    _logger.LogInformation("Found MemberGroupID: {MemberGroupID}", model.MemberGroupID);
-                                }
-                                else
-                                {
-                                    _logger.LogWarning("No MemberGroup found for MemberId {MemberId} in GroupId {GroupId}", memberId, groupId);
-                                    throw new Exception("No valid MemberGroup found — cannot create contribution.");
-                                }
-
+                            _logger.LogInformation("Found MemberGroupID: {MemberGroupID}", model.MemberGroupID);
                         }
-                    }
+                        else
+                        {
+                            _logger.LogWarning("No MemberGroup found for MemberId {MemberId} in GroupId {GroupId}", memberId, groupId);
+                            throw new Exception("No valid MemberGroup found — cannot create contribution.");
+                        }
 
+                    }
                 }
 
-                return View("~/Views/Transactions/ContributionsCreate.cshtml", model);
             }
+
+            return View("~/Views/Transactions/ContributionsCreate.cshtml", model);
+        }
+
+        [HttpPost]
+        [Authorize(Roles = "Admin")]
+        public IActionResult RefundContribution(int contributionId)
+        {
+            try
+            {
+                _logger.LogError( "This is your contribution ID {ContributionId}", contributionId);
+                using (var connection = new SqlConnection(_configuration.GetConnectionString("DefaultConnection")))
+                {
+                    connection.Open();
+
+                    var query = @"
+                        UPDATE Contributions
+                        SET Status = 'Refunded'
+                        WHERE ID = @ContributionID AND Status != 'Refunded';
+                    ";
+
+                    using (var command = new SqlCommand(query, connection))
+                    {
+                        command.Parameters.AddWithValue("@ContributionID", contributionId);
+                        int rowsAffected = command.ExecuteNonQuery();
+
+                        if (rowsAffected == 0)
+                        {
+                            _logger.LogError("Error refunding contribution ID {ContributionId}", contributionId);
+                            return Json(new { success = false, message = "Contribution not found or already refunded" });
+                        }
+                    }
+                }
+
+                return Json(new { success = true, message = "Contribution successfully refunded." });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error refunding contribution ID {ContributionId}", contributionId);
+                return Json(new { success = false, message = "Error processing refund." });
+            }
+        }
 
 
 

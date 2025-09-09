@@ -687,6 +687,44 @@ namespace StokvelManagementSystem.Controllers
                     }
                 }
 
+                // ✅ Check if group can be closed
+                using (var cmd = new SqlCommand(@"
+                    SELECT 
+                        CASE 
+                            WHEN EXISTS (
+                                SELECT 1 
+                                FROM Payouts p
+                                JOIN MemberGroups mg ON p.MemberGroupID = mg.ID
+                                WHERE mg.GroupID = @groupId 
+                                AND p.PaidForCycle = g.Cycles
+                            ) THEN 0 -- ❌ Cannot close if any payout exists in current cycle
+
+                            WHEN EXISTS (
+                                SELECT 1 
+                                FROM Contributions c
+                                JOIN MemberGroups mg ON c.MemberGroupID = mg.ID
+                                WHERE mg.GroupID = @groupId
+                                AND c.PaidForCycle = g.Cycles
+                                AND c.Status = 'Success'
+                            ) THEN 0 -- ❌ Cannot close if any contribution is 'Success'
+
+                            ELSE 1 -- ✅ Can close if:
+                                --   a) contributions exist but none are 'Success'
+                                --   b) no contributions or payouts at all
+                        END AS CanBeClosed
+                    FROM Groups g
+                    WHERE g.ID = @groupId", conn))
+                {
+                    cmd.Parameters.AddWithValue("@groupId", groupId);
+                    var result = cmd.ExecuteScalar();
+                    bool canBeClosed = (result != null && Convert.ToInt32(result) == 1);
+                    ViewBag.CanBeClosed = canBeClosed;
+
+                    // Cast to bool to satisfy ILogger
+                    _logger.LogInformation("GroupID {GroupId} CanBeClosed: {CanBeClosed}", groupId, (bool)canBeClosed);
+                }
+
+
                 return View(model);
             }
         }

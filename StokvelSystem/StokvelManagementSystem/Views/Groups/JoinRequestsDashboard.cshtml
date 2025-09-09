@@ -163,15 +163,23 @@
                 </div>
                 
                 @if (!Model.IsMemberNotAdmin)
-                    {
-                        <button type="button" 
-                        class="list-group-item list-group-item-action text-danger fw-semibold d-flex align-items-center d-none" 
-                        id="closeGroupBtn" 
-                        data-group-id="@Model.Group.ID">
-                            <i class="fas fa-lock me-2"></i>
-                            Close Group 
-                        </button>  
-                    }
+                {
+                    <button type="button"
+                            class="list-group-item list-group-item-action text-danger fw-semibold d-flex align-items-center"
+                            id="closeGroupBtn"
+                            data-group-id="@Model.Group.ID"
+                            @(ViewBag.CanBeClosed == false ? "disabled" : "")>
+                        <i class="fas fa-lock me-2"></i>
+                        Close Group
+                    </button>
+                }
+
+                @if (ViewBag.CanBeClosed == false)
+                {
+                <p class="text-warning p-3 mt-2">
+                    You cannot close group if you have pending payouts for a completed cycle and you have paid at least one person, or you have pending refunds for an uncompleted cycle
+                </p>
+                }
                          
                 <p  class="list-group-item list-group-item-action text-danger fw-semibold d-flex align-items-center d-none" id="group-closed-status">This group is closed </p>
                 
@@ -585,7 +593,7 @@
                     .catch(err => {
                         console.error(err);
                         const stats = document.getElementById('group-stats');
-                        if (stats) stats.textContent = "Error loading stats";
+                        if (stats) stats.textContent = "Error loading stats "+ err;
                     });
             }
 
@@ -595,13 +603,14 @@
 
                 const groupStarted = @((ViewBag.GroupStarted ?? false).ToString().ToLower());
                 const canBePaused = @((ViewBag.CanBePaused ?? false).ToString().ToLower());
+                const groupClosed = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.Group.Closed));
 
                 console.log("Group Started:", groupStarted);
                 console.log("Can Be Paused:", canBePaused);
 
 
                 // 🔔 Show full notification if group has not started
-                if (!document.getElementById("group-full-alert") && !groupStarted && !@Model.Group.Closed) {
+                if (!document.getElementById("group-full-alert") && !groupStarted && !groupClosed) {
                     const alert = document.createElement("div");
                     alert.id = "group-full-alert";
                     alert.className = "alert alert-warning mt-3";
