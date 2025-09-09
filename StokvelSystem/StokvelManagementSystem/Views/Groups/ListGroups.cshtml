@@ -496,7 +496,7 @@
                                         <form action="/Groups/RequestToJoin" method="get">
                                             <input type="hidden" name="GroupId" value="${group.id}" />
                                             <input type="hidden" name="NationalId" value="${nationalId}" />
-                                            ${canJoin && group.status === "1" && group.closed === false ? `<button type="submit" class="btn btn-success w-100">Request To Join Group</button>` : ""}
+                                            ${canJoin && group.closed === false ? `<button type="submit" class="btn btn-success w-100">Request To Join Group</button>` : ""}
                                         </form>
                                     </div>
                                 </div>
