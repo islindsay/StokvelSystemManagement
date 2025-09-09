@@ -181,7 +181,7 @@
                     </button>
                 }
 
-                @if (ViewBag.CanBeClosed == false && !Model.IsMemberNotAdmin)
+                @if (ViewBag.CanBeClosed == false && !Model.IsMemberNotAdmin && Model.Group.Closed == false)
                 {
                 <p class="text-warning p-3 mt-2">
                     You cannot close group if you have pending payouts for a completed cycle and you have paid at least one person, or you have pending refunds for an uncompleted cycle

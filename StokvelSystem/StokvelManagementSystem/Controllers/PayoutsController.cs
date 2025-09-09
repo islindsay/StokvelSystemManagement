@@ -591,6 +591,7 @@ namespace StokvelManagementSystem.Controllers
                                         p.AccountNumber,
                                         p.CVC,
                                         p.Expiry,
+                                        p.PaidForCycle,
                                         p.Status,
                                         g.GroupName,
                                         c.Currency,                      
@@ -634,7 +635,8 @@ namespace StokvelManagementSystem.Controllers
                                     AccountNumber = reader["AccountNumber"]?.ToString(),
                                     CVC = reader["CVC"]?.ToString(),
                                     Expiry = reader["Expiry"]?.ToString(),
-                                    Status = reader["Status"].ToString()
+                                    Status = reader["Status"].ToString(),
+                                    PaidForCycle = Convert.ToInt32(reader["PaidForCycle"])
 
                                 });
                             }

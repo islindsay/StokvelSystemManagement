@@ -634,9 +634,12 @@ namespace StokvelManagementSystem.Controllers
             using var conn = new SqlConnection(_connectionString);
 
             // Base query: always include Status = 'Success'
-            var sql = @"SELECT ISNULL(SUM(ContributionAmount), 0) 
-                        FROM Contributions 
-                        WHERE MemberGroupID = @GroupId AND LTRIM(RTRIM(Status)) = 'Success' {0}";
+            var sql = @"SELECT ISNULL(SUM(c.TotalAmount), 0) AS TotalContributions
+                        FROM Contributions c
+                        INNER JOIN MemberGroups mg ON c.MemberGroupID = mg.ID
+                        WHERE mg.GroupID = @GroupId
+                        AND LTRIM(RTRIM(c.Status)) = 'Success';
+                        ";
 
             // Build optional filters
             var filters = new List<string>();

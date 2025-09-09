@@ -23,6 +23,7 @@ namespace StokvelManagementSystem.Models
         public string? MemberName { get; set; }
         public string? Phone { get; set; }
         public string? Email { get; set; }
+        
 
         [Required]
         [Display(Name = "Payment Method")]
@@ -46,6 +47,8 @@ namespace StokvelManagementSystem.Models
 
 
         //public string? ProofOfPaymentPath { get; set; }
+
+        public int? PaidForCycle { get; set; }
 
 
         [Display(Name = "Processed By")]

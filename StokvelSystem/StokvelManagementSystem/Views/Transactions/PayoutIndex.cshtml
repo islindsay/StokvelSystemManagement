@@ -65,6 +65,7 @@
                                 <th class="bi bi-calendar me-1"> Date</th>
                                 <th class="bi bi-tag me-1"> Reference</th>
                                 <th class="bi bi-person-plus me-1"> CreatedBy</th>
+                                 <th class="bi bi-cycle me-1"> Cycle</th>
                                  <th class="bi bi-person-plus me-1"> Status</th>
                                 <th class="bi me-1"> Action</th>
                                
@@ -80,6 +81,7 @@
                                     <td>@item.PayoutDate.ToString("dd MMM yyyy")</td>
                                     <td><span class="badge bg-primary">@item.Reference</span></td>
                                     <td>@item.CreatedBy</td>
+                                    <td>@item.PaidForCycle</td>
                                     <td>
                                         <button type="button" class="btn btn-sm btn-outline-primary view-details-btn"
                                             data-group="@item.GroupName"
