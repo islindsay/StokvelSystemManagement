@@ -477,6 +477,7 @@
             if (!form) return;
 
             const isActiveCheckbox = form.querySelector("input[name='IsActive']");
+            const saveBtn = document.getElementById("saveUpdatebutton");
             if (!isActiveCheckbox) return;
 
             function updateFieldStates() {
@@ -485,8 +486,7 @@
                 // 🔒 Make the checkbox itself readonly
                 isActiveCheckbox.addEventListener("click", e => e.preventDefault());
                 isActiveCheckbox.style.cursor = "not-allowed";
-                isActiveCheckbox.classList.add("readonly-checkbox");
-
+                isActiveCheckbox.classList.add("readonly-checkbox");             
 
                 form.querySelectorAll("input, select").forEach(el => {
                     if (el.name === "IsActive") return; // skip checkbox
@@ -520,6 +520,12 @@
                             }
                         }
                     }
+
+                    // Disable Save button
+                    if (saveBtn) {
+                        saveBtn.disabled = true;
+                        saveBtn.classList.add("disabled");
+                    }
                 });
             }
 
@@ -536,6 +542,7 @@
 
             const form = event.target;
             const formData = new FormData(form);
+
 
             fetch(form.action, {
                 method: "POST",
@@ -609,7 +616,7 @@
             function showGroupFullNotification() {
                 const container = document.getElementById("partial-content-container");
 
-                const groupStarted = @((ViewBag.GroupStarted ?? false).ToString().ToLower());
+                const groupStarted = @((ViewBag.GroupStarted ?? true).ToString().ToLower());
                 const canBePaused = @((ViewBag.CanBePaused ?? false).ToString().ToLower());
                 const groupClosed = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.Group.Closed));
 
@@ -617,8 +624,13 @@
                 console.log("Can Be Paused:", canBePaused);
 
 
+                const isMemberNotAdmin = @Model.IsMemberNotAdmin.ToString().ToLower();
+
+
+
+
                 // 🔔 Show full notification if group has not started
-                if (!document.getElementById("group-full-alert") && !groupStarted && !groupClosed) {
+                if (!document.getElementById("group-full-alert") && !groupStarted && !groupClosed && !isMemberNotAdmin) {
                     const alert = document.createElement("div");
                     alert.id = "group-full-alert";
                     alert.className = "alert alert-warning mt-3";
@@ -716,8 +728,9 @@
                             container.innerHTML = html;
 
                             // ----- Add checkbox readonly logic here -----
-                            const canBeActivated = "@(ViewBag.CanBeActivated ?? true)".toLowerCase() === "true";
+                            const canBeActivated = "@(ViewBag.CanBeActivated ?? false)".toLowerCase() === "true";
                             const checkbox = document.getElementById("isActiveCheckbox");
+                             const saveBtn = document.getElementById("saveUpdatebutton");
 
                             if (checkbox && !canBeActivated) {
                                 const originalValue = checkbox.checked;
@@ -737,7 +750,20 @@
 
                                 // Add visual readonly style
                                 checkbox.classList.add("readonly-checkbox");
-                            }
+
+                                   if (saveBtn) {
+                                        saveBtn.disabled = true;
+                                        saveBtn.classList.add("disabled"); // optional: add bootstrap disabled style
+                                    }
+                                   else
+                                   {
+                                            // Ensure button is enabled if checkbox is not read-only
+                                        if (saveBtn) {
+                                                saveBtn.disabled = false;
+                                                saveBtn.classList.remove("disabled");
+                                        }
+                                    }
+                                }
                             // ---------------------------------------------
                         })
                         .catch(err => {

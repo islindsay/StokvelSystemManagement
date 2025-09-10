@@ -781,6 +781,37 @@ namespace StokvelManagementSystem.Controllers
                     }
                 }
 
+                // ✅ Add CanBeActivated logic
+                using (var cmd = new SqlCommand(
+                    @"SELECT g.MemberLimit, g.Status, g.StartDate,
+                            (SELECT COUNT(*) FROM MemberGroups mg WHERE mg.GroupID = g.ID) AS CurrentMembers
+                    FROM Groups g
+                    WHERE g.ID = @groupId", conn))
+                {
+                    cmd.Parameters.AddWithValue("@groupId", groupId);
+                    using (var reader = cmd.ExecuteReader())
+                    {
+                        if (reader.Read())
+                        {
+                            int groupStatus = reader.GetInt32(reader.GetOrdinal("Status"));
+                            ViewBag.GroupStarted = (groupStatus == 1);
+                            ViewBag.CanBePaused = !reader.IsDBNull(reader.GetOrdinal("StartDate"));
+
+                            int maxMembers = reader.GetInt32(reader.GetOrdinal("MemberLimit"));
+                            int currentMembers = reader.GetInt32(reader.GetOrdinal("CurrentMembers"));
+
+                            if (currentMembers < maxMembers && ViewBag.CanBePaused)
+                                ViewBag.CanBeActivated = false;
+                            else if (currentMembers >= maxMembers && !ViewBag.CanBePaused)
+                                ViewBag.CanBeActivated = true;
+                            else if (currentMembers < maxMembers && !ViewBag.CanBePaused)
+                                ViewBag.CanBeActivated = false;
+                            else if (currentMembers >= maxMembers && ViewBag.CanBePaused)
+                                ViewBag.CanBeActivated = false;
+                        }
+                    }
+                }
+
                 // Get Leave Requests
                 var requests = new List<LeaveRequestView>();
                 string query = @"SELECT lr.ID, lr.MemberID, lr.RequestedDate, lr.Status,
