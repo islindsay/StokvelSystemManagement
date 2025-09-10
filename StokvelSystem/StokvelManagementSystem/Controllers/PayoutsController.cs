@@ -228,11 +228,14 @@ namespace StokvelManagementSystem.Controllers
                             COUNT(DISTINCT mg.ID) AS TotalMembers,
                             COUNT(DISTINCT p.MemberGroupID) AS PaidMembers
                         FROM MemberGroups mg
-                        LEFT JOIN Payouts p 
-                            ON p.MemberGroupID = mg.ID
+                        LEFT JOIN Groups g 
+                           ON g.ID =mg.GroupID 
+                           LEFT JOIN Payouts p 
+                           ON p.MemberGroupID= mg.ID
+                           
                             AND p.PaidForCycle = g.Cycles
                             AND p.Reference IS NOT NULL
-                        JOIN Groups g ON g.ID = mg.GroupID
+                       
                         WHERE mg.GroupID = @GroupId;
                     ";
 
